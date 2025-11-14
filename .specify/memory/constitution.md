@@ -1,50 +1,536 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+  SYNC IMPACT REPORT
+  ==================
+  Version Change: 1.0.0 → 2.0.0
+  Rationale: MAJOR version bump - Complete architecture redesign from Rails monolith
+             to full-stack TypeScript monorepo with React + Supabase
+
+  Modified Principles (BREAKING CHANGES - All Replaced):
+  - REMOVED: I. Rails Convention Over Configuration
+  - REMOVED: II. Test-Driven Development (TDD) with RSpec
+  - REMOVED: III. Hotwire-First Frontend Architecture
+  - REMOVED: IV. Clean Code & Rails Style Guide Compliance
+  - REMOVED: V. Database Design & ActiveRecord Best Practices
+  - REMOVED: VI. Security & Performance Standards
+
+  - NEW: I. Monorepo Architecture & Domain-Driven Design
+  - NEW: II. TypeScript-First Development (Strict Mode)
+  - NEW: III. API-First Design with Contract-Driven Development
+  - NEW: IV. Component-Driven Frontend Architecture
+  - NEW: V. Supabase Backend Platform Standards
+  - NEW: VI. Code Quality & SOLID Principles
+  - NEW: VII. Testing Standards & Coverage Requirements
+  - NEW: VIII. Security & Performance Engineering
+
+  Technology Stack Changes:
+  - Ruby/Rails → TypeScript/React
+  - Hotwire → React + TanStack Router
+  - RSpec → Vitest/Jest + Testing Library
+  - ActiveRecord → Prisma ORM
+  - Devise/Pundit → Supabase Auth
+  - Backend: Supabase Edge Functions + PostgreSQL
+  - Payments: Stripe integration
+  - Storage: Supabase Storage
+
+  Added Sections:
+  - Monorepo Structure
+  - Frontend Standards
+  - Backend & Integration Standards
+
+  Templates Requiring Updates:
+  ✅ plan-template.md - Constitution Check section compatible
+  ✅ spec-template.md - No changes required (technology-agnostic by design)
+  ✅ tasks-template.md - Update examples for TypeScript/React
+  ⚠️  CLAUDE.md - MUST update with new tech stack and examples
+
+  Follow-up TODOs:
+  - Update CLAUDE.md with TypeScript/React examples
+  - Create monorepo structure guidelines
+  - Define component library conventions
+
+  Date: 2025-11-04
+-->
+
+# Service Bond Full-Stack Monorepo Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Monorepo Architecture & Domain-Driven Design
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**MUST** maintain clean separation between frontend, backend, and shared code:
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- **Monorepo structure** with clear boundaries:
+  - `apps/web/` - React frontend application
+  - `apps/functions/` - Supabase Edge Functions (backend APIs)
+  - `packages/` - Shared libraries (types, utils, configs)
+  - `prisma/` - Database schema and migrations
+- **Domain-Driven Design** where applicable:
+  - Organize code by business domain, not technical layer
+  - Keep related business logic together (cohesion)
+  - Clear bounded contexts between domains
+  - Shared kernel only for truly cross-domain concerns
+- **API-first contracts**: Frontend and backend communicate via well-defined APIs
+- **Dependency direction**: Frontend depends on backend contracts, never
+  implementation details
+- No circular dependencies between packages
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale**: Monorepo enables code sharing and atomic changes while maintaining
+separation of concerns. DDD reduces coupling and improves maintainability.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. TypeScript-First Development (Strict Mode) (NON-NEGOTIABLE)
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**MUST** use TypeScript with strict mode across the entire stack:
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- **`strict: true`** in all `tsconfig.json` files
+- **Zero `any` types** - proper type definitions required for all values
+- **Type inference preferred** over explicit types when clear
+- **Type-safe database access** via Prisma (generated types from schema)
+- **API contract types** shared between frontend and backend
+- **Runtime validation** at API boundaries (Zod or similar)
+- **Generic types** for reusable components and utilities
+- **Discriminated unions** for state management and data variants
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale**: TypeScript prevents entire classes of bugs at compile time. Strict
+mode eliminates unsafe patterns. Type safety across the stack enables confident
+refactoring and catches integration issues early.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. API-First Design with Contract-Driven Development
+
+**MUST** design and document APIs before implementation:
+
+- **API contracts defined first** using TypeScript types or OpenAPI schemas
+- **Edge Functions** follow RESTful conventions:
+  - `GET` for retrieval (idempotent, no side effects)
+  - `POST` for creation
+  - `PUT`/`PATCH` for updates
+  - `DELETE` for removal
+- **Consistent response format**:
+  ```typescript
+  { data: T } // Success
+  { error: { code: string, message: string } } // Error
+  ```
+- **Status codes** used correctly:
+  - `200` OK (success with body)
+  - `201` Created
+  - `400` Bad Request (client error)
+  - `401` Unauthorized
+  - `403` Forbidden
+  - `404` Not Found
+  - `500` Internal Server Error
+- **Error handling** at all API boundaries:
+  - Structured error responses
+  - User-friendly error messages
+  - Technical details logged but not exposed to client
+- **API versioning** when breaking changes required (`/v1/`, `/v2/`)
+
+**Rationale**: API-first design enables parallel frontend/backend development,
+clear contracts prevent integration issues, and consistent patterns reduce bugs.
+
+### IV. Component-Driven Frontend Architecture
+
+**MUST** follow React and component-driven development best practices:
+
+- **React with TypeScript** for all UI components
+- **TanStack Router** for type-safe routing and navigation
+- **Tailwind CSS** with utility-first approach + **shadcn/ui** for base
+  components
+- **Component architecture**:
+  - Small, focused components (Single Responsibility)
+  - Composition over prop drilling (Context for shared state)
+  - Custom hooks for reusable logic
+  - Presentational vs Container component separation when beneficial
+- **Web-first, responsive design**:
+  - Desktop as primary target
+  - Mobile-responsive views via Tailwind breakpoints
+  - Touch-friendly interactive elements
+- **Accessibility (WCAG AA minimum)**:
+  - Semantic HTML elements
+  - ARIA labels where needed
+  - Keyboard navigation support
+  - Color contrast ratios meet AA standards
+  - Focus management for modals/dialogs
+- **State management**:
+  - Server state via TanStack Query (React Query)
+  - Client state via React hooks (useState, useReducer)
+  - Avoid global state unless truly global
+- **Performance**:
+  - Lazy load routes via TanStack Router
+  - Code splitting at route boundaries
+  - Optimize bundle size (tree-shaking, dynamic imports)
+  - Virtualize long lists
+
+**Rationale**: Component-driven architecture enables reusability and testability.
+Accessibility is non-negotiable. Performance patterns prevent slow user
+experience.
+
+### V. Supabase Backend Platform Standards
+
+**MUST** leverage Supabase services correctly and securely:
+
+- **Supabase Auth** for authentication:
+  - SMS OTP as primary authentication method
+  - Row Level Security (RLS) policies on all tables
+  - JWT tokens for API authorization
+  - No auth logic in Edge Functions (delegated to Supabase)
+- **PostgreSQL + Prisma**:
+  - Prisma schema as single source of truth
+  - Migrations via `prisma migrate`
+  - Type-safe queries via Prisma Client
+  - Database indexes on foreign keys and queried columns
+  - Constraints at database level (NOT NULL, UNIQUE, foreign keys)
+- **Supabase Edge Functions**:
+  - TypeScript for all functions
+  - One function per logical endpoint/operation
+  - Environment variables for configuration
+  - CORS configured appropriately per environment
+  - Rate limiting implemented via middleware
+- **Supabase Storage**:
+  - RLS policies on storage buckets
+  - File uploads validated (type, size)
+  - Signed URLs for temporary access
+  - CDN-friendly paths for public assets
+- **Stripe Integration**:
+  - Webhooks handled via Edge Functions
+  - Payment intents created server-side only
+  - Idempotency keys for payment operations
+  - Secure webhook signature verification
+  - Payout tracking via Stripe Connect APIs
+
+**Rationale**: Supabase provides managed backend infrastructure. Following
+platform best practices ensures security, scalability, and maintainability.
+
+### VI. Code Quality & SOLID Principles (NON-NEGOTIABLE)
+
+**MUST** write clean, maintainable code following SOLID principles:
+
+- **Single Responsibility Principle**:
+  - Functions do one thing well
+  - Components have one reason to change
+  - Files focused on single concern
+- **Open/Closed Principle**:
+  - Extend behavior via composition, not modification
+  - Use TypeScript generics for reusable abstractions
+- **Liskov Substitution Principle**:
+  - Interfaces and types honor contracts
+  - Subtypes don't break parent expectations
+- **Interface Segregation**:
+  - Small, focused interfaces
+  - No "fat" interfaces forcing unused dependencies
+- **Dependency Inversion**:
+  - Depend on abstractions (interfaces/types), not concrete implementations
+  - Higher-level modules don't depend on lower-level details
+- **Code quality rules**:
+  - Maximum file length: **300 lines** (including tests)
+  - Functions SHOULD be < 20 lines; > 50 lines requires justification
+  - Meaningful names: `getUserById` not `get` or `fetch`
+  - Prefer composition over inheritance (React functional components)
+  - No dead code or unused imports (ESLint enforced)
+  - Comments only for complex business logic, not obvious code
+  - Consistent formatting via Prettier (auto-format on save)
+
+**Rationale**: SOLID principles reduce coupling and improve testability. Code
+quality standards prevent technical debt and improve long-term velocity.
+
+### VII. Testing Standards & Coverage Requirements
+
+**MUST** maintain comprehensive test coverage across the stack:
+
+- **Unit tests** for business logic and utilities:
+  - Pure functions tested in isolation
+  - Edge cases and error conditions covered
+  - Test framework: Vitest or Jest
+- **Component tests** for React components:
+  - User interactions tested via Testing Library
+  - Render behavior and state changes validated
+  - Accessibility checked via jest-axe
+- **Integration tests** for API endpoints:
+  - Edge Functions tested with real Supabase client
+  - Request/response contracts validated
+  - Error handling verified
+- **Coverage target: 80% minimum**:
+  - Enforced in CI pipeline
+  - Exceptions documented (e.g., trivial getters/setters)
+  - Trend tracked: coverage should not decrease
+- **Test quality standards**:
+  - Tests must be maintainable and readable
+  - Descriptive test names: "should return error when user not found"
+  - Arrange-Act-Assert pattern
+  - No flaky tests (deterministic, no race conditions)
+  - Fast execution (< 1 second per unit test)
+
+**Rationale**: Tests catch regressions, enable refactoring, and serve as
+documentation. 80% coverage ensures critical paths are validated.
+
+### VIII. Security & Performance Engineering
+
+**MUST** implement security and performance from day one:
+
+- **Security (OWASP Top 10 compliance)**:
+  - **Never commit secrets**: `.env` files in `.gitignore`
+  - Environment variables for all sensitive data (API keys, DB URLs)
+  - Supabase RLS policies on all tables (no unprotected data access)
+  - Input validation on all API endpoints (Zod schemas)
+  - SQL injection prevention (Prisma parameterized queries)
+  - XSS prevention (React auto-escapes, sanitize user HTML)
+  - CSRF protection via Supabase Auth tokens
+  - Rate limiting on public API endpoints (per IP/user)
+  - Content Security Policy (CSP) headers
+  - HTTPS only in production
+  - Secure cookie settings (httpOnly, secure, sameSite)
+- **Performance targets**:
+  - Initial page load: < 2 seconds (3G connection)
+  - Time to Interactive (TTI): < 3 seconds
+  - API response time: < 500ms p95
+  - Database queries: < 100ms p95 (optimize with indexes)
+  - Bundle size: < 500KB initial JavaScript (compressed)
+- **Performance patterns**:
+  - Code splitting at route level
+  - Lazy load non-critical features
+  - Image optimization (WebP, lazy loading, responsive sizes)
+  - Database query optimization (no N+1, proper indexes)
+  - Caching strategies (React Query for API, memoization for expensive
+    computations)
+- **Observability**:
+  - Error tracking (Sentry or similar)
+  - Performance monitoring (Supabase analytics + custom metrics)
+  - Structured logging in Edge Functions
+  - Key metrics: API latency, error rate, user session length
+
+**Rationale**: Security vulnerabilities are expensive to fix post-release.
+Performance directly impacts user experience and business metrics.
+
+## Technology Stack
+
+**MUST** use these technologies unless specific feature requirements demand
+alternatives:
+
+### Frontend
+- **Language**: TypeScript 5.0+ (strict mode)
+- **Framework**: React 18+
+- **Router**: TanStack Router (type-safe routing)
+- **Styling**: Tailwind CSS 3+ with shadcn/ui component library
+- **State Management**: TanStack Query (server state) + React hooks (client
+  state)
+- **Forms**: React Hook Form + Zod validation
+- **Build Tool**: Vite
+- **Testing**: Vitest + React Testing Library + jest-axe
+
+### Backend
+- **Platform**: Supabase (managed backend)
+- **Runtime**: Supabase Edge Functions (Deno runtime, TypeScript)
+- **Database**: PostgreSQL 14+ (Supabase-managed)
+- **ORM**: Prisma 5+ (type-safe database access)
+- **Authentication**: Supabase Auth (SMS OTP)
+- **Storage**: Supabase Storage (file management)
+- **Payments**: Stripe API + Stripe Connect (payouts)
+
+### Shared/Tooling
+- **Monorepo**: Turborepo or pnpm workspaces
+- **Package Manager**: pnpm (fast, efficient)
+- **Linting**: ESLint (TypeScript rules, React hooks rules)
+- **Formatting**: Prettier (auto-format on save)
+- **Type Checking**: TypeScript compiler + tsc --noEmit in CI
+- **Environment**: dotenv for local, Supabase secrets for production
+
+### Approved Libraries
+
+Pre-vetted for common needs:
+
+- `zod` - Schema validation and type inference
+- `date-fns` - Date manipulation (tree-shakeable)
+- `clsx` / `tailwind-merge` - Conditional class names
+- `react-hook-form` - Form state management
+- `@tanstack/react-query` - Server state caching
+- `@tanstack/react-router` - Type-safe routing
+- `lucide-react` - Icon library (tree-shakeable)
+- `@stripe/stripe-js` - Stripe frontend SDK
+- `stripe` (backend) - Stripe Node.js SDK
+
+### Library Approval Process
+
+New libraries require review:
+
+1. Actively maintained (commit within 6 months)
+2. TypeScript support (native or @types package)
+3. Tree-shakeable (ESM support)
+4. No critical security vulnerabilities
+5. Bundle size impact acceptable (< 50KB gzipped)
+6. Clear documentation and types
+
+## Monorepo Structure
+
+**MUST** follow this directory organization:
+
+```
+service_bond/
+├── apps/
+│   ├── web/                    # React frontend
+│   │   ├── src/
+│   │   │   ├── components/     # Reusable UI components
+│   │   │   ├── features/       # Feature-specific code (domain-driven)
+│   │   │   ├── lib/            # Utilities and helpers
+│   │   │   ├── hooks/          # Custom React hooks
+│   │   │   ├── routes/         # TanStack Router routes
+│   │   │   └── main.tsx        # Entry point
+│   │   ├── public/             # Static assets
+│   │   ├── index.html
+│   │   ├── vite.config.ts
+│   │   └── tsconfig.json
+│   │
+│   └── functions/              # Supabase Edge Functions
+│       ├── _shared/            # Shared utilities for functions
+│       ├── stripe-webhook/     # Individual function
+│       ├── create-payment/
+│       └── process-payout/
+│
+├── packages/
+│   ├── types/                  # Shared TypeScript types
+│   │   ├── src/
+│   │   │   ├── api.ts          # API contract types
+│   │   │   ├── database.ts     # Prisma-generated types (re-exported)
+│   │   │   └── common.ts       # Shared utility types
+│   │   └── tsconfig.json
+│   │
+│   ├── config/                 # Shared configs (ESLint, Prettier, tsconfig)
+│   │   ├── eslint-config/
+│   │   ├── prettier-config/
+│   │   └── tsconfig/
+│   │
+│   └── utils/                  # Shared utility functions
+│       ├── src/
+│       │   ├── date.ts
+│       │   ├── validation.ts
+│       │   └── formatting.ts
+│       └── tsconfig.json
+│
+├── prisma/
+│   ├── schema.prisma           # Database schema (single source of truth)
+│   ├── migrations/             # Migration history
+│   └── seed.ts                 # Seed data for development
+│
+├── supabase/
+│   ├── config.toml             # Supabase project config
+│   ├── migrations/             # Supabase-specific migrations (if needed)
+│   └── functions/              # Symlink or copy of apps/functions/
+│
+├── docs/
+│   ├── adr/                    # Architecture Decision Records
+│   ├── api/                    # API documentation
+│   └── guides/                 # Development guides
+│
+├── .github/
+│   └── workflows/              # CI/CD pipelines
+│
+├── package.json                # Root package.json (workspaces)
+├── pnpm-workspace.yaml         # pnpm workspace config
+├── turbo.json                  # Turborepo config (if using Turbo)
+├── .env.example                # Example environment variables
+└── README.md                   # Project overview
+```
+
+## Development Workflow
+
+**MUST** follow these development practices:
+
+### Code Review Requirements
+
+- **All code MUST be reviewed** before merging to `main`
+- **Review checklist**:
+  - [ ] TypeScript compiles without errors (`tsc --noEmit`)
+  - [ ] ESLint passes (zero errors)
+  - [ ] Tests written and passing (80% coverage maintained)
+  - [ ] API contracts validated (types match between frontend/backend)
+  - [ ] Constitution compliance verified
+  - [ ] Security considerations addressed (no secrets, input validation)
+  - [ ] Performance acceptable (no bundle size regressions)
+  - [ ] Accessibility checked (no axe violations)
+
+### Branch Strategy
+
+- `main` branch is production-ready at all times
+- Feature branches: `[###-feature-name]` (Specify workflow convention)
+- No direct commits to `main`; all changes via Pull Requests
+- Squash commits on merge for clean history
+
+### CI/CD Requirements
+
+- **CI pipeline MUST enforce**:
+  - TypeScript compilation passes across all packages
+  - ESLint passes (zero errors, warnings acceptable if documented)
+  - Prettier formatting verified
+  - Test suites pass (unit + integration + component)
+  - Code coverage ≥ 80% (maintained or improved)
+  - Bundle size checks (no regressions > 10%)
+  - Dependency vulnerabilities scan (npm audit or similar)
+- **Deployment gates**:
+  - All CI checks green
+  - At least one approval on PR
+  - Staging deployment successful (for high-risk changes)
+
+### Environment Management
+
+- **Development**: Local Supabase via Docker, `.env.local`
+- **Staging**: Separate Supabase project, `.env.staging`
+- **Production**: Production Supabase project, `.env.production`
+- **Secrets**: Never committed, managed via Supabase dashboard or CI variables
+
+### Database Migrations
+
+- **Schema changes via Prisma**:
+  1. Update `prisma/schema.prisma`
+  2. Run `prisma migrate dev --name descriptive-name`
+  3. Review generated SQL migration
+  4. Test migration locally
+  5. Commit schema + migration files
+- **Deployment**:
+  - Migrations run automatically on deploy (or manually for high-risk)
+  - Staging migrations tested before production
+  - Zero-downtime patterns: add before remove, backfill data
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution **supersedes all other development practices** for this
+project.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### Amendment Process
+
+1. Proposed changes submitted as PR to `.specify/memory/constitution.md`
+2. Include rationale and impact analysis in PR description
+3. Requires team discussion and consensus
+4. Version bump according to semantic versioning:
+   - **MAJOR**: Principle removal or incompatible governance change (tech stack
+     change)
+   - **MINOR**: New principle or section added
+   - **PATCH**: Clarifications, wording improvements
+5. Update all dependent templates (plan, spec, tasks, CLAUDE.md) in same PR
+6. Update `LAST_AMENDED_DATE` to amendment date
+
+### Compliance & Enforcement
+
+- **All Pull Requests MUST verify constitution compliance** before approval
+- Constitution violations require either:
+  - Code changes to comply, OR
+  - Explicit justification documented in PR (rare exceptions only)
+- Technical debt from non-compliance MUST be tracked and prioritized
+- Review constitution quarterly; propose amendments as project evolves
+
+### Complexity Justification
+
+When constitution principles cannot be followed, **document in Complexity
+Tracking** section of `plan.md`:
+
+- Which principle violated
+- Why needed for this feature
+- What simpler alternative was rejected and why
+- Migration plan to return to compliance (if applicable)
+
+### Reference Documentation
+
+- Runtime development guidance in `CLAUDE.md` (for AI assistants)
+- Human developer onboarding in `README.md`
+- API documentation in `docs/api/`
+- Architecture Decision Records (ADRs) in `docs/adr/` for major technical
+  choices
+- Component storybook (if implemented) for UI component documentation
+
+**Version**: 2.0.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2025-11-04
