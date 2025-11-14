@@ -1,0 +1,3 @@
+# Supabase migrations directory
+# Migrations will be created here using:
+# supabase migration new <migration_name>
