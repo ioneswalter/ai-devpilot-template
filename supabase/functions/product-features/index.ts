@@ -25,10 +25,10 @@ Deno.serve(async (req) => {
 
     // Get all product features with test cases
     const { data: features, error: featuresError } = await supabase
-      .from('ProductFeature')
+      .from('product_features')
       .select(`
         *,
-        test_cases:TestCase(*)
+        test_cases:test_cases(*)
       `)
       .order('feature_id', { ascending: true });
 
