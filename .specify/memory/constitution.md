@@ -495,18 +495,18 @@ ServiceBond operates as a **platform cooperative** - owned and governed by its s
 
 | Tier | Investment | Effective Fee | Benefits |
 |------|------------|---------------|----------|
-| **Founding Co-op** | $1,000 (one-time) | 10% | AI Business Coach, Voting Rights, First 300 only |
-| **Co-op** | $1,500 (one-time) | 10% | AI Business Coach, Voting Rights |
-| **Member** | $0 | 20% | Basic platform access |
+| **Cooperative Member (First 300)** | $1,000 (one-time) | 10% | AI Business Coach, Voting Rights, First 300 only |
+| **Cooperative Member** | $1,500 (one-time) | 10% | AI Business Coach, Voting Rights |
+| **Free Member** | $0 | 20% | Basic platform access |
 
 ### Fee Structure
 
 - **All providers pay 20% platform fee** on completed jobs
-- **Co-op members receive 10% monthly rebate** (effective 10% fee)
+- **Cooperative members receive 10% monthly rebate** (effective 10% fee)
 - Rebates distributed monthly via Stripe Connect payouts
 - Rebate eligibility requires active membership status
 
-### AI Business Coach (Co-op Members Only)
+### AI Business Coach (Cooperative Members Only)
 
 Exclusive 24/7 AI-powered business advisor providing:
 
@@ -517,18 +517,18 @@ Exclusive 24/7 AI-powered business advisor providing:
 
 ### Democratic Governance
 
-**Important**: Co-op membership provides **voting rights only** - members do **NOT** receive share equity or ownership stakes in the cooperative. The investment is a membership fee that provides platform benefits and voting participation.
+**Important**: Cooperative membership provides **voting rights only** - members do **NOT** receive share equity or ownership stakes in the cooperative. The investment is a membership fee that provides platform benefits and voting participation.
 
-- **One member, one vote** - Co-op members have equal voting rights on roadmap and platform features
+- **One member, one vote** - Cooperative members have equal voting rights on roadmap and platform features
 - **Feature prioritization** - Members vote on which features and improvements to build next
 - **Platform policies** - Major policy changes require member input and approval
 - **Transparent operations** - Platform decisions and reasoning shared with all members
 
-### Founding Member Program
+### First 300 Member Program
 
 - Limited to **first 300 members** at $1,000 membership investment
-- After 300 founders, Co-op tier at $1,500 membership investment
-- Founding members receive special recognition and early access to features
+- After 300 members, cooperative membership at $1,500 membership investment
+- First 300 members receive special recognition and early access to features
 - **Membership investment is a fee, not equity** - provides voting rights and platform benefits only
 
 ## Governance
