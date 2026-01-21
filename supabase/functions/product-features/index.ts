@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
         *,
         test_cases:test_cases(*)
       `)
-      .order('feature_id', { ascending: true });
+      .order('feature_code', { ascending: true });
 
     if (featuresError) {
       console.error('Get features error:', featuresError);
@@ -42,31 +42,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Format response
+    // Format response - map database fields to API response format
     const formattedFeatures = (features || []).map((feature) => ({
       id: feature.id,
-      feature_id: feature.feature_id,
-      name: feature.name,
+      feature_code: feature.feature_code,
+      title: feature.title,
       description: feature.description,
-      status: feature.status,
-      priority: feature.priority,
-      category: feature.category,
-      user_story: feature.user_story,
       acceptance_criteria: feature.acceptance_criteria,
+      feature_type: feature.feature_type,
+      priority: feature.priority,
+      status: feature.status,
+      spec_section: feature.spec_section,
+      related_user_stories: feature.related_user_stories || [],
       created_at: feature.created_at,
       updated_at: feature.updated_at,
       test_cases: (feature.test_cases || []).map((tc: Record<string, unknown>) => ({
         id: tc.id,
-        test_case_id: tc.test_case_id,
-        name: tc.name,
+        test_code: tc.test_code,
+        title: tc.title,
         description: tc.description,
+        test_type: tc.test_type,
+        priority: tc.priority,
         status: tc.status,
-        steps: tc.steps,
-        expected_result: tc.expected_result,
-        actual_result: tc.actual_result,
-        notes: tc.notes,
-        created_at: tc.created_at,
-        updated_at: tc.updated_at,
+        automated: tc.automated,
+        passed: tc.passed,
       })),
     }));
 
