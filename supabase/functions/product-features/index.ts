@@ -54,6 +54,7 @@ Deno.serve(async (req) => {
       status: feature.status,
       spec_section: feature.spec_section,
       related_user_stories: feature.related_user_stories || [],
+      implementing_features: feature.implementing_features || null,
       created_at: feature.created_at,
       updated_at: feature.updated_at,
       test_cases: (feature.test_cases || []).map((tc: Record<string, unknown>) => ({
