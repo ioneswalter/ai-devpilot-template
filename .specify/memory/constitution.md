@@ -493,18 +493,17 @@ ServiceBond operates as a **platform cooperative** - owned and governed by its s
 
 ### Membership Tiers
 
-| Tier | Investment | Effective Fee | Benefits |
-|------|------------|---------------|----------|
-| **Cooperative Member (First 300)** | $1,000 (one-time) | 10% | AI Business Coach, Voting Rights, First 300 only |
-| **Cooperative Member** | $1,500 (one-time) | 10% | AI Business Coach, Voting Rights |
-| **Free Member** | $0 | 20% | Basic platform access |
+| Tier | Investment | Transaction Fee | Benefits |
+|------|------------|-----------------|----------|
+| **Cooperative Member** | $1,500 (first 300 at $1,000) | 10% | AI Business Coach, Voting Rights, Certification Path, Equity |
+| **Associate** | $0 | 20% | Marketplace access, Job matching, Bid & provide services |
 
 ### Fee Structure
 
-- **All providers pay 20% platform fee** on completed jobs
-- **Cooperative members receive 10% monthly rebate** (effective 10% fee)
-- Rebates distributed monthly via Stripe Connect payouts
-- Rebate eligibility requires active membership status
+- **Cooperative Members pay 10% transaction fee** directly on completed jobs
+- **Associates pay 20% transaction fee** directly on completed jobs
+- Fees applied at the point of transaction—no monthly rebate complexity
+- Fee tier determined by provider's enrollment status (enrollment_fee_paid)
 
 ### AI Business Coach (Cooperative Members Only)
 
@@ -524,11 +523,11 @@ Exclusive 24/7 AI-powered business advisor providing:
 - **Platform policies** - Major policy changes require member input and approval
 - **Transparent operations** - Platform decisions and reasoning shared with all members
 
-### First 300 Member Program
+### First 300 Founding Member Discount
 
-- Limited to **first 300 members** at $1,000 membership investment
-- After 300 members, cooperative membership at $1,500 membership investment
-- First 300 members receive special recognition and early access to features
+- First **300 Cooperative Members** receive 33% discount: $1,000 instead of $1,500
+- After 300 members, Cooperative Membership investment is $1,500
+- Founding members receive special recognition
 - **Membership investment is a fee, not equity** - provides voting rights and platform benefits only
 
 ## Governance
