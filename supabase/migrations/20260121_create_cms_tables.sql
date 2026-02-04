@@ -81,10 +81,10 @@ CREATE INDEX IF NOT EXISTS idx_cms_global_config_key ON cms_global_config(config
 
 INSERT INTO cms_global_config (config_key, config_type, text_value, image_url, json_value)
 VALUES
-  ('site_name', 'text', 'ServiceBond', NULL, NULL),
+  ('site_name', 'text', 'OwnYourGig', NULL, NULL),
   ('tagline', 'text', 'Workers united. Customers satisfied. Platform shared.', NULL, NULL),
-  ('logo_url', 'image', NULL, '/images/servicebond-hero2.png', NULL),
-  ('footer_copyright', 'text', '© 2026 ServiceBond Platform Cooperative', NULL, NULL),
+  ('logo_url', 'image', NULL, '/images/ownyourgig-hero.png', NULL),
+  ('footer_copyright', 'text', '© 2026 OwnYourGig Platform Cooperative', NULL, NULL),
   ('nav_items', 'json', NULL, NULL, '[
     {"label": "Home", "path": "/", "exact": true},
     {"label": "Mission & Vision", "path": "/mission"},
@@ -112,7 +112,7 @@ ON CONFLICT (config_key) DO UPDATE SET
 INSERT INTO cms_pages (slug, title, description)
 VALUES (
   'home',
-  'ServiceBond - Workers united. Customers satisfied. Platform shared.',
+  'OwnYourGig — A Different Kind of Marketplace',
   'A platform cooperative marketplace connecting customers with verified service providers.'
 )
 ON CONFLICT (slug) DO UPDATE SET
@@ -143,14 +143,14 @@ BEGIN
   -- Hero content blocks
   INSERT INTO cms_content_blocks (section_id, content_key, content_type, text_value, "order")
   VALUES
-    (hero_section_id, 'main_description', 'text', 'ServiceBond is a platform cooperative governed by the workers who deliver excellent quality service to satisfy customers!', 0)
+    (hero_section_id, 'main_description', 'text', 'OwnYourGig is a platform cooperative governed by the workers who deliver excellent quality service to satisfy customers!', 0)
   ON CONFLICT (section_id, content_key) DO UPDATE SET
     text_value = EXCLUDED.text_value,
     updated_at = now();
 
   INSERT INTO cms_content_blocks (section_id, content_key, content_type, image_url, "order")
   VALUES
-    (hero_section_id, 'hero_image', 'image', '/images/servicebond-hero2.png', 1)
+    (hero_section_id, 'hero_image', 'image', '/images/ownyourgig-hero.png', 1)
   ON CONFLICT (section_id, content_key) DO UPDATE SET
     image_url = EXCLUDED.image_url,
     updated_at = now();

@@ -51,7 +51,13 @@
   Date: 2025-11-04
 -->
 
-# Service Bond Full-Stack Monorepo Constitution
+# OwnYourGig Full-Stack Monorepo Constitution
+
+## Project Overview
+
+**OwnYourGig** -- A Different Kind of Marketplace.
+
+Own your work. Own your future.
 
 ## Core Principles
 
@@ -362,7 +368,7 @@ New libraries require review:
 **MUST** follow this directory organization:
 
 ```
-service_bond/
+ownyourgig/
 ├── apps/
 │   ├── web/                    # React frontend
 │   │   ├── src/
@@ -489,7 +495,7 @@ service_bond/
 
 ## Cooperative Business Model
 
-ServiceBond operates as a **platform cooperative** - owned and governed by its service provider members.
+OwnYourGig operates as a **platform cooperative** - owned and governed by its service provider members.
 
 ### Membership Tiers
 
