@@ -87,15 +87,17 @@ VALUES
   ('footer_copyright', 'text', '© 2026 OwnYourGig Platform Cooperative', NULL, NULL),
   ('nav_items', 'json', NULL, NULL, '[
     {"label": "Home", "path": "/", "exact": true},
-    {"label": "Mission & Vision", "path": "/mission"},
-    {"label": "Membership", "path": "/membership"},
-    {"label": "Roadmap", "path": "/roadmap"},
-    {"label": "Architecture", "path": "/architecture"}
+    {"label": "Manifesto", "path": "/manifesto"},
+    {"label": "Membership", "path": "/membership"}
   ]'::jsonb),
   ('nav_items_logged_in', 'json', NULL, NULL, '[
     {"label": "My Jobs", "path": "/customer/dashboard"},
     {"label": "Find Work", "path": "/provider/dashboard"},
     {"label": "Post a Job", "path": "/customer/post-job"}
+  ]'::jsonb),
+  ('nav_items_cooperative', 'json', NULL, NULL, '[
+    {"label": "Roadmap", "path": "/roadmap"},
+    {"label": "Architecture", "path": "/architecture"}
   ]'::jsonb)
 ON CONFLICT (config_key) DO UPDATE SET
   config_type = EXCLUDED.config_type,
