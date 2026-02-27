@@ -1,10 +1,10 @@
 /**
  * Roadmap Admin Features API (FR-029)
  *
- * Admin-only endpoints for managing features and user stories
+ * Admin-only endpoints for managing features and journeys
  *
- * POST /roadmap-admin-features - Create a new feature or user story
- * PATCH /roadmap-admin-features - Update a feature or user story
+ * POST /roadmap-admin-features - Create a new feature or journey
+ * PATCH /roadmap-admin-features - Update a feature or journey
  * DELETE /roadmap-admin-features?feature_id=xxx - Delete a feature (only proposed/roadmap status)
  * POST /roadmap-admin-features/request-implementation - Request AI implementation
  */
@@ -45,8 +45,8 @@ async function isAdmin(supabase: ReturnType<typeof createClient>, userId: string
  * Generate next available feature code, recycling deleted codes
  * Finds the lowest available gap in the sequence (e.g., if FR-031 was deleted, reuse it)
  */
-function generateFeatureCode(existingCodes: string[], type: 'feature' | 'user_story'): string {
-  const prefix = type === 'user_story' ? 'US-' : 'FR-';
+function generateFeatureCode(existingCodes: string[], type: 'feature' | 'journey'): string {
+  const prefix = type === 'journey' ? 'J-' : 'FR-';
   const relevantCodes = existingCodes.filter(c => c.startsWith(prefix));
 
   // Extract all existing numbers and sort them
@@ -152,8 +152,8 @@ function parseTestCasesText(text: string): ParsedTestCase[] {
  * Format: TC-{feature_number}-{sequence} (e.g., TC-054-001 for FR-054)
  */
 function generateTestCaseCode(existingCodes: string[], featureCode: string): string {
-  // Extract feature number from feature code (FR-054 -> 054, US-006 -> 006)
-  const featureNumMatch = featureCode.match(/(?:FR|US)-(\d+)/);
+  // Extract feature number from feature code (FR-054 -> 054, J-006 -> 006)
+  const featureNumMatch = featureCode.match(/(?:FR|J)-(\d+)/);
   const featureNum = featureNumMatch ? featureNumMatch[1] : '000';
 
   const prefix = `TC-${featureNum}-`;
@@ -276,13 +276,13 @@ Deno.serve(async (req) => {
     const pathParts = url.pathname.split('/').filter(Boolean);
     const action = pathParts[pathParts.length - 1];
 
-    // POST - Create a new feature or user story
+    // POST - Create a new feature or journey
     if (req.method === 'POST' && action !== 'request-implementation') {
       const body = await req.json();
       const {
         title,
         description,
-        feature_type = 'functional_requirement', // or 'user_story'
+        feature_type = 'functional_requirement', // or 'journey'
         priority = 'P2',
         acceptance_criteria_text = '',
         acceptance_criteria = [], // Legacy support
@@ -314,7 +314,7 @@ Deno.serve(async (req) => {
       const existingCodes = (existingFeatures || []).map(f => f.feature_code);
       const featureCode = generateFeatureCode(
         existingCodes,
-        feature_type === 'user_story' ? 'user_story' : 'feature'
+        feature_type === 'journey' ? 'journey' : 'feature'
       );
 
       const now = new Date().toISOString();
