@@ -1,54 +1,36 @@
 <!--
   SYNC IMPACT REPORT
   ==================
-  Version Change: 1.0.0 → 2.0.0
-  Rationale: MAJOR version bump - Complete architecture redesign from Rails monolith
-             to full-stack TypeScript monorepo with React + Supabase
+  Version Change: 2.0.0 → 2.1.0
+  Rationale: MINOR version bump - Split Security from Performance, elevate Security
+             to NON-NEGOTIABLE. Driven by FR-062 RLS audit that found 12 tables
+             with RLS disabled in production.
 
-  Modified Principles (BREAKING CHANGES - All Replaced):
-  - REMOVED: I. Rails Convention Over Configuration
-  - REMOVED: II. Test-Driven Development (TDD) with RSpec
-  - REMOVED: III. Hotwire-First Frontend Architecture
-  - REMOVED: IV. Clean Code & Rails Style Guide Compliance
-  - REMOVED: V. Database Design & ActiveRecord Best Practices
-  - REMOVED: VI. Security & Performance Standards
+  Modified Principles:
+  - SPLIT: VIII. Security & Performance Engineering →
+    - VIII. Security Engineering (NON-NEGOTIABLE) — expanded with RLS verification,
+      data protection, dependency security, pre-launch checklist
+    - IX. Performance Engineering — unchanged content, renumbered
 
-  - NEW: I. Monorepo Architecture & Domain-Driven Design
-  - NEW: II. TypeScript-First Development (Strict Mode)
-  - NEW: III. API-First Design with Contract-Driven Development
-  - NEW: IV. Component-Driven Frontend Architecture
-  - NEW: V. Supabase Backend Platform Standards
-  - NEW: VI. Code Quality & SOLID Principles
-  - NEW: VII. Testing Standards & Coverage Requirements
-  - NEW: VIII. Security & Performance Engineering
+  Key Additions to Security (VIII):
+  - RLS verification (pnpm verify:rls) MUST pass before releases
+  - Migrations MUST be verified as applied, not just written
+  - Data protection requirements for user PII
+  - Dependency security scanning
+  - Pre-launch security checklist
 
-  Technology Stack Changes:
-  - Ruby/Rails → TypeScript/React
-  - Hotwire → React + TanStack Router
-  - RSpec → Vitest/Jest + Testing Library
-  - ActiveRecord → Prisma ORM
-  - Devise/Pundit → Supabase Auth
-  - Backend: Supabase Edge Functions + PostgreSQL
-  - Payments: Stripe integration
-  - Storage: Supabase Storage
-
-  Added Sections:
-  - Monorepo Structure
-  - Frontend Standards
-  - Backend & Integration Standards
+  NON-NEGOTIABLE Principles (3 total):
+  - II. TypeScript-First Development (Strict Mode)
+  - VI. Code Quality & SOLID Principles
+  - VIII. Security Engineering ← NEW
 
   Templates Requiring Updates:
-  ✅ plan-template.md - Constitution Check section compatible
-  ✅ spec-template.md - No changes required (technology-agnostic by design)
-  ✅ tasks-template.md - Update examples for TypeScript/React
-  ⚠️  CLAUDE.md - MUST update with new tech stack and examples
+  ✅ CLAUDE.md - Update Core Principles section (VIII → VIII + IX)
 
-  Follow-up TODOs:
-  - Update CLAUDE.md with TypeScript/React examples
-  - Create monorepo structure guidelines
-  - Define component library conventions
+  Date: 2026-03-02
 
-  Date: 2025-11-04
+  Previous Version History:
+  - 1.0.0 → 2.0.0 (2025-11-04): Complete architecture redesign from Rails to TypeScript/React
 -->
 
 # OwnYourGig Full-Stack Monorepo Constitution
@@ -267,14 +249,13 @@ quality standards prevent technical debt and improve long-term velocity.
 **Rationale**: Tests catch regressions, enable refactoring, and serve as
 documentation. 80% coverage ensures critical paths are validated.
 
-### VIII. Security & Performance Engineering
+### VIII. Security Engineering (NON-NEGOTIABLE)
 
-**MUST** implement security and performance from day one:
+**MUST** implement security from day one — security is a continuous process, not a one-time task:
 
-- **Security (OWASP Top 10 compliance)**:
+- **OWASP Top 10 compliance**:
   - **Never commit secrets**: `.env` files in `.gitignore`
   - Environment variables for all sensitive data (API keys, DB URLs)
-  - Supabase RLS policies on all tables (no unprotected data access)
   - Input validation on all API endpoints (Zod schemas)
   - SQL injection prevention (Prisma parameterized queries)
   - XSS prevention (React auto-escapes, sanitize user HTML)
@@ -283,6 +264,37 @@ documentation. 80% coverage ensures critical paths are validated.
   - Content Security Policy (CSP) headers
   - HTTPS only in production
   - Secure cookie settings (httpOnly, secure, sameSite)
+- **Row Level Security (RLS)**:
+  - RLS policies on ALL public schema tables — no exceptions
+  - New tables MUST have RLS enabled in the same migration that creates them
+  - RLS verification (`pnpm verify:rls`) MUST pass before any release
+  - Migrations MUST be verified as applied, not just written (FR-062 lesson)
+- **Data protection**:
+  - User PII (phone numbers, names, addresses) encrypted at rest (Supabase default)
+  - Minimal data collection — only store what's needed for functionality
+  - User data accessible only to the owning user via RLS policies
+  - Service role access restricted to Edge Functions (never client-side)
+- **Dependency security**:
+  - No libraries with known critical vulnerabilities
+  - `npm audit` or equivalent run before releases
+  - Library approval process enforced (see Approved Libraries section)
+- **Pre-launch security checklist**:
+  - [ ] All tables have RLS enabled (`pnpm verify:rls` passes)
+  - [ ] No secrets in codebase (`git log` audit)
+  - [ ] API endpoints validate all inputs (Zod schemas)
+  - [ ] Auth tokens verified on all protected routes
+  - [ ] Stripe webhook signatures verified
+  - [ ] CORS configured for production domain only
+  - [ ] Service role key never exposed to client
+
+**Rationale**: Security vulnerabilities are expensive to fix post-release.
+The FR-062 audit revealed 12 tables with RLS disabled in production despite
+migrations being written — verification must be automated and continuous.
+
+### IX. Performance Engineering
+
+**MUST** meet performance targets for production readiness:
+
 - **Performance targets**:
   - Initial page load: < 2 seconds (3G connection)
   - Time to Interactive (TTI): < 3 seconds
@@ -302,8 +314,7 @@ documentation. 80% coverage ensures critical paths are validated.
   - Structured logging in Edge Functions
   - Key metrics: API latency, error rate, user session length
 
-**Rationale**: Security vulnerabilities are expensive to fix post-release.
-Performance directly impacts user experience and business metrics.
+**Rationale**: Performance directly impacts user experience and business metrics.
 
 ## Technology Stack
 
@@ -582,4 +593,4 @@ Tracking** section of `plan.md`:
   choices
 - Component storybook (if implemented) for UI component documentation
 
-**Version**: 2.0.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2025-11-04
+**Version**: 2.1.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-03-02
