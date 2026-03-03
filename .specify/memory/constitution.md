@@ -1,35 +1,25 @@
 <!--
   SYNC IMPACT REPORT
   ==================
-  Version Change: 2.0.0 → 2.1.0
-  Rationale: MINOR version bump - Split Security from Performance, elevate Security
-             to NON-NEGOTIABLE. Driven by FR-062 RLS audit that found 12 tables
-             with RLS disabled in production.
+  Version Change: 2.1.0 → 2.2.0
+  Rationale: MINOR version bump - Added Deployment & Hosting subsection to
+             Technology Stack. Prevents context loss about infrastructure decisions
+             (DigitalOcean App Platform, not Vercel/Netlify).
 
-  Modified Principles:
-  - SPLIT: VIII. Security & Performance Engineering →
-    - VIII. Security Engineering (NON-NEGOTIABLE) — expanded with RLS verification,
-      data protection, dependency security, pre-launch checklist
-    - IX. Performance Engineering — unchanged content, renumbered
-
-  Key Additions to Security (VIII):
-  - RLS verification (pnpm verify:rls) MUST pass before releases
-  - Migrations MUST be verified as applied, not just written
-  - Data protection requirements for user PII
-  - Dependency security scanning
-  - Pre-launch security checklist
-
-  NON-NEGOTIABLE Principles (3 total):
-  - II. TypeScript-First Development (Strict Mode)
-  - VI. Code Quality & SOLID Principles
-  - VIII. Security Engineering ← NEW
+  Key Additions:
+  - New "Deployment & Hosting" subsection under Technology Stack
+  - Explicitly documents: DigitalOcean App Platform, Static Site deployment,
+    SYD1 region, Supabase-hosted backend
+  - Prevents AI assistants from suggesting alternative hosting platforms
 
   Templates Requiring Updates:
-  ✅ CLAUDE.md - Update Core Principles section (VIII → VIII + IX)
+  - CLAUDE.md - Add Deployment & Hosting info to Technology Stack section
 
-  Date: 2026-03-02
+  Date: 2026-03-04
 
   Previous Version History:
+  - 2.0.0 → 2.1.0 (2026-03-02): Split Security from Performance, elevate Security
+    to NON-NEGOTIABLE. Driven by FR-062 RLS audit.
   - 1.0.0 → 2.0.0 (2025-11-04): Complete architecture redesign from Rails to TypeScript/React
 -->
 
@@ -349,6 +339,13 @@ alternatives:
 - **Type Checking**: TypeScript compiler + tsc --noEmit in CI
 - **Environment**: dotenv for local, Supabase secrets for production
 
+### Deployment & Hosting
+- **Platform**: DigitalOcean App Platform (NOT Vercel, Netlify, or any other host)
+- **Frontend**: Deployed as a Static Site (Vite build output)
+- **Region**: SYD1 (Sydney, Australia)
+- **Backend**: Supabase-hosted (Edge Functions, database, auth, storage)
+- **Environment**: Development environment on DigitalOcean; Supabase manages all backend infrastructure
+
 ### Approved Libraries
 
 Pre-vetted for common needs:
@@ -593,4 +590,4 @@ Tracking** section of `plan.md`:
   choices
 - Component storybook (if implemented) for UI component documentation
 
-**Version**: 2.1.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-03-02
+**Version**: 2.2.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-03-04
