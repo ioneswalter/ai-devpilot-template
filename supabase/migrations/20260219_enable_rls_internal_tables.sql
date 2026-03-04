@@ -114,6 +114,6 @@ CREATE POLICY "Service role write access to feature_dependencies"
   TO service_role
   USING (true);
 
--- ============================================================================
--- NOTE: spatial_ref_sys is a PostGIS system table and should not be modified
--- ============================================================================
+-- NOTE: spatial_ref_sys is a PostGIS system table owned by supabase_admin.
+-- RLS cannot be enabled (ownership restriction). This is a Supabase Security Advisor
+-- false positive — the table contains only standard coordinate reference definitions.

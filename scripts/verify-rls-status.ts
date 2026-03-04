@@ -59,6 +59,8 @@ const EXPECTED_TABLES = [
 ];
 
 // System tables excluded from audit
+// spatial_ref_sys: PostGIS system table owned by supabase_admin — RLS cannot be enabled
+// (read-only coordinate reference data, no sensitive content; Supabase Security Advisor false positive)
 const EXCLUDED_TABLES = [
   'spatial_ref_sys',
   '_prisma_migrations',
