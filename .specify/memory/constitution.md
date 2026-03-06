@@ -27,7 +27,7 @@
 
 ## Project Overview
 
-**OwnYourGig** -- A Different Kind of Marketplace.
+**OwnYourGig** -- The Gig Platform That's Actually On Your Side.
 
 Own your work. Own your future.
 

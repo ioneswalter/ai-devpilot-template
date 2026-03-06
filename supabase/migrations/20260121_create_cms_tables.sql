@@ -114,7 +114,7 @@ ON CONFLICT (config_key) DO UPDATE SET
 INSERT INTO cms_pages (slug, title, description)
 VALUES (
   'home',
-  'OwnYourGig — A Different Kind of Marketplace',
+  'OwnYourGig — The Gig Platform That''s Actually On Your Side',
   'A platform cooperative marketplace connecting customers with verified service providers.'
 )
 ON CONFLICT (slug) DO UPDATE SET
@@ -135,7 +135,7 @@ BEGIN
 
   -- Hero Section
   INSERT INTO cms_sections (page_id, section_key, title, "order")
-  VALUES (home_page_id, 'hero', 'A Different Kind of Marketplace', 0)
+  VALUES (home_page_id, 'hero', 'The Gig Platform That''s Actually On Your Side', 0)
   ON CONFLICT (page_id, section_key) DO UPDATE SET
     title = EXCLUDED.title,
     "order" = EXCLUDED."order",
