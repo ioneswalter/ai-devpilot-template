@@ -22,10 +22,10 @@ export interface ConstitutionData {
   principles: Principle[];
   techStack: TechStackSection[];
   monorepoStructure: string;
-  cooperativePrice: string;
+  memberPrice: string;
   foundingPrice: string;
   foundingCount: string;
-  cooperativeFee: string;
+  memberFee: string;
   associateFee: string;
   version: string;
 }
@@ -112,10 +112,10 @@ function parseBusinessModelData(content: string) {
   const assocFeeMatch = section.match(/Associates?\s+pay\s+(\d+)%/i);
 
   return {
-    cooperativePrice: priceMatch ? `$${priceMatch[1]}` : '$1,500',
+    memberPrice: priceMatch ? `$${priceMatch[1]}` : '$1,500',
     foundingPrice: priceMatch ? `$${priceMatch[3]}` : '$1,000',
     foundingCount: priceMatch ? priceMatch[2] : '300',
-    cooperativeFee: coopFeeMatch ? `${coopFeeMatch[1]}%` : '10%',
+    memberFee: coopFeeMatch ? `${coopFeeMatch[1]}%` : '10%',
     associateFee: assocFeeMatch ? `${assocFeeMatch[1]}%` : '20%',
   };
 }
