@@ -501,25 +501,25 @@ ownyourgig/
   - Staging migrations tested before production
   - Zero-downtime patterns: add before remove, backfill data
 
-## Cooperative Business Model
+## Member-Governed Business Model
 
-OwnYourGig operates as a **platform cooperative** - owned and governed by its service provider members.
+OwnYourGig operates as a **member-governed platform** - owned and governed by its service provider members.
 
 ### Membership Tiers
 
 | Tier | Investment | Transaction Fee | Benefits |
 |------|------------|-----------------|----------|
-| **Cooperative Member** | $1,500 (first 300 at $1,000) | 10% | AI Business Coach, Voting Rights, Certification Path, Equity |
+| **Member** | $1,500 (first 300 at $1,000) | 10% | AI Business Coach, Voting Rights, Certification Path, Equity |
 | **Associate** | $0 | 20% | Marketplace access, Job matching, Bid & provide services |
 
 ### Fee Structure
 
-- **Cooperative Members pay 10% transaction fee** directly on completed jobs
+- **Members pay 10% transaction fee** directly on completed jobs
 - **Associates pay 20% transaction fee** directly on completed jobs
 - Fees applied at the point of transaction—no monthly rebate complexity
 - Fee tier determined by provider's enrollment status (enrollment_fee_paid)
 
-### AI Business Coach (Cooperative Members Only)
+### AI Business Coach (Members Only)
 
 Exclusive 24/7 AI-powered business advisor providing:
 
@@ -530,17 +530,17 @@ Exclusive 24/7 AI-powered business advisor providing:
 
 ### Democratic Governance
 
-**Important**: Cooperative membership provides **voting rights only** - members do **NOT** receive share equity or ownership stakes in the cooperative. The investment is a membership fee that provides platform benefits and voting participation.
+**Important**: Membership provides **voting rights only** - members do **NOT** receive share equity or ownership stakes in the platform. The investment is a membership fee that provides platform benefits and voting participation.
 
-- **One member, one vote** - Cooperative members have equal voting rights on roadmap and platform features
+- **One member, one vote** - Members have equal voting rights on roadmap and platform features
 - **Feature prioritization** - Members vote on which features and improvements to build next
 - **Platform policies** - Major policy changes require member input and approval
 - **Transparent operations** - Platform decisions and reasoning shared with all members
 
 ### First 300 Founding Member Discount
 
-- First **300 Cooperative Members** receive 33% discount: $1,000 instead of $1,500
-- After 300 members, Cooperative Membership investment is $1,500
+- First **300 Members** receive 33% discount: $1,000 instead of $1,500
+- After 300 members, Membership investment is $1,500
 - Founding members receive special recognition
 - **Membership investment is a fee, not equity** - provides voting rights and platform benefits only
 
