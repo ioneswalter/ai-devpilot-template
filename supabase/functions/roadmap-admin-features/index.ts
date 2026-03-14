@@ -603,8 +603,8 @@ Update the roadmap when complete.
         );
       }
 
-      // Only allow deleting features with status 'proposed' or 'roadmap'
-      if (!['proposed', 'roadmap'].includes(existingFeature.status)) {
+      // Only allow deleting features with status 'proposed' or 'approved'
+      if (!['proposed', 'approved'].includes(existingFeature.status)) {
         return new Response(
           JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Cannot delete features that are in development or released' } }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
