@@ -19,13 +19,13 @@ $$ LANGUAGE plpgsql;
 
 -- 3. Create invoices table
 CREATE TABLE IF NOT EXISTS invoices (
-  id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id                    TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
   invoice_number        TEXT NOT NULL UNIQUE,
-  escrow_payment_id     UUID UNIQUE REFERENCES escrow_payments(id),
-  additional_escrow_id  UUID UNIQUE REFERENCES additional_work_escrows(id),
-  provider_id           UUID NOT NULL REFERENCES service_providers(id),
-  customer_id           UUID NOT NULL REFERENCES customers(id),
-  job_id                UUID NOT NULL,
+  escrow_payment_id     TEXT UNIQUE REFERENCES escrow_payments(id),
+  additional_escrow_id  TEXT UNIQUE REFERENCES additional_work_escrows(id),
+  provider_id           TEXT NOT NULL REFERENCES service_providers(id),
+  customer_id           TEXT NOT NULL REFERENCES customers(id),
+  job_id                TEXT NOT NULL,
   service_cost          INT NOT NULL,
   platform_fee          INT NOT NULL,
   platform_fee_rate     TEXT NOT NULL,
@@ -63,7 +63,7 @@ CREATE POLICY invoices_provider_select ON invoices
   FOR SELECT
   USING (
     provider_id IN (
-      SELECT id FROM service_providers WHERE user_id = auth.uid()
+      SELECT id FROM service_providers WHERE user_id = auth.uid()::TEXT
     )
   );
 
@@ -99,7 +99,7 @@ CREATE POLICY invoices_storage_provider_select ON storage.objects
   USING (
     bucket_id = 'invoices'
     AND (storage.foldername(name))[1] IN (
-      SELECT id::TEXT FROM service_providers WHERE user_id = auth.uid()
+      SELECT id FROM service_providers WHERE user_id = auth.uid()::TEXT
     )
   );
 
