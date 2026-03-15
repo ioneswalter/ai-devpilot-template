@@ -286,6 +286,7 @@ Deno.serve(async (req) => {
         priority = 'P2',
         acceptance_criteria_text = '',
         acceptance_criteria = [], // Legacy support
+        category = null,
         spec_section = 'New Features',
         related_user_stories = [],
         test_cases_text = '',
@@ -329,6 +330,7 @@ Deno.serve(async (req) => {
           priority,
           status: 'proposed',
           acceptance_criteria: parsedCriteria,
+          category,
           spec_section,
           related_user_stories,
           spec_branch: '001-coop-marketplace-platform',
@@ -487,7 +489,7 @@ Update the roadmap when complete.
       // Only allow updating certain fields
       const allowedFields = [
         'title', 'description', 'feature_type', 'priority', 'status', 'acceptance_criteria',
-        'spec_section', 'related_user_stories', 'implementing_features'
+        'category', 'spec_section', 'related_user_stories', 'implementing_features'
       ];
 
       const filteredUpdates: Record<string, unknown> = {};

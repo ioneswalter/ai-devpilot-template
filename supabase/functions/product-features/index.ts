@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
       feature_type: feature.feature_type,
       priority: feature.priority,
       status: feature.status,
+      category: feature.category || null,
       spec_section: feature.spec_section,
       related_user_stories: feature.related_user_stories || [],
       implementing_features: feature.implementing_features || null,
