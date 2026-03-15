@@ -497,6 +497,74 @@ Update the roadmap when complete.
         }
       }
 
+      // Validate status transitions if status is changing
+      if ('status' in filteredUpdates) {
+        const newStatus = filteredUpdates.status as string;
+        const statusOrder = ['proposed', 'approved', 'in_development', 'released'];
+
+        // Get current feature to check transition
+        const { data: currentFeature, error: fetchError } = await supabase
+          .from('product_features')
+          .select('status, acceptance_criteria, id')
+          .eq('id', feature_id)
+          .single();
+
+        if (fetchError || !currentFeature) {
+          return new Response(
+            JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Feature not found' } }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const fromIndex = statusOrder.indexOf(currentFeature.status);
+        const toIndex = statusOrder.indexOf(newStatus);
+
+        // Forward transitions must be exactly one step
+        if (toIndex > fromIndex && toIndex !== fromIndex + 1) {
+          return new Response(
+            JSON.stringify({ error: { code: 'INVALID_TRANSITION', message: `Cannot skip from ${currentFeature.status} to ${newStatus}. Transition one step at a time.` } }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validate requirements for forward transitions
+        if (toIndex > fromIndex) {
+          if (newStatus === 'released') {
+            // Must have at least 1 test case, all must pass
+            const { data: testCases } = await supabase
+              .from('test_cases')
+              .select('passed')
+              .eq('feature_id', currentFeature.id);
+
+            if (!testCases || testCases.length === 0) {
+              return new Response(
+                JSON.stringify({ error: { code: 'MISSING_TESTS', message: 'Cannot release: no test cases defined. Add test cases first.' } }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+
+            const failedOrNotRun = testCases.filter(tc => tc.passed !== true);
+            if (failedOrNotRun.length > 0) {
+              return new Response(
+                JSON.stringify({ error: { code: 'TESTS_NOT_PASSED', message: `Cannot release: ${failedOrNotRun.length} test(s) not passed. All tests must pass before releasing.` } }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+
+          if (newStatus === 'approved' || newStatus === 'in_development') {
+            // Must have acceptance criteria
+            const criteria = currentFeature.acceptance_criteria as string[] | null;
+            if (!criteria || criteria.length === 0) {
+              return new Response(
+                JSON.stringify({ error: { code: 'MISSING_CRITERIA', message: `Cannot move to ${newStatus}: no acceptance criteria defined.` } }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+        }
+      }
+
       // Allow update even if only test_cases_text is provided
       const hasTestCases = test_cases_text && test_cases_text.trim();
       if (Object.keys(filteredUpdates).length === 0 && !hasTestCases) {
