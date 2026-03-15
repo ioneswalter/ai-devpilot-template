@@ -89,5 +89,10 @@ CREATE POLICY "Anyone can read admin_users" ON admin_users
   FOR SELECT USING (true);
 
 -- Add average_rating column to product_features for caching
-ALTER TABLE product_features ADD COLUMN IF NOT EXISTS average_rating DECIMAL(3,2);
-ALTER TABLE product_features ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_features') THEN
+    ALTER TABLE product_features ADD COLUMN IF NOT EXISTS average_rating DECIMAL(3,2);
+    ALTER TABLE product_features ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 0;
+  END IF;
+END $$;

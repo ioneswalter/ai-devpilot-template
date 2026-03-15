@@ -27,12 +27,14 @@
 -- Add RLS policy for notifications DELETE (needed for clearAll feature)
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE policyname = 'Users delete own notifications'
-  ) THEN
-    CREATE POLICY "Users delete own notifications"
-    ON notifications FOR DELETE
-    TO authenticated
-    USING (recipient_id = auth.uid());
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notifications') THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_policies WHERE policyname = 'Users delete own notifications'
+    ) THEN
+      CREATE POLICY "Users delete own notifications"
+      ON notifications FOR DELETE
+      TO authenticated
+      USING (recipient_id = auth.uid());
+    END IF;
   END IF;
 END $$;

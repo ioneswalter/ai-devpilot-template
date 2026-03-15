@@ -13,22 +13,56 @@
 -- ============================================================================
 
 -- Core business tables (originally in 20250115000004_enable_rls.sql)
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE service_providers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE job_requests ENABLE ROW LEVEL SECURITY;
-ALTER TABLE job_matches ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bids ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bid_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE job_executions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE execution_messages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE escrow_payments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE membership_enrollments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mediation_cases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'customers') THEN
+    ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'service_providers') THEN
+    ALTER TABLE service_providers ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'job_requests') THEN
+    ALTER TABLE job_requests ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'job_matches') THEN
+    ALTER TABLE job_matches ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'bids') THEN
+    ALTER TABLE bids ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'bid_messages') THEN
+    ALTER TABLE bid_messages ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'job_executions') THEN
+    ALTER TABLE job_executions ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'execution_messages') THEN
+    ALTER TABLE execution_messages ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'escrow_payments') THEN
+    ALTER TABLE escrow_payments ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'membership_enrollments') THEN
+    ALTER TABLE membership_enrollments ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'reviews') THEN
+    ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'mediation_cases') THEN
+    ALTER TABLE mediation_cases ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notifications') THEN
+    ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- FR-014: Issue handling
-ALTER TABLE additional_work_escrows ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'additional_work_escrows') THEN
+    ALTER TABLE additional_work_escrows ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- CMS tables (originally in 20260121_create_cms_tables.sql)
 ALTER TABLE cms_pages ENABLE ROW LEVEL SECURITY;
@@ -42,49 +76,78 @@ ALTER TABLE feature_ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 
 -- Internal/tooling tables (originally in 20260219_enable_rls_internal_tables.sql)
-ALTER TABLE service_categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE product_features ENABLE ROW LEVEL SECURITY;
-ALTER TABLE test_cases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE releases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE release_features ENABLE ROW LEVEL SECURITY;
-ALTER TABLE test_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE feature_dependencies ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'service_categories') THEN
+    ALTER TABLE service_categories ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_features') THEN
+    ALTER TABLE product_features ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'test_cases') THEN
+    ALTER TABLE test_cases ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'releases') THEN
+    ALTER TABLE releases ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'release_features') THEN
+    ALTER TABLE release_features ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'test_runs') THEN
+    ALTER TABLE test_runs ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'feature_dependencies') THEN
+    ALTER TABLE feature_dependencies ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- Marketplace tables (originally in 20260216/20260217 migrations)
-ALTER TABLE marketplace_posts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE marketplace_bids ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'marketplace_posts') THEN
+    ALTER TABLE marketplace_posts ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'marketplace_bids') THEN
+    ALTER TABLE marketplace_bids ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- ============================================================================
 -- PHASE 2: Recreate additional_work_escrows policies
 -- (from 20260206_fr014_issue_handling.sql — confirmed missing in production)
 -- ============================================================================
 
-DROP POLICY IF EXISTS "Customers can view own additional escrows" ON additional_work_escrows;
-CREATE POLICY "Customers can view own additional escrows"
-ON additional_work_escrows FOR SELECT
-TO authenticated
-USING (
-  customer_id IN (
-    SELECT id FROM customers WHERE user_id = auth.uid()::text
-  )
-);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'additional_work_escrows') THEN
+    DROP POLICY IF EXISTS "Customers can view own additional escrows" ON additional_work_escrows;
+    CREATE POLICY "Customers can view own additional escrows"
+    ON additional_work_escrows FOR SELECT
+    TO authenticated
+    USING (
+      customer_id IN (
+        SELECT id FROM customers WHERE user_id = auth.uid()::text
+      )
+    );
 
-DROP POLICY IF EXISTS "Providers can view own additional escrows" ON additional_work_escrows;
-CREATE POLICY "Providers can view own additional escrows"
-ON additional_work_escrows FOR SELECT
-TO authenticated
-USING (
-  provider_id IN (
-    SELECT id FROM service_providers WHERE user_id = auth.uid()::text
-  )
-);
+    DROP POLICY IF EXISTS "Providers can view own additional escrows" ON additional_work_escrows;
+    CREATE POLICY "Providers can view own additional escrows"
+    ON additional_work_escrows FOR SELECT
+    TO authenticated
+    USING (
+      provider_id IN (
+        SELECT id FROM service_providers WHERE user_id = auth.uid()::text
+      )
+    );
 
-DROP POLICY IF EXISTS "Service role full access to additional escrows" ON additional_work_escrows;
-CREATE POLICY "Service role full access to additional escrows"
-ON additional_work_escrows FOR ALL
-TO service_role
-USING (true)
-WITH CHECK (true);
+    DROP POLICY IF EXISTS "Service role full access to additional escrows" ON additional_work_escrows;
+    CREATE POLICY "Service role full access to additional escrows"
+    ON additional_work_escrows FOR ALL
+    TO service_role
+    USING (true)
+    WITH CHECK (true);
+  END IF;
+END $$;
 
 -- ============================================================================
 -- PHASE 3: Recreate CMS table policies
@@ -141,105 +204,127 @@ CREATE POLICY "Allow service role full access to cms_global_config"
 -- ============================================================================
 
 -- service_categories
-DROP POLICY IF EXISTS "Public read access to service_categories" ON service_categories;
-CREATE POLICY "Public read access to service_categories"
-  ON service_categories FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'service_categories') THEN
+    DROP POLICY IF EXISTS "Public read access to service_categories" ON service_categories;
+    CREATE POLICY "Public read access to service_categories"
+      ON service_categories FOR SELECT
+      USING (true);
 
-DROP POLICY IF EXISTS "Service role write access to service_categories" ON service_categories;
-CREATE POLICY "Service role write access to service_categories"
-  ON service_categories FOR ALL
-  TO service_role
-  USING (true);
+    DROP POLICY IF EXISTS "Service role write access to service_categories" ON service_categories;
+    CREATE POLICY "Service role write access to service_categories"
+      ON service_categories FOR ALL
+      TO service_role
+      USING (true);
+  END IF;
+END $$;
 
 -- product_features
-DROP POLICY IF EXISTS "Public read access to product_features" ON product_features;
-CREATE POLICY "Public read access to product_features"
-  ON product_features FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_features') THEN
+    DROP POLICY IF EXISTS "Public read access to product_features" ON product_features;
+    CREATE POLICY "Public read access to product_features"
+      ON product_features FOR SELECT
+      USING (true);
 
-DROP POLICY IF EXISTS "Service role write access to product_features" ON product_features;
-CREATE POLICY "Service role write access to product_features"
-  ON product_features FOR ALL
-  TO service_role
-  USING (true);
+    DROP POLICY IF EXISTS "Service role write access to product_features" ON product_features;
+    CREATE POLICY "Service role write access to product_features"
+      ON product_features FOR ALL
+      TO service_role
+      USING (true);
+  END IF;
+END $$;
 
 -- test_cases
-DROP POLICY IF EXISTS "Public read access to test_cases" ON test_cases;
-CREATE POLICY "Public read access to test_cases"
-  ON test_cases FOR SELECT
-  USING (true);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'test_cases') THEN
+    DROP POLICY IF EXISTS "Public read access to test_cases" ON test_cases;
+    CREATE POLICY "Public read access to test_cases"
+      ON test_cases FOR SELECT
+      USING (true);
 
-DROP POLICY IF EXISTS "Service role write access to test_cases" ON test_cases;
-CREATE POLICY "Service role write access to test_cases"
-  ON test_cases FOR ALL
-  TO service_role
-  USING (true);
+    DROP POLICY IF EXISTS "Service role write access to test_cases" ON test_cases;
+    CREATE POLICY "Service role write access to test_cases"
+      ON test_cases FOR ALL
+      TO service_role
+      USING (true);
+  END IF;
+END $$;
 
--- releases
-DROP POLICY IF EXISTS "Public read access to releases" ON releases;
-CREATE POLICY "Public read access to releases"
-  ON releases FOR SELECT
-  USING (true);
+-- releases, release_features, test_runs, feature_dependencies
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'releases') THEN
+    DROP POLICY IF EXISTS "Public read access to releases" ON releases;
+    CREATE POLICY "Public read access to releases"
+      ON releases FOR SELECT USING (true);
+    DROP POLICY IF EXISTS "Service role write access to releases" ON releases;
+    CREATE POLICY "Service role write access to releases"
+      ON releases FOR ALL TO service_role USING (true);
+  END IF;
 
-DROP POLICY IF EXISTS "Service role write access to releases" ON releases;
-CREATE POLICY "Service role write access to releases"
-  ON releases FOR ALL
-  TO service_role
-  USING (true);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'release_features') THEN
+    DROP POLICY IF EXISTS "Public read access to release_features" ON release_features;
+    CREATE POLICY "Public read access to release_features"
+      ON release_features FOR SELECT USING (true);
+    DROP POLICY IF EXISTS "Service role write access to release_features" ON release_features;
+    CREATE POLICY "Service role write access to release_features"
+      ON release_features FOR ALL TO service_role USING (true);
+  END IF;
 
--- release_features
-DROP POLICY IF EXISTS "Public read access to release_features" ON release_features;
-CREATE POLICY "Public read access to release_features"
-  ON release_features FOR SELECT
-  USING (true);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'test_runs') THEN
+    DROP POLICY IF EXISTS "Public read access to test_runs" ON test_runs;
+    CREATE POLICY "Public read access to test_runs"
+      ON test_runs FOR SELECT USING (true);
+    DROP POLICY IF EXISTS "Service role write access to test_runs" ON test_runs;
+    CREATE POLICY "Service role write access to test_runs"
+      ON test_runs FOR ALL TO service_role USING (true);
+  END IF;
 
-DROP POLICY IF EXISTS "Service role write access to release_features" ON release_features;
-CREATE POLICY "Service role write access to release_features"
-  ON release_features FOR ALL
-  TO service_role
-  USING (true);
-
--- test_runs
-DROP POLICY IF EXISTS "Public read access to test_runs" ON test_runs;
-CREATE POLICY "Public read access to test_runs"
-  ON test_runs FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS "Service role write access to test_runs" ON test_runs;
-CREATE POLICY "Service role write access to test_runs"
-  ON test_runs FOR ALL
-  TO service_role
-  USING (true);
-
--- feature_dependencies
-DROP POLICY IF EXISTS "Public read access to feature_dependencies" ON feature_dependencies;
-CREATE POLICY "Public read access to feature_dependencies"
-  ON feature_dependencies FOR SELECT
-  USING (true);
-
-DROP POLICY IF EXISTS "Service role write access to feature_dependencies" ON feature_dependencies;
-CREATE POLICY "Service role write access to feature_dependencies"
-  ON feature_dependencies FOR ALL
-  TO service_role
-  USING (true);
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'feature_dependencies') THEN
+    DROP POLICY IF EXISTS "Public read access to feature_dependencies" ON feature_dependencies;
+    CREATE POLICY "Public read access to feature_dependencies"
+      ON feature_dependencies FOR SELECT USING (true);
+    DROP POLICY IF EXISTS "Service role write access to feature_dependencies" ON feature_dependencies;
+    CREATE POLICY "Service role write access to feature_dependencies"
+      ON feature_dependencies FOR ALL TO service_role USING (true);
+  END IF;
+END $$;
 
 -- ============================================================================
 -- PHASE 5: Add explicit service_role bypass for marketplace tables
 -- (defense-in-depth, consistent with other tables)
 -- ============================================================================
 
-DROP POLICY IF EXISTS "Service role full access to marketplace_posts" ON marketplace_posts;
-CREATE POLICY "Service role full access to marketplace_posts"
-ON marketplace_posts FOR ALL
-TO service_role
-USING (true);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'marketplace_posts') THEN
+    DROP POLICY IF EXISTS "Service role full access to marketplace_posts" ON marketplace_posts;
+    CREATE POLICY "Service role full access to marketplace_posts"
+    ON marketplace_posts FOR ALL
+    TO service_role
+    USING (true);
+  END IF;
+END $$;
 
-DROP POLICY IF EXISTS "Service role full access to marketplace_bids" ON marketplace_bids;
-CREATE POLICY "Service role full access to marketplace_bids"
-ON marketplace_bids FOR ALL
-TO service_role
-USING (true);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'marketplace_bids') THEN
+    DROP POLICY IF EXISTS "Service role full access to marketplace_bids" ON marketplace_bids;
+    CREATE POLICY "Service role full access to marketplace_bids"
+    ON marketplace_bids FOR ALL
+    TO service_role
+    USING (true);
+  END IF;
+END $$;
 
 -- Documentation
-COMMENT ON TABLE additional_work_escrows IS 'FR-014: Stores escrow payments for additional work. FR-062: RLS re-enabled and policies recreated.';
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'additional_work_escrows') THEN
+    COMMENT ON TABLE additional_work_escrows IS 'FR-014: Stores escrow payments for additional work. FR-062: RLS re-enabled and policies recreated.';
+  END IF;
+END $$;

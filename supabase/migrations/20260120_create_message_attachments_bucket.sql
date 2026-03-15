@@ -15,20 +15,27 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = 5242880,
   allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']::text[];
 
--- Policy: Authenticated users can upload files
-CREATE POLICY IF NOT EXISTS "Authenticated users can upload message attachments"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'message-attachments');
+-- Storage policies
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Authenticated users can upload message attachments') THEN
+    CREATE POLICY "Authenticated users can upload message attachments"
+    ON storage.objects FOR INSERT
+    TO authenticated
+    WITH CHECK (bucket_id = 'message-attachments');
+  END IF;
 
--- Policy: Anyone can view files (public bucket)
-CREATE POLICY IF NOT EXISTS "Anyone can view message attachments"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'message-attachments');
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Anyone can view message attachments') THEN
+    CREATE POLICY "Anyone can view message attachments"
+    ON storage.objects FOR SELECT
+    TO public
+    USING (bucket_id = 'message-attachments');
+  END IF;
 
--- Policy: Users can delete their own uploads (based on path containing their user id)
-CREATE POLICY IF NOT EXISTS "Users can delete their own message attachments"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'message-attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can delete their own message attachments') THEN
+    CREATE POLICY "Users can delete their own message attachments"
+    ON storage.objects FOR DELETE
+    TO authenticated
+    USING (bucket_id = 'message-attachments' AND auth.uid()::text = (storage.foldername(name))[1]);
+  END IF;
+END $$;
