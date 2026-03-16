@@ -10,12 +10,46 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { z } from 'https://esm.sh/zod@3.22.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
 };
+
+const CreateFeatureSchema = z.object({
+  title: z.string().min(1, 'title is required'),
+  description: z.string().min(1, 'description is required'),
+  feature_type: z.string().optional().default('functional_requirement'),
+  priority: z.string().optional().default('P2'),
+  acceptance_criteria_text: z.string().optional().default(''),
+  acceptance_criteria: z.array(z.string()).optional().default([]),
+  category: z.string().nullable().optional().default(null),
+  spec_section: z.string().optional().default('New Features'),
+  related_user_stories: z.array(z.string()).optional().default([]),
+  test_cases_text: z.string().optional().default(''),
+});
+
+const RequestImplementationSchema = z.object({
+  feature_id: z.string().uuid('feature_id is required'),
+  implementation_notes: z.string().optional(),
+});
+
+const UpdateFeatureSchema = z.object({
+  feature_id: z.string().uuid('feature_id is required'),
+  test_cases_text: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  feature_type: z.string().optional(),
+  priority: z.string().optional(),
+  status: z.string().optional(),
+  acceptance_criteria: z.array(z.string()).optional(),
+  category: z.string().nullable().optional(),
+  spec_section: z.string().optional(),
+  related_user_stories: z.array(z.string()).optional(),
+  implementing_features: z.array(z.string()).optional(),
+});
 
 async function isAdmin(supabase: ReturnType<typeof createClient>, userId: string, userEmail: string | undefined): Promise<boolean> {
   // Check by user_id first (more reliable for phone auth users)
@@ -278,26 +312,28 @@ Deno.serve(async (req) => {
 
     // POST - Create a new feature or journey
     if (req.method === 'POST' && action !== 'request-implementation') {
-      const body = await req.json();
-      const {
-        title,
-        description,
-        feature_type = 'functional_requirement', // or 'journey'
-        priority = 'P2',
-        acceptance_criteria_text = '',
-        acceptance_criteria = [], // Legacy support
-        category = null,
-        spec_section = 'New Features',
-        related_user_stories = [],
-        test_cases_text = '',
-      } = body;
+      const rawBody = await req.json();
+      const validation = CreateFeatureSchema.safeParse(rawBody);
 
-      if (!title || !description) {
+      if (!validation.success) {
         return new Response(
-          JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'title and description are required' } }),
+          JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: validation.error.errors[0].message } }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      const {
+        title,
+        description,
+        feature_type,
+        priority,
+        acceptance_criteria_text,
+        acceptance_criteria,
+        category,
+        spec_section,
+        related_user_stories,
+        test_cases_text,
+      } = validation.data;
 
       // Parse acceptance criteria from text, or use provided array
       let parsedCriteria: string[] = acceptance_criteria;
@@ -404,15 +440,17 @@ Deno.serve(async (req) => {
 
     // POST /request-implementation - Request AI to implement a feature
     if (req.method === 'POST' && action === 'request-implementation') {
-      const body = await req.json();
-      const { feature_id, implementation_notes } = body;
+      const rawBody = await req.json();
+      const validation = RequestImplementationSchema.safeParse(rawBody);
 
-      if (!feature_id) {
+      if (!validation.success) {
         return new Response(
-          JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'feature_id is required' } }),
+          JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: validation.error.errors[0].message } }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      const { feature_id, implementation_notes } = validation.data;
 
       // Get feature details
       const { data: feature, error: featureError } = await supabase
@@ -476,15 +514,17 @@ Update the roadmap when complete.
 
     // PATCH - Update a feature
     if (req.method === 'PATCH') {
-      const body = await req.json();
-      const { feature_id, test_cases_text, ...updates } = body;
+      const rawBody = await req.json();
+      const validation = UpdateFeatureSchema.safeParse(rawBody);
 
-      if (!feature_id) {
+      if (!validation.success) {
         return new Response(
-          JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'feature_id is required' } }),
+          JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: validation.error.errors[0].message } }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      const { feature_id, test_cases_text, ...updates } = validation.data;
 
       // Only allow updating certain fields
       const allowedFields = [
