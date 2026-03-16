@@ -11,3 +11,14 @@ DO $$ BEGIN
     CREATE POLICY "Service role full access to feature_ratings" ON feature_ratings FOR ALL TO service_role USING (true) WITH CHECK (true);
   END IF;
 END $$;
+
+-- Fix: Add database-level defaults for id and updated_at columns
+-- Prisma's @default(uuid()) and @updatedAt only work at the Prisma client level.
+-- Edge functions use the Supabase JS client, which bypasses Prisma, so these
+-- columns need database-level defaults to avoid NOT NULL violations on insert.
+
+ALTER TABLE feature_comments ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE feature_comments ALTER COLUMN updated_at SET DEFAULT now();
+
+ALTER TABLE feature_ratings ALTER COLUMN id SET DEFAULT gen_random_uuid();
+ALTER TABLE feature_ratings ALTER COLUMN updated_at SET DEFAULT now();
