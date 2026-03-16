@@ -56,6 +56,16 @@ const EXPECTED_TABLES = [
   'marketplace_bids',
   // FR-063: Rate limiting
   'rate_limit_log',
+  // FR-083: Currency localisation
+  'country_currency_config',
+  // FR-003: Ideation chat
+  'ideation_conversations',
+  'conversation_messages',
+  // FR-020: Invoices
+  'invoices',
+  // FR-087: Provider verification
+  'provider_certifications',
+  'provider_documents',
 ];
 
 // System tables excluded from audit
@@ -69,7 +79,11 @@ const EXCLUDED_TABLES = [
 
 // Tables that customers/providers access their own data on via authenticated policies
 // These must have at least one authenticated or public SELECT policy
-const USER_DATA_TABLES = ['additional_work_escrows'];
+const USER_DATA_TABLES = [
+  'additional_work_escrows',
+  'provider_certifications',
+  'provider_documents',
+];
 
 // Tables with public SELECT access (CMS, roadmap, reference data)
 const PUBLIC_READ_TABLES = [
@@ -89,6 +103,10 @@ const PUBLIC_READ_TABLES = [
   'admin_users',
   'marketplace_posts',
   'marketplace_bids',
+  'country_currency_config',
+  'ideation_conversations',
+  'conversation_messages',
+  'invoices',
 ];
 
 // Tables that must have service_role access (for Edge Functions)
@@ -117,6 +135,10 @@ const SERVICE_ROLE_TABLES = [
   'marketplace_posts',
   'marketplace_bids',
   'rate_limit_log',
+  'country_currency_config',
+  'provider_certifications',
+  'provider_documents',
+  'invoices',
 ];
 
 interface TableInfo {
