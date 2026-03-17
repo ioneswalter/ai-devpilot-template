@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { SendIcon, XIcon, LoaderIcon, CheckCircleIcon } from './icons';
 import { DeduplicationWarning } from './DeduplicationWarning';
+import { ProposalFormFields } from './ProposalFormFields';
 import { devpilotApi } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase-client';
 import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
@@ -67,7 +68,6 @@ export function ProposalPanel({
     setForms(newForms);
     setActiveIndex(0);
 
-    // Check which proposals were already submitted as features
     if (conversationId && conversationId !== 'pending') {
       supabase
         .from('product_features')
@@ -218,85 +218,13 @@ export function ProposalPanel({
         </div>
       )}
 
-      {/* Form — read-only when submitted */}
+      {/* Form */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {form.submitted && (
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
-            <CheckCircleIcon className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-            <span className="text-sm text-emerald-800 font-medium">
-              Submitted as {form.submittedCode}
-            </span>
-          </div>
-        )}
-
-        <Field label="Title">
-          <input
-            value={form.title}
-            onChange={(e) => updateForm(activeIndex, { title: e.target.value })}
-            disabled={form.submitted}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-500"
-          />
-        </Field>
-
-        <Field label="Description">
-          <textarea
-            value={form.description}
-            onChange={(e) => updateForm(activeIndex, { description: e.target.value })}
-            disabled={form.submitted}
-            rows={4}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:bg-gray-50 disabled:text-gray-500"
-          />
-        </Field>
-
-        <Field label="Acceptance Criteria" hint="One per line">
-          <textarea
-            value={form.criteria}
-            onChange={(e) => updateForm(activeIndex, { criteria: e.target.value })}
-            disabled={form.submitted}
-            rows={5}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
-          />
-        </Field>
-
-        {isAdmin && (
-          <>
-            <Field label="Priority">
-              <select
-                value={form.priority}
-                onChange={(e) => updateForm(activeIndex, { priority: e.target.value })}
-                disabled={form.submitted}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-500"
-              >
-                <option value="P1">P1 — Critical</option>
-                <option value="P2">P2 — High</option>
-                <option value="P3">P3 — Medium</option>
-                <option value="P4">P4 — Low</option>
-              </select>
-            </Field>
-
-            <Field label="Category">
-              <select
-                value={form.category}
-                onChange={(e) => updateForm(activeIndex, { category: e.target.value })}
-                disabled={form.submitted}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-500"
-              >
-                <option value="">None</option>
-                <option value="toolkit">Toolkit</option>
-                <option value="business_module">Business Module</option>
-              </select>
-            </Field>
-
-            <Field label="Roadmap Section">
-              <input
-                value={form.specSection}
-                onChange={(e) => updateForm(activeIndex, { specSection: e.target.value })}
-                disabled={form.submitted}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-500"
-              />
-            </Field>
-          </>
-        )}
+        <ProposalFormFields
+          form={form}
+          isAdmin={isAdmin}
+          onUpdate={(updates) => updateForm(activeIndex, updates)}
+        />
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
@@ -305,7 +233,7 @@ export function ProposalPanel({
         )}
       </div>
 
-      {/* Submit button — submits all unsubmitted proposals at once */}
+      {/* Submit button */}
       {!allSubmitted && (
         <div className="border-t px-4 py-3">
           <button
@@ -329,18 +257,6 @@ export function ProposalPanel({
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label}
-        {hint && <span className="text-gray-400 font-normal ml-1">({hint})</span>}
-      </label>
-      {children}
     </div>
   );
 }
