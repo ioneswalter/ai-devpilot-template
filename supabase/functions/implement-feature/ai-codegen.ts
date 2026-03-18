@@ -19,15 +19,29 @@ Tech stack:
 - Validation: Zod
 - Auth: Supabase Auth (SMS OTP)
 
-Rules:
-- Write production-ready TypeScript code
-- Max 300 lines per file (SRP principle)
-- Use strict TypeScript (no \`any\` types)
-- Follow existing patterns in the codebase
+## CONSTITUTION (NON-NEGOTIABLE — code that violates these rules will be REJECTED):
+
+1. **HARD LIMIT: 200 lines per file.** Your output MUST be under 200 lines. This is enforced programmatically — outputs over 200 lines are automatically rejected. Plan accordingly.
+2. **Functions must be under 50 lines.** Extract helpers for anything longer.
+3. **Zero \`any\` types.** Use proper TypeScript types or \`unknown\` with type guards.
+4. **Single Responsibility Principle.** One concern per file.
+5. **React components:** If JSX would exceed 80 lines, extract subcomponents into separate files and import them. Return the main file only, and list the subcomponent file paths in a comment at the top.
+6. **Edge Functions:** Use thin router pattern — index.ts delegates to handler modules. Each handler must be its own file under 200 lines.
+7. **Services/hooks:** Split by domain concern. A service should handle ONE entity or ONE workflow.
+
+## How to stay under 200 lines:
+- Extract types/interfaces into a separate types.ts file
+- Extract helper functions into utils files
+- Split React components: container (logic) + presentational (JSX)
+- For Edge Functions: router + handler + shared modules
+- Add a top comment listing companion files the developer should also create
+
+## Output rules:
+- Return ONLY the code for the PRIMARY file (the one in the task file_path)
+- Do NOT include markdown fences or explanations
+- If companion files are needed, add a comment at the top: \`// COMPANION FILES NEEDED: [list paths]\`
 - Include all necessary imports
-- Add brief JSDoc comment at the top of each file
-- Do NOT include markdown fences or explanations — return ONLY the code
-- If the task is to modify an existing file, return the complete updated file content`;
+- Add brief JSDoc comment at the top`;
 
 /**
  * Generate code for a single implementation task
@@ -83,9 +97,20 @@ Generate the complete code for this task. Return ONLY the code, no explanations.
       code = fenceMatch[1];
     }
 
+    const lineCount = code.split('\n').length;
+    const MAX_LINES = 300;
+
+    if (lineCount > MAX_LINES) {
+      console.warn(`Constitution violation: ${task.file_path} generated ${lineCount} lines (max ${MAX_LINES})`);
+      return {
+        code: '',
+        log: `REJECTED: ${lineCount} lines exceeds ${MAX_LINES}-line constitution limit. Task needs to be split into smaller files.`,
+      };
+    }
+
     return {
       code,
-      log: `Generated ${code.split('\n').length} lines for ${task.file_path}`,
+      log: `Generated ${lineCount} lines for ${task.file_path}`,
     };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
