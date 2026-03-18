@@ -89,25 +89,33 @@ function TaskCounts({
   taskCount, isImplementing, pendingCount, acceptedCount,
   rejectedCount, implementedCount, failedImplCount,
 }: Omit<ImplementationFooterProps, 'canImplement' | 'onImplement' | 'onClose'>) {
+  const hasImplProgress = implementedCount > 0 || failedImplCount > 0;
+  const remainingImplCount = acceptedCount - implementedCount - failedImplCount;
+
   return (
     <div className="flex items-center gap-3 text-xs">
-      {taskCount > 0 && !isImplementing && (
+      {isImplementing && (
+        <span className="text-gray-500">
+          Implementation continues in the background if you close this panel.
+        </span>
+      )}
+      {!isImplementing && hasImplProgress && (
+        <>
+          <span className="text-blue-600">{implementedCount} generated</span>
+          {failedImplCount > 0 && (
+            <span className="text-red-500">{failedImplCount} failed</span>
+          )}
+          {remainingImplCount > 0 && (
+            <span className="text-amber-600">{remainingImplCount} remaining</span>
+          )}
+        </>
+      )}
+      {!isImplementing && !hasImplProgress && taskCount > 0 && (
         <>
           <span className="text-gray-500">{pendingCount} pending</span>
           <span className="text-green-600">{acceptedCount} accepted</span>
           <span className="text-red-500">{rejectedCount} rejected</span>
         </>
-      )}
-      {isImplementing && (
-        <span className="text-xs text-gray-500">
-          Implementation continues in the background if you close this panel.
-        </span>
-      )}
-      {implementedCount > 0 && !isImplementing && (
-        <span className="text-blue-600">{implementedCount} generated</span>
-      )}
-      {failedImplCount > 0 && (
-        <span className="text-red-500">{failedImplCount} failed</span>
       )}
     </div>
   );
