@@ -114,7 +114,9 @@ export function useImplementation(featureId: string | null) {
 
   const taskItems = implQuery.data?.task_items ?? [];
   const acceptedItems = taskItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
-  const isImplementing = implQuery.data?.status === 'implementing' || implementMutation.isPending;
+  // Only show as "implementing" if the frontend loop is actually running.
+  // DB status 'implementing' alone means a previous session died — show Resume instead.
+  const isImplementing = implementMutation.isPending;
 
   return {
     request: implQuery.data ?? null,
@@ -132,7 +134,7 @@ export function useImplementation(featureId: string | null) {
     implementedCount: taskItems.filter(t => t.implementation_status === 'completed').length,
     generatingCount: taskItems.filter(t => t.implementation_status === 'generating').length,
     failedImplCount: taskItems.filter(t => t.implementation_status === 'failed').length,
-    canImplement: acceptedItems.length > 0 && acceptedItems.some(t => t.implementation_status === 'pending' || t.implementation_status === 'failed'),
+    canImplement: acceptedItems.length > 0 && acceptedItems.some(t => t.implementation_status === 'pending'),
 
     // Actions
     isRequesting: requestMutation.isPending,
