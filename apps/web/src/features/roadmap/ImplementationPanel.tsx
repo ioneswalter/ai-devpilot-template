@@ -11,6 +11,7 @@ import { ImplementationStartForm } from './ImplementationStartForm';
 import { ImplementationLoadingSkeleton } from './ImplementationLoadingSkeleton';
 import { ImplementationLog } from './ImplementationLog';
 import { ImplementationFooter } from './ImplementationFooter';
+import { ImplementationSummary } from './ImplementationSummary';
 import { AddTaskForm } from './AddTaskForm';
 
 interface ImplementationPanelProps {
@@ -201,6 +202,15 @@ export function ImplementationPanel({
             ref={logRef}
             taskItems={impl.taskItems}
             isImplementing={impl.isImplementing}
+          />
+        )}
+
+        {/* Completion summary — shown when all tasks processed, not currently running */}
+        {!impl.isImplementing && !impl.canImplement && (impl.implementedCount > 0 || impl.failedImplCount > 0) && (
+          <ImplementationSummary
+            implementedCount={impl.implementedCount}
+            failedCount={impl.failedImplCount}
+            totalAccepted={impl.acceptedCount}
           />
         )}
       </div>
