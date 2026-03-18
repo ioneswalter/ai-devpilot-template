@@ -34,7 +34,7 @@ export async function countRemainingTasks(supabase: SupabaseClient, requestId: s
     .select('id', { count: 'exact', head: true })
     .eq('request_id', requestId)
     .in('decision', ['accepted', 'modified'])
-    .in('implementation_status', ['pending', 'failed']);
+    .eq('implementation_status', 'pending');
   return count ?? 0;
 }
 

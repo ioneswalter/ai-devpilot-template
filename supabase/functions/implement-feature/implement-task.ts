@@ -32,7 +32,7 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     .select('*')
     .eq('request_id', requestId)
     .in('decision', ['accepted', 'modified'])
-    .in('implementation_status', ['pending', 'failed'])
+    .eq('implementation_status', 'pending')
     .order('sort_order', { ascending: true })
     .limit(1);
 
