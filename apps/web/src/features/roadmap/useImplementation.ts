@@ -60,14 +60,27 @@ export function useImplementation(featureId: string | null) {
       abortRef.current = false;
 
       // Loop: process one task per iteration
+      let consecutiveErrors = 0;
       while (!abortRef.current) {
-        const res = await adminApi.implementNextTask(requestId);
+        try {
+          const res = await adminApi.implementNextTask(requestId);
+          consecutiveErrors = 0;
 
-        // Refetch to update UI with latest task statuses
-        await queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
+          // Refetch to update UI with latest task statuses
+          await queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
 
-        if (res.data.done) {
-          break;
+          if (res.data.done) {
+            break;
+          }
+        } catch (err) {
+          consecutiveErrors++;
+          console.error('Implementation task error:', err);
+          // Refetch so UI shows current state
+          await queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
+          // Stop after 3 consecutive errors to avoid infinite loop
+          if (consecutiveErrors >= 3) {
+            throw err;
+          }
         }
       }
     },
