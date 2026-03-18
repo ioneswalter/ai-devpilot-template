@@ -162,6 +162,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             featureId={implementingFeature.id}
             featureCode={implementingFeature.feature_code}
             featureTitle={implementingFeature.title}
+            featureStatus={implementingFeature.status}
             onClose={() => setImplementingFeature(null)}
             onComplete={() => {
               setImplementingFeature(null);

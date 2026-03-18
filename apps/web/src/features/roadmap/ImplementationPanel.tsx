@@ -17,6 +17,7 @@ interface ImplementationPanelProps {
   featureId: string;
   featureCode: string;
   featureTitle: string;
+  featureStatus: string;
   onClose: () => void;
   onComplete: () => void;
 }
@@ -25,6 +26,7 @@ export function ImplementationPanel({
   featureId,
   featureCode,
   featureTitle,
+  featureStatus,
   onClose,
   onComplete,
 }: ImplementationPanelProps) {
@@ -44,8 +46,46 @@ export function ImplementationPanel({
     }
   }, [impl.isImplementing]);
 
-  // No request yet — show start form
+  // No request yet
   if (!impl.isLoading && !impl.request) {
+    // Feature already in_development but no AI request — implemented outside AI workflow
+    if (featureStatus === 'in_development') {
+      return (
+        <div className="flex flex-col h-full">
+          <div className="p-4 border-b">
+            <div className="flex items-center gap-2 mb-1">
+              <code className="text-xs font-mono text-blue-600">{featureCode}</code>
+              <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
+            </div>
+          </div>
+          <div className="flex-1 p-4 flex items-center justify-center">
+            <div className="text-center max-w-xs space-y-3">
+              <div className="w-12 h-12 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+              </div>
+              <h4 className="text-sm font-semibold text-gray-900">Implemented manually</h4>
+              <p className="text-xs text-gray-500">
+                This feature was implemented outside the AI workflow. You can still start an AI implementation to generate additional code or review tasks.
+              </p>
+              <button
+                onClick={() => impl.requestImplementation().catch(() => {})}
+                disabled={impl.isRequesting}
+                className="px-4 py-2 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+              >
+                {impl.isRequesting ? 'Starting...' : 'Start AI Implementation Anyway'}
+              </button>
+            </div>
+          </div>
+          <div className="border-t p-3 flex justify-end">
+            <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
+          </div>
+        </div>
+      );
+    }
+
+    // Approved feature, no request yet — show start form
     return (
       <ImplementationStartForm
         featureCode={featureCode}
