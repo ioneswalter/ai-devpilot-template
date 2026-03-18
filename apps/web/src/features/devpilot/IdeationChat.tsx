@@ -18,13 +18,17 @@ interface IdeationChatProps {
 
 export function IdeationChat({ messages, isLoading, error, onSendMessage, forceCollapsed }: IdeationChatProps) {
   const [input, setInput] = useState('');
-  const [inputExpanded, setInputExpanded] = useState(messages.length === 0);
+  const [inputExpanded, setInputExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-scroll to bottom when messages change or AI is loading
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
 
   // Auto-collapse when proposal panel opens
   useEffect(() => {
@@ -43,7 +47,6 @@ export function IdeationChat({ messages, isLoading, error, onSendMessage, forceC
     if (!trimmed || isLoading) return;
     onSendMessage(trimmed);
     setInput('');
-    setInputExpanded(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -57,7 +60,7 @@ export function IdeationChat({ messages, isLoading, error, onSendMessage, forceC
     <div className="flex h-full">
       {/* AI conversation panel */}
       <div className={`${forceCollapsed ? 'flex-1' : inputExpanded ? 'md:w-2/3' : 'flex-1'} flex flex-col h-full ${forceCollapsed ? '' : 'border-r'}`}>
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-12">
               <SparklesIcon className="h-10 w-10 text-emerald-500 mx-auto mb-3" />

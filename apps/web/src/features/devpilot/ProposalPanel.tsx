@@ -12,13 +12,30 @@ import { devpilotApi } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase-client';
 import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
 
+function useAvailableSections() {
+  const [sections, setSections] = useState<string[]>([]);
+  useEffect(() => {
+    supabase
+      .from('product_features')
+      .select('spec_section')
+      .not('spec_section', 'is', null)
+      .then(({ data }) => {
+        if (data) {
+          const unique = [...new Set(data.map((r: { spec_section: string }) => r.spec_section))].sort();
+          setSections(unique);
+        }
+      });
+  }, []);
+  return sections;
+}
+
 interface ProposalPanelProps {
   proposal: AdminProposal | MemberProposal;
   proposals?: Array<AdminProposal | MemberProposal>;
   conversationId: string;
   isAdmin: boolean;
   onClose: () => void;
-  onSubmitted: (result: SubmitProposalResponse) => void;
+  onSubmitted: (results: SubmitProposalResponse[]) => void;
 }
 
 interface ProposalFormState {
@@ -55,6 +72,7 @@ export function ProposalPanel({
 }: ProposalPanelProps) {
   const allProposals = proposalsProp && proposalsProp.length > 0 ? proposalsProp : [proposal];
   const isMulti = allProposals.length > 1;
+  const availableSections = useAvailableSections();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [forms, setForms] = useState<ProposalFormState[]>(allProposals.map(initFormState));
@@ -111,7 +129,7 @@ export function ProposalPanel({
     setError(null);
 
     const unsubmittedForms = forms.map((f, i) => ({ form: f, index: i })).filter(({ form: f }) => !f.submitted);
-    let lastResult: SubmitProposalResponse | null = null;
+    const allResults: SubmitProposalResponse[] = [];
     let firstDedupResult: SubmitProposalResponse | null = null;
 
     for (const { form: f, index } of unsubmittedForms) {
@@ -136,7 +154,7 @@ export function ProposalPanel({
           firstDedupResult = result;
         }
         updateForm(index, { submitted: true, submittedCode: result.feature.feature_code });
-        lastResult = result;
+        allResults.push(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : `Failed to submit "${f.title}"`);
         setIsSubmitting(false);
@@ -148,8 +166,8 @@ export function ProposalPanel({
 
     if (firstDedupResult) {
       setDedupResult(firstDedupResult);
-    } else if (lastResult) {
-      onSubmitted(lastResult);
+    } else if (allResults.length > 0) {
+      onSubmitted(allResults);
     }
   };
 
@@ -160,7 +178,7 @@ export function ProposalPanel({
           matches={dedupResult.dedup_check.matches}
           onSubmitAnyway={() => {
             setDedupResult(null);
-            onSubmitted(dedupResult);
+            onSubmitted([dedupResult]);
           }}
           onCancel={() => setDedupResult(null)}
         />
@@ -224,6 +242,7 @@ export function ProposalPanel({
           form={form}
           isAdmin={isAdmin}
           onUpdate={(updates) => updateForm(activeIndex, updates)}
+          availableSections={availableSections}
         />
 
         {error && (

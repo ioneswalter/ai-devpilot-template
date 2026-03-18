@@ -2,6 +2,7 @@
  * Form fields for the proposal panel — title, description, criteria, admin fields
  */
 
+import { useState } from 'react';
 import { CheckCircleIcon } from './icons';
 
 interface ProposalFormState {
@@ -19,9 +20,11 @@ interface ProposalFormFieldsProps {
   form: ProposalFormState;
   isAdmin: boolean;
   onUpdate: (updates: Partial<ProposalFormState>) => void;
+  availableSections?: string[];
 }
 
-export function ProposalFormFields({ form, isAdmin, onUpdate }: ProposalFormFieldsProps) {
+export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections = [] }: ProposalFormFieldsProps) {
+  const [customSection, setCustomSection] = useState(false);
   return (
     <>
       {form.submitted && (
@@ -92,12 +95,48 @@ export function ProposalFormFields({ form, isAdmin, onUpdate }: ProposalFormFiel
           </Field>
 
           <Field label="Roadmap Section">
-            <input
-              value={form.specSection}
-              onChange={(e) => onUpdate({ specSection: e.target.value })}
-              disabled={form.submitted}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-500"
-            />
+            {customSection ? (
+              <div className="flex gap-2">
+                <input
+                  value={form.specSection}
+                  onChange={(e) => onUpdate({ specSection: e.target.value })}
+                  disabled={form.submitted}
+                  placeholder="New section name..."
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCustomSection(false)}
+                  className="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <select
+                  value={availableSections.includes(form.specSection) ? form.specSection : ''}
+                  onChange={(e) => onUpdate({ specSection: e.target.value })}
+                  disabled={form.submitted}
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-50 disabled:text-gray-500"
+                >
+                  {!availableSections.includes(form.specSection) && form.specSection && (
+                    <option value="">{form.specSection} (new)</option>
+                  )}
+                  {availableSections.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setCustomSection(true)}
+                  disabled={form.submitted}
+                  className="text-xs text-emerald-600 hover:text-emerald-700 whitespace-nowrap disabled:opacity-50"
+                >
+                  + New
+                </button>
+              </div>
+            )}
           </Field>
         </>
       )}

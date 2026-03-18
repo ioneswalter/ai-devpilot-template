@@ -40,7 +40,7 @@ interface FeatureContext {
   acceptance_criteria: string[] | null;
 }
 
-function buildSystemPrompt(features: FeatureContext[], isAdmin: boolean): string {
+function buildSystemPrompt(features: FeatureContext[], isAdmin: boolean, existingSections: string[] = []): string {
   const featureList = features
     .map((f) => {
       const desc = f.description ? ` | ${f.description.substring(0, 150)}` : '';
@@ -62,7 +62,7 @@ You help members describe problems they want solved and produce clear feature pr
 When the user's idea spans multiple distinct capabilities, you MUST split it into separate, focused features:
 - Each feature should be independently deliverable and testable
 - Suggest a logical delivery order (P2 for MVP slice, P3/P4 for follow-ups)
-- Group related features under the same roadmap section
+- ALWAYS use an existing roadmap section from the list below. Only create a new section if the feature truly doesn't fit any existing one
 - Explain the split briefly: "I've broken this into X features so each can be built and shipped independently"
 
 When asked to generate a proposal, output a JSON block. If the idea should be split, output MULTIPLE proposals in an array:
@@ -76,7 +76,7 @@ When asked to generate a proposal, output a JSON block. If the idea should be sp
       "acceptance_criteria": ["Given..., When..., Then..."],
       "priority": "P1|P2|P3|P4",
       "category": "toolkit|business_module|null",
-      "spec_section": "Roadmap section name",
+      "spec_section": "Must be one of the existing roadmap sections listed below",
       "problem_statement": "The problem being solved",
       "solution": "The proposed solution"
     }
@@ -141,6 +141,9 @@ A single feature should have no more than 5-7 acceptance criteria. If you need m
 6. Only generate a proposal when the user explicitly asks for one.
 
 ${proposalFormat}
+
+## Existing Roadmap Sections (ALWAYS use one of these)
+${existingSections.length > 0 ? existingSections.map(s => `- ${s}`).join('\n') : '- No sections yet'}
 
 ## Existing Product Roadmap (${features.length} features)
 ${featureList}
@@ -241,8 +244,15 @@ Deno.serve(async (req) => {
     // Fetch product features for context
     const { data: features } = await supabase
       .from('product_features')
-      .select('feature_code, title, description, status, category, acceptance_criteria')
+      .select('feature_code, title, description, status, category, acceptance_criteria, spec_section')
       .order('feature_code');
+
+    // Extract distinct roadmap sections from existing features
+    const existingSections = [...new Set(
+      (features ?? [])
+        .map((f: { spec_section?: string | null }) => f.spec_section)
+        .filter((s): s is string => !!s)
+    )].sort();
 
     // Fetch conversation history
     const { data: history } = await supabase
@@ -252,7 +262,7 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: true });
 
     // Build messages for Claude (truncate long conversations to fit context window)
-    const systemPrompt = buildSystemPrompt((features ?? []) as FeatureContext[], isAdmin);
+    const systemPrompt = buildSystemPrompt((features ?? []) as FeatureContext[], isAdmin, existingSections);
     const allMessages = (history ?? []).map((m) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
