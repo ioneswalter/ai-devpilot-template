@@ -13,23 +13,62 @@ interface FeatureDetailPanelProps {
   feature: ProductFeature;
   features: ProductFeature[];
   isMember: boolean;
+  isAdmin: boolean;
   toggleExpanded: (featureId: string) => void;
   featureRowRefs: MutableRefObject<Record<string, HTMLDivElement | null>>;
+  onReviewFeature?: (feature: ProductFeature) => void;
+  onImplementFeature?: (feature: ProductFeature) => void;
 }
 
 export function FeatureDetailPanel({
   feature,
   features,
   isMember,
+  isAdmin,
   toggleExpanded,
   featureRowRefs,
+  onReviewFeature,
+  onImplementFeature,
 }: FeatureDetailPanelProps) {
   const getJourneyByCode = (code: string): ProductFeature | undefined => {
     return features.find((f) => f.feature_code === code && f.feature_type === 'journey');
   };
 
+  // in_development features always have an implementation request
+  // (transitioning to in_development triggers implementation)
+  const hasActiveImpl = feature.status === 'in_development';
+
   return (
     <div className="px-3 lg:px-4 pb-4 border-t bg-gray-50">
+      {/* Admin Review Button — proposed features only */}
+      {isAdmin && feature.status === 'proposed' && onReviewFeature && (
+        <div className="pt-3 pb-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onReviewFeature(feature); }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            Review with AI
+          </button>
+        </div>
+      )}
+      {/* Implementation Button — in_development features only */}
+      {isAdmin && feature.status === 'in_development' && onImplementFeature && (
+        <div className="pt-3 pb-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onImplementFeature(feature); }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {hasActiveImpl ? 'Watch Implementation' : 'Implement'}
+          </button>
+        </div>
+      )}
       <div className="pt-4 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Acceptance Criteria */}
         <div>

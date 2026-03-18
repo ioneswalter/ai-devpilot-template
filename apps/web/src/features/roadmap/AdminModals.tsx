@@ -25,6 +25,8 @@ interface AdminModalsProps {
   isTransitioning: boolean;
   onTransitionConfirm: () => void;
   onTransitionCancel: () => void;
+  onReviewWithAI?: (feature: ProductFeature) => void;
+  onStartImplementation?: (feature: ProductFeature) => void;
 }
 
 export function AdminModals({
@@ -43,6 +45,8 @@ export function AdminModals({
   isTransitioning,
   onTransitionConfirm,
   onTransitionCancel,
+  onReviewWithAI,
+  onStartImplementation,
 }: AdminModalsProps) {
   return (
     <>
@@ -128,6 +132,14 @@ export function AdminModals({
             onConfirm={onTransitionConfirm}
             onCancel={onTransitionCancel}
             isUpdating={isTransitioning}
+            onReviewWithAI={onReviewWithAI ? () => {
+              onTransitionCancel();
+              onReviewWithAI(transitionFeature);
+            } : undefined}
+            onStartImplementation={onStartImplementation ? () => {
+              onTransitionCancel();
+              onStartImplementation(transitionFeature);
+            } : undefined}
           />
         );
       })()}

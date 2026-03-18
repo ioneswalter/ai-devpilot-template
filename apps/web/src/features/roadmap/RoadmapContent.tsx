@@ -3,6 +3,7 @@
  * Composes header, filters, list/kanban views, copilot, and admin modals.
  */
 
+import { useState } from 'react';
 import { CopilotPanel, CopilotToggle } from '../../features/copilot';
 import { KanbanBoard } from '../../components/roadmap/KanbanBoard';
 import { useRoadmapData } from './useRoadmapData';
@@ -10,9 +11,15 @@ import { RoadmapHeader } from './RoadmapHeader';
 import { RoadmapFilters } from './RoadmapFilters';
 import { FeatureListView } from './FeatureListView';
 import { AdminModals } from './AdminModals';
+import { Modal } from '../../components/ui/Modal';
+import { SpecReviewPanel } from './SpecReviewPanel';
+import { ImplementationPanel } from './ImplementationPanel';
+import type { ProductFeature } from './roadmap-helpers';
 
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
+  const [reviewingFeature, setReviewingFeature] = useState<ProductFeature | null>(null);
+  const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -102,6 +109,8 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           onEditFeature={roadmap.setEditingFeature}
           onDeleteFeature={roadmap.setDeletingFeature}
           onLinkCriteria={roadmap.setLinkingCriteriaFeature}
+          onReviewFeature={roadmap.isAdmin ? setReviewingFeature : undefined}
+          onImplementFeature={roadmap.isAdmin ? setImplementingFeature : undefined}
         />
       )}
 
@@ -117,6 +126,50 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           />
         </>
       )}
+
+      {/* Spec Review Modal */}
+      <Modal
+        isOpen={!!reviewingFeature}
+        onClose={() => setReviewingFeature(null)}
+        size="xl"
+        showCloseButton={false}
+        className="h-[80vh]"
+      >
+        {reviewingFeature && (
+          <SpecReviewPanel
+            featureId={reviewingFeature.id}
+            featureCode={reviewingFeature.feature_code}
+            featureTitle={reviewingFeature.title}
+            onClose={() => setReviewingFeature(null)}
+            onReviewComplete={() => {
+              setReviewingFeature(null);
+              roadmap.fetchFeatures();
+            }}
+          />
+        )}
+      </Modal>
+
+      {/* Implementation Modal */}
+      <Modal
+        isOpen={!!implementingFeature}
+        onClose={() => setImplementingFeature(null)}
+        size="xl"
+        showCloseButton={false}
+        className="h-[80vh]"
+      >
+        {implementingFeature && (
+          <ImplementationPanel
+            featureId={implementingFeature.id}
+            featureCode={implementingFeature.feature_code}
+            featureTitle={implementingFeature.title}
+            onClose={() => setImplementingFeature(null)}
+            onComplete={() => {
+              setImplementingFeature(null);
+              roadmap.fetchFeatures();
+            }}
+          />
+        )}
+      </Modal>
 
       {/* Admin Modals */}
       <AdminModals
@@ -135,6 +188,8 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         isTransitioning={roadmap.isTransitioning}
         onTransitionConfirm={roadmap.handleTransitionConfirm}
         onTransitionCancel={roadmap.handleTransitionCancel}
+        onReviewWithAI={setReviewingFeature}
+        onStartImplementation={setImplementingFeature}
       />
     </div>
   );

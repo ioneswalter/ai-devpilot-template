@@ -20,6 +20,8 @@ interface FeatureListViewProps {
   onEditFeature: (feature: ProductFeature) => void;
   onDeleteFeature: (feature: ProductFeature) => void;
   onLinkCriteria: (feature: ProductFeature) => void;
+  onReviewFeature?: (feature: ProductFeature) => void;
+  onImplementFeature?: (feature: ProductFeature) => void;
 }
 
 export function FeatureListView({
@@ -35,6 +37,8 @@ export function FeatureListView({
   onEditFeature,
   onDeleteFeature,
   onLinkCriteria,
+  onReviewFeature,
+  onImplementFeature,
 }: FeatureListViewProps) {
   return (
     <section className="py-8">
@@ -93,8 +97,11 @@ export function FeatureListView({
                         feature={feature}
                         features={features}
                         isMember={isMember}
+                        isAdmin={isAdmin}
                         toggleExpanded={toggleExpanded}
                         featureRowRefs={featureRowRefs}
+                        onReviewFeature={onReviewFeature}
+                        onImplementFeature={onImplementFeature}
                       />
                     )}
                   </div>
