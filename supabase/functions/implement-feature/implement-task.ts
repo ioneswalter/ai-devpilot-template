@@ -4,6 +4,7 @@
  */
 
 import { generateCode } from './ai-codegen.ts';
+import { autoSplitTask } from './split-task.ts';
 import { jsonResponse, errorResponse, countRemainingTasks, finalizeRequest, type AuthContext } from './shared.ts';
 
 export async function handleImplementTask(req: Request, ctx: AuthContext): Promise<Response> {
@@ -63,6 +64,19 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     { title: task.title, description: task.description, file_path: task.file_path, task_type: task.task_type },
     { feature_code: feature.feature_code, title: feature.title, description: feature.description, criteria: feature.acceptance_criteria || [] },
   );
+
+  // If rejected for exceeding line limit, auto-split into smaller subtasks
+  const isConstitutionReject = !result?.code && result?.log?.includes('REJECTED');
+  if (isConstitutionReject) {
+    const splitCount = await autoSplitTask(ctx, { ...task, request_id: requestId });
+    if (splitCount > 0) {
+      const remaining = await countRemainingTasks(ctx.supabase, requestId);
+      console.log(`Implementation: ${feature.feature_code} task "${task.title}" — auto-split into ${splitCount} subtasks (${remaining} remaining)`);
+      return jsonResponse({
+        data: { done: false, remaining, task_id: task.id, status: 'split', split_count: splitCount },
+      });
+    }
+  }
 
   await saveTaskResult(ctx, task.id, result);
 

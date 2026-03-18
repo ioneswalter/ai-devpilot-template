@@ -63,7 +63,7 @@ function NextSteps({ allSucceeded, failedCount }: { allSucceeded: boolean; faile
         ) : (
           <>
             {failedCount > 0 && (
-              <li>Failed tasks need to be split into smaller subtasks, then re-run</li>
+              <li>Failed tasks were auto-split into smaller subtasks — click Implement to process them</li>
             )}
             <li>Review successful tasks and copy working code to your project</li>
           </>
