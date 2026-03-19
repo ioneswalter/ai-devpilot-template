@@ -64,11 +64,11 @@ export async function autoSplitTask(
     return 0;
   }
 
-  // Mark the parent task as split (not failed)
+  // Mark the parent task as split (distinct from failed)
   await ctx.supabase
     .from('implementation_task_items')
     .update({
-      implementation_status: 'failed',
+      implementation_status: 'split',
       ai_log: `Auto-split into ${subtasks.length} smaller subtasks`,
       updated_at: new Date().toISOString(),
     })

@@ -113,9 +113,10 @@ export function useImplementation(featureId: string | null) {
   });
 
   const taskItems = implQuery.data?.task_items ?? [];
-  const acceptedItems = taskItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
+  // Exclude split parent tasks — their subtasks replace them
+  const activeItems = taskItems.filter(t => t.implementation_status !== 'split');
+  const acceptedItems = activeItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
   // Only show as "implementing" if the frontend loop is actually running.
-  // DB status 'implementing' alone means a previous session died — show Resume instead.
   const isImplementing = implementMutation.isPending;
 
   return {
@@ -124,16 +125,16 @@ export function useImplementation(featureId: string | null) {
     isLoading: implQuery.isLoading,
     error: implQuery.error,
 
-    // Counts
-    pendingCount: taskItems.filter(t => t.decision === 'pending').length,
+    // Counts (exclude split parent tasks)
+    pendingCount: activeItems.filter(t => t.decision === 'pending').length,
     acceptedCount: acceptedItems.length,
-    rejectedCount: taskItems.filter(t => t.decision === 'rejected').length,
+    rejectedCount: activeItems.filter(t => t.decision === 'rejected').length,
 
-    // Implementation progress
+    // Implementation progress (exclude split parent tasks)
     isImplementing,
-    implementedCount: taskItems.filter(t => t.implementation_status === 'completed').length,
-    generatingCount: taskItems.filter(t => t.implementation_status === 'generating').length,
-    failedImplCount: taskItems.filter(t => t.implementation_status === 'failed').length,
+    implementedCount: activeItems.filter(t => t.implementation_status === 'completed').length,
+    generatingCount: activeItems.filter(t => t.implementation_status === 'generating').length,
+    failedImplCount: activeItems.filter(t => t.implementation_status === 'failed').length,
     canImplement: acceptedItems.length > 0 && acceptedItems.some(t => t.implementation_status === 'pending'),
 
     // Actions

@@ -61,11 +61,15 @@ function TaskStatusIcon({ status }: { status: string }) {
   if (status === 'completed') {
     return <span className="text-green-400 flex-shrink-0">✓</span>;
   }
+  if (status === 'split') {
+    return <span className="text-blue-400 flex-shrink-0">↳</span>;
+  }
   return <span className="text-red-400 flex-shrink-0">✗</span>;
 }
 
 function statusTextClass(status: string): string {
   if (status === 'generating') return 'text-yellow-300';
   if (status === 'completed') return 'text-green-300';
+  if (status === 'split') return 'text-blue-300';
   return 'text-red-300';
 }
