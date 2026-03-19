@@ -92,11 +92,12 @@ async function saveAiPlan(
   feature: Record<string, unknown>,
   aiPlan: { summary: string; architecture_notes: string; tasks: Array<{ title: string; description?: string; file_path: string; task_type: string }> },
 ): Promise<Response> {
+  // Store tasks in ai_response for recovery if task insert fails
   await ctx.supabase
     .from('implementation_requests')
     .update({
       status: 'completed',
-      ai_response: { summary: aiPlan.summary, architecture_notes: aiPlan.architecture_notes },
+      ai_response: { summary: aiPlan.summary, architecture_notes: aiPlan.architecture_notes, tasks: aiPlan.tasks },
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -113,12 +114,16 @@ async function saveAiPlan(
     sort_order: i,
   }));
 
-  const { data: savedItems } = await ctx.supabase
+  const { data: savedItems, error: taskErr } = await ctx.supabase
     .from('implementation_task_items')
     .insert(taskRows)
     .select();
 
-  console.log(`AI implementation: ${(feature as Record<string, string>).feature_code} — ${aiPlan.tasks.length} tasks saved`);
+  if (taskErr) {
+    console.error(`Failed to save task items: ${taskErr.message}`);
+  }
+
+  console.log(`AI implementation: ${(feature as Record<string, string>).feature_code} — ${savedItems?.length ?? 0}/${aiPlan.tasks.length} tasks saved`);
 
   return jsonResponse({
     data: {
