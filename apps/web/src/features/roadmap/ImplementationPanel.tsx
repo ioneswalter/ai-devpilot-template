@@ -47,8 +47,13 @@ export function ImplementationPanel({
     }
   }, [impl.isImplementing]);
 
+  // Show loading skeleton while fetching
+  if (impl.isLoading) {
+    return <ImplementationLoadingSkeleton />;
+  }
+
   // No request yet
-  if (!impl.isLoading && !impl.request) {
+  if (!impl.request) {
     // Feature already in_development but no AI request — implemented outside AI workflow
     if (featureStatus === 'in_development') {
       return (
@@ -97,10 +102,6 @@ export function ImplementationPanel({
         onClose={onClose}
       />
     );
-  }
-
-  if (impl.isLoading) {
-    return <ImplementationLoadingSkeleton />;
   }
 
   const aiPlan = impl.request?.ai_response;
