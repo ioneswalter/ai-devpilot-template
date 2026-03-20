@@ -3,8 +3,8 @@
  * Composes header, filters, list/kanban views, copilot, and admin modals.
  */
 
-import { useState } from 'react';
-import { CopilotPanel, CopilotToggle } from '../../features/copilot';
+import { useState, useEffect } from 'react';
+import { CopilotPanel } from '../../features/copilot';
 import { KanbanBoard } from '../../components/roadmap/KanbanBoard';
 import { useRoadmapData } from './useRoadmapData';
 import { RoadmapHeader } from './RoadmapHeader';
@@ -14,12 +14,26 @@ import { AdminModals } from './AdminModals';
 import { Modal } from '../../components/ui/Modal';
 import { SpecReviewPanel } from './SpecReviewPanel';
 import { ImplementationPanel } from './ImplementationPanel';
+import { TestRunPanel } from './TestRunPanel';
 import type { ProductFeature } from './roadmap-helpers';
 
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
   const [reviewingFeature, setReviewingFeature] = useState<ProductFeature | null>(null);
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
+  const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
+
+  // Sync modal feature state when features list refreshes (e.g. after test submission)
+  useEffect(() => {
+    if (testingFeature) {
+      const updated = roadmap.features.find((f) => f.id === testingFeature.id);
+      if (updated && updated !== testingFeature) setTestingFeature(updated);
+    }
+    if (implementingFeature) {
+      const updated = roadmap.features.find((f) => f.id === implementingFeature.id);
+      if (updated && updated !== implementingFeature) setImplementingFeature(updated);
+    }
+  }, [roadmap.features]);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -111,20 +125,18 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           onLinkCriteria={roadmap.setLinkingCriteriaFeature}
           onReviewFeature={roadmap.isAdmin ? setReviewingFeature : undefined}
           onImplementFeature={roadmap.isAdmin ? setImplementingFeature : undefined}
+          onRunTests={roadmap.isAdmin ? setTestingFeature : undefined}
         />
       )}
 
-      {/* AI Copilot (Admin Only) */}
-      {roadmap.isAdmin && (
-        <>
-          <CopilotToggle isOpen={roadmap.copilotOpen} onClick={() => roadmap.setCopilotOpen(!roadmap.copilotOpen)} />
-          <CopilotPanel
-            isOpen={roadmap.copilotOpen}
-            onClose={() => roadmap.setCopilotOpen(false)}
-            selectedFeature={roadmap.selectedFeatureForCopilot}
-            onFeatureUpdated={roadmap.handleFeatureUpdated}
-          />
-        </>
+      {/* AI Copilot (Admin Only) — panel only, no floating toggle */}
+      {roadmap.isAdmin && roadmap.copilotOpen && (
+        <CopilotPanel
+          isOpen={roadmap.copilotOpen}
+          onClose={() => roadmap.setCopilotOpen(false)}
+          selectedFeature={roadmap.selectedFeatureForCopilot}
+          onFeatureUpdated={roadmap.handleFeatureUpdated}
+        />
       )}
 
       {/* Spec Review Modal */}
@@ -159,6 +171,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       >
         {implementingFeature && (
           <ImplementationPanel
+            key={implementingFeature.id}
             featureId={implementingFeature.id}
             featureCode={implementingFeature.feature_code}
             featureTitle={implementingFeature.title}
@@ -168,6 +181,31 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
               setImplementingFeature(null);
               roadmap.fetchFeatures();
             }}
+          />
+        )}
+      </Modal>
+
+      {/* Test Run Modal */}
+      <Modal
+        isOpen={!!testingFeature}
+        onClose={() => setTestingFeature(null)}
+        size="xl"
+        showCloseButton={false}
+        className="h-[80vh]"
+      >
+        {testingFeature && (
+          <TestRunPanel
+            key={testingFeature.id}
+            featureId={testingFeature.id}
+            featureCode={testingFeature.feature_code}
+            featureTitle={testingFeature.title}
+            testCases={testingFeature.test_cases ?? []}
+            onClose={() => setTestingFeature(null)}
+            onComplete={() => {
+              setTestingFeature(null);
+              roadmap.fetchFeatures();
+            }}
+            onRefresh={roadmap.fetchFeatures}
           />
         )}
       </Modal>
@@ -191,6 +229,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onTransitionCancel={roadmap.handleTransitionCancel}
         onReviewWithAI={setReviewingFeature}
         onStartImplementation={setImplementingFeature}
+        onRunTests={setTestingFeature}
       />
     </div>
   );

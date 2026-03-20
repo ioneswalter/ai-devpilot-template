@@ -99,7 +99,27 @@ export function useImplementation(featureId: string | null) {
   const updateItemMutation = useMutation({
     mutationFn: (data: { item_id: string; decision?: string; title?: string; description?: string; comment?: string }) =>
       adminApi.updateTaskItem(data),
-    onSuccess: () => {
+    onMutate: async (data) => {
+      // Cancel in-flight refetches so they don't overwrite optimistic update
+      await queryClient.cancelQueries({ queryKey: [...IMPL_KEY, featureId] });
+      const previous = queryClient.getQueryData<ImplementationRequestWithItems>([...IMPL_KEY, featureId]);
+      if (previous) {
+        queryClient.setQueryData([...IMPL_KEY, featureId], {
+          ...previous,
+          task_items: previous.task_items.map((t) =>
+            t.id === data.item_id ? { ...t, ...data, item_id: undefined } : t,
+          ),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _data, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        queryClient.setQueryData([...IMPL_KEY, featureId], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
     },
   });

@@ -24,6 +24,13 @@ export interface RoadmapStats {
   proposed: number;
 }
 
+/** Scroll an element into view below all sticky headers (navbar + tabs + filters). */
+function scrollToFeatureRow(el: HTMLElement) {
+  const rect = el.getBoundingClientRect();
+  const scrollY = window.scrollY + rect.top - 260;
+  window.scrollTo({ top: Math.max(0, scrollY), behavior: 'smooth' });
+}
+
 export function useRoadmapData(featureParam?: string) {
   const [features, setFeatures] = useState<ProductFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,7 +92,7 @@ export function useRoadmapData(featureParam?: string) {
       hasAutoExpanded.current = true;
       setExpandedFeature(target.id);
       requestAnimationFrame(() => {
-        featureRowRefs.current[target.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = featureRowRefs.current[target.id]; if (el) scrollToFeatureRow(el);
       });
     }
   }, [featureParam, features]);
@@ -172,7 +179,7 @@ export function useRoadmapData(featureParam?: string) {
 
     if (isExpanding) {
       requestAnimationFrame(() => {
-        featureRowRefs.current[featureId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const el = featureRowRefs.current[featureId]; if (el) scrollToFeatureRow(el);
       });
     }
 
@@ -226,7 +233,7 @@ export function useRoadmapData(featureParam?: string) {
     setViewMode('list');
     setExpandedFeature(featureId);
     requestAnimationFrame(() => {
-      featureRowRefs.current[featureId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const el = featureRowRefs.current[featureId]; if (el) scrollToFeatureRow(el);
     });
   }, []);
 

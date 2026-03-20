@@ -6,9 +6,10 @@ interface ImplementationSummaryProps {
   implementedCount: number;
   failedCount: number;
   totalAccepted: number;
+  featureCode: string;
 }
 
-export function ImplementationSummary({ implementedCount, failedCount, totalAccepted }: ImplementationSummaryProps) {
+export function ImplementationSummary({ implementedCount, failedCount, totalAccepted, featureCode }: ImplementationSummaryProps) {
   const allSucceeded = failedCount === 0;
   const allFailed = implementedCount === 0;
 
@@ -32,7 +33,7 @@ export function ImplementationSummary({ implementedCount, failedCount, totalAcce
             {implementedCount} of {totalAccepted} tasks generated code successfully.
             {failedCount > 0 && ` ${failedCount} task${failedCount > 1 ? 's' : ''} failed (exceeded 300-line limit).`}
           </p>
-          <NextSteps allSucceeded={allSucceeded} failedCount={failedCount} />
+          <NextSteps allSucceeded={allSucceeded} failedCount={failedCount} featureCode={featureCode} />
         </div>
       </div>
     </div>
@@ -52,20 +53,32 @@ function StatusIcon({ allSucceeded, allFailed }: { allSucceeded: boolean; allFai
   );
 }
 
-function NextSteps({ allSucceeded, failedCount }: { allSucceeded: boolean; failedCount: number }) {
+function NextSteps({ allSucceeded, failedCount, featureCode }: { allSucceeded: boolean; failedCount: number; featureCode: string }) {
   return (
     <div className="mt-3 space-y-1.5">
       <p className="text-xs font-semibold text-gray-700">Next steps:</p>
       <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
         <li>Review generated code in each task card (click to expand)</li>
         {allSucceeded ? (
-          <li>Copy the code to your project files and test</li>
+          <li>
+            Run{' '}
+            <code className="px-1 py-0.5 bg-gray-100 rounded text-[11px] font-mono">
+              pnpm apply:implementation {featureCode}
+            </code>{' '}
+            to write generated code to your project files
+          </li>
         ) : (
           <>
             {failedCount > 0 && (
               <li>Failed tasks were auto-split into smaller subtasks — click Implement to process them</li>
             )}
-            <li>Review successful tasks and copy working code to your project</li>
+            <li>
+              Run{' '}
+              <code className="px-1 py-0.5 bg-gray-100 rounded text-[11px] font-mono">
+                pnpm apply:implementation {featureCode}
+              </code>{' '}
+              to write completed code to your project files
+            </li>
           </>
         )}
         <li>Run tests to verify the implementation works correctly</li>

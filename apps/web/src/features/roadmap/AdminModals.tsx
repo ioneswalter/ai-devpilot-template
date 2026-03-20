@@ -27,6 +27,7 @@ interface AdminModalsProps {
   onTransitionCancel: () => void;
   onReviewWithAI?: (feature: ProductFeature) => void;
   onStartImplementation?: (feature: ProductFeature) => void;
+  onRunTests?: (feature: ProductFeature) => void;
 }
 
 export function AdminModals({
@@ -47,6 +48,7 @@ export function AdminModals({
   onTransitionCancel,
   onReviewWithAI,
   onStartImplementation,
+  onRunTests,
 }: AdminModalsProps) {
   return (
     <>
@@ -139,6 +141,10 @@ export function AdminModals({
             onStartImplementation={onStartImplementation ? () => {
               onTransitionCancel();
               onStartImplementation(transitionFeature);
+            } : undefined}
+            onRunTests={onRunTests ? () => {
+              onTransitionCancel();
+              onRunTests(transitionFeature);
             } : undefined}
           />
         );

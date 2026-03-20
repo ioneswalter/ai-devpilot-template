@@ -22,6 +22,7 @@ interface FeatureListViewProps {
   onLinkCriteria: (feature: ProductFeature) => void;
   onReviewFeature?: (feature: ProductFeature) => void;
   onImplementFeature?: (feature: ProductFeature) => void;
+  onRunTests?: (feature: ProductFeature) => void;
 }
 
 export function FeatureListView({
@@ -39,6 +40,7 @@ export function FeatureListView({
   onLinkCriteria,
   onReviewFeature,
   onImplementFeature,
+  onRunTests,
 }: FeatureListViewProps) {
   return (
     <section className="py-8">
@@ -102,6 +104,7 @@ export function FeatureListView({
                         featureRowRefs={featureRowRefs}
                         onReviewFeature={onReviewFeature}
                         onImplementFeature={onImplementFeature}
+                        onRunTests={onRunTests}
                       />
                     )}
                   </div>

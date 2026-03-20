@@ -18,6 +18,7 @@ interface FeatureDetailPanelProps {
   featureRowRefs: MutableRefObject<Record<string, HTMLDivElement | null>>;
   onReviewFeature?: (feature: ProductFeature) => void;
   onImplementFeature?: (feature: ProductFeature) => void;
+  onRunTests?: (feature: ProductFeature) => void;
 }
 
 export function FeatureDetailPanel({
@@ -29,6 +30,7 @@ export function FeatureDetailPanel({
   featureRowRefs,
   onReviewFeature,
   onImplementFeature,
+  onRunTests,
 }: FeatureDetailPanelProps) {
   const getJourneyByCode = (code: string): ProductFeature | undefined => {
     return features.find((f) => f.feature_code === code && f.feature_type === 'journey');
@@ -66,6 +68,20 @@ export function FeatureDetailPanel({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             {hasActiveImpl ? 'Watch Implementation' : 'Implement'}
+          </button>
+        </div>
+      )}
+      {/* Run Tests Button — in_development features with test cases */}
+      {isAdmin && feature.status === 'in_development' && onRunTests && (feature.test_cases?.length ?? 0) > 0 && (
+        <div className="pt-3 pb-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onRunTests(feature); }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Run Tests
           </button>
         </div>
       )}

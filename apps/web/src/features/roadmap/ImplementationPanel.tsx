@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useImplementation } from './useImplementation';
 import { ImplementationTaskCard } from './ImplementationTaskCard';
 import { ImplementationStartForm } from './ImplementationStartForm';
-import { ImplementationLoadingSkeleton } from './ImplementationLoadingSkeleton';
 import { ImplementationLog } from './ImplementationLog';
 import { ImplementationFooter } from './ImplementationFooter';
 import { ImplementationSummary } from './ImplementationSummary';
@@ -31,10 +30,17 @@ export function ImplementationPanel({
   onClose,
   onComplete,
 }: ImplementationPanelProps) {
-  const impl = useImplementation(featureId);
   const logRef = useRef<HTMLDivElement>(null);
   const hasScrolledToLog = useRef(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+
+  const impl = useImplementation(featureId);
 
   // Auto-scroll to log when panel opens with an active implementation
   // NOTE: must be before any early returns to satisfy React hooks rules
@@ -47,9 +53,14 @@ export function ImplementationPanel({
     }
   }, [impl.isImplementing]);
 
-  // Show loading skeleton while fetching
-  if (impl.isLoading) {
-    return <ImplementationLoadingSkeleton />;
+  // Show loading while data is being fetched or component just mounted
+  if (!ready || impl.isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm text-gray-500">Loading implementation details...</p>
+      </div>
+    );
   }
 
   // No request yet
@@ -118,11 +129,12 @@ export function ImplementationPanel({
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span>Requested by: {impl.request?.requested_by_name ?? 'Admin'}</span>
           <span className={`px-1.5 py-0.5 rounded font-medium ${
+            impl.request?.status === 'completed' && impl.pendingCount > 0 ? 'bg-amber-100 text-amber-700' :
             impl.request?.status === 'completed' ? 'bg-green-100 text-green-700' :
             impl.request?.status === 'failed' ? 'bg-red-100 text-red-700' :
             'bg-blue-100 text-blue-700'
           }`}>
-            {impl.request?.status}
+            {impl.request?.status === 'completed' && impl.pendingCount > 0 ? 'Awaiting Review' : impl.request?.status}
           </span>
         </div>
       </div>
@@ -212,6 +224,7 @@ export function ImplementationPanel({
             implementedCount={impl.implementedCount}
             failedCount={impl.failedImplCount}
             totalAccepted={impl.acceptedCount}
+            featureCode={featureCode}
           />
         )}
       </div>
