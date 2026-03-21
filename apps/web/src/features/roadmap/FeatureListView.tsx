@@ -1,11 +1,10 @@
-/**
- * FeatureListView - Renders the grouped list of features with expandable rows.
- */
-
+/** FeatureListView - Grouped list of features with expandable rows. */
 import type { MutableRefObject } from 'react';
 import { getStatusBadge, getPriorityBadge, getTypeBadge, getCategoryBadge } from '../../components/roadmap/badge-utils';
 import { CollapsibleDescription, type ProductFeature } from './roadmap-helpers';
 import { FeatureDetailPanel } from './FeatureDetailPanel';
+import { PipelineBar } from './PipelineBar';
+import type { FeaturePipelineState, PipelineStageName } from './pipeline-types';
 
 interface FeatureListViewProps {
   groupedFeatures: Record<string, ProductFeature[]>;
@@ -20,9 +19,8 @@ interface FeatureListViewProps {
   onEditFeature: (feature: ProductFeature) => void;
   onDeleteFeature: (feature: ProductFeature) => void;
   onLinkCriteria: (feature: ProductFeature) => void;
-  onReviewFeature?: (feature: ProductFeature) => void;
-  onImplementFeature?: (feature: ProductFeature) => void;
-  onRunTests?: (feature: ProductFeature) => void;
+  getPipeline?: (featureId: string) => FeaturePipelineState | undefined;
+  onPipelineStageClick?: (feature: ProductFeature, stage: PipelineStageName) => void;
 }
 
 export function FeatureListView({
@@ -38,9 +36,8 @@ export function FeatureListView({
   onEditFeature,
   onDeleteFeature,
   onLinkCriteria,
-  onReviewFeature,
-  onImplementFeature,
-  onRunTests,
+  getPipeline,
+  onPipelineStageClick,
 }: FeatureListViewProps) {
   return (
     <section className="py-8">
@@ -91,6 +88,8 @@ export function FeatureListView({
                       onEditFeature={onEditFeature}
                       onDeleteFeature={onDeleteFeature}
                       onLinkCriteria={onLinkCriteria}
+                      pipeline={getPipeline?.(feature.id)}
+                      onPipelineStageClick={onPipelineStageClick ? (stage) => onPipelineStageClick(feature, stage) : undefined}
                     />
 
                     {/* Expanded Detail */}
@@ -102,9 +101,6 @@ export function FeatureListView({
                         isAdmin={isAdmin}
                         toggleExpanded={toggleExpanded}
                         featureRowRefs={featureRowRefs}
-                        onReviewFeature={onReviewFeature}
-                        onImplementFeature={onImplementFeature}
-                        onRunTests={onRunTests}
                       />
                     )}
                   </div>
@@ -123,11 +119,7 @@ export function FeatureListView({
     </section>
   );
 }
-
-/* ------------------------------------------------------------------ */
-/*  FeatureRow - A single collapsed feature row                        */
-/* ------------------------------------------------------------------ */
-
+/** FeatureRow - A single collapsed feature row */
 interface FeatureRowProps {
   feature: ProductFeature;
   isExpanded: boolean;
@@ -136,6 +128,8 @@ interface FeatureRowProps {
   onEditFeature: (feature: ProductFeature) => void;
   onDeleteFeature: (feature: ProductFeature) => void;
   onLinkCriteria: (feature: ProductFeature) => void;
+  pipeline?: FeaturePipelineState;
+  onPipelineStageClick?: (stage: PipelineStageName) => void;
 }
 
 function FeatureRow({
@@ -146,6 +140,8 @@ function FeatureRow({
   onEditFeature,
   onDeleteFeature,
   onLinkCriteria,
+  pipeline,
+  onPipelineStageClick,
 }: FeatureRowProps) {
   const chevronClass = `transition-transform ${isExpanded ? 'rotate-180' : ''}`;
 
@@ -213,6 +209,13 @@ function FeatureRow({
             )}
           </div>
           <CollapsibleDescription text={feature.description} maxLines={3} />
+          {/* Pipeline Bar */}
+          <PipelineBar
+            featureStatus={feature.status}
+            pipeline={pipeline}
+            isAdmin={isAdmin}
+            onStageClick={onPipelineStageClick}
+          />
           {/* Related User Stories - shown inline for FRs */}
           {feature.related_user_stories && feature.related_user_stories.length > 0 && (
             <div className="flex flex-wrap items-center gap-1 mt-1">

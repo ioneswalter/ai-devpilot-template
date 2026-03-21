@@ -15,6 +15,33 @@ import type {
 const TEST_RUNS_KEY = ['test-runs'];
 const READINESS_KEY = ['release-readiness'];
 
+interface RawTestRun {
+  id: string;
+  test_case_id: string;
+  environment: string;
+  result: string;
+  error_message: string | null;
+  executed_at: string;
+  executed_by: string;
+  duration_ms: number | null;
+  test_cases: { id: string; title: string; test_code: string; feature_id: string };
+}
+
+function mapTestRun(raw: RawTestRun): TestExecutionEntry {
+  return {
+    id: raw.id,
+    test_case_id: raw.test_case_id,
+    test_code: raw.test_cases?.test_code ?? '',
+    test_title: raw.test_cases?.title ?? '',
+    test_type: '',
+    result: raw.result as TestExecutionEntry['result'],
+    notes: raw.error_message,
+    executed_by: raw.executed_by,
+    executed_at: raw.executed_at,
+    environment: raw.environment,
+  };
+}
+
 export function useTestExecution(featureId: string | null) {
   const queryClient = useQueryClient();
 
@@ -23,7 +50,7 @@ export function useTestExecution(featureId: string | null) {
     queryFn: async (): Promise<TestExecutionEntry[]> => {
       if (!featureId) return [];
       const res = await adminApi.getTestRunHistory(featureId);
-      return res.test_runs ?? [];
+      return (res.test_runs ?? []).map(mapTestRun);
     },
     staleTime: 10_000,
     retry: false,

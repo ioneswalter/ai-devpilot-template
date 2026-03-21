@@ -99,10 +99,14 @@ export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <code className="text-[10px] font-mono text-gray-500">{entry.test_code}</code>
-                        <span className="text-[10px] text-gray-400">{formatTime(entry.executed_at)}</span>
-                        <span className="text-[10px] text-gray-400 ml-auto truncate">{entry.executed_by}</span>
+                        <span className="text-[11px] text-gray-700 font-medium truncate">
+                          {entry.test_title || entry.test_code || 'Test'}
+                        </span>
+                        <span className="text-[10px] text-gray-400 flex-shrink-0">{formatTime(entry.executed_at)}</span>
                       </div>
+                      {entry.test_code && entry.test_title && (
+                        <code className="text-[10px] font-mono text-gray-400">{entry.test_code}</code>
+                      )}
                       {entry.notes && (
                         <p className="text-[10px] text-gray-500 mt-0.5 italic">{entry.notes}</p>
                       )}

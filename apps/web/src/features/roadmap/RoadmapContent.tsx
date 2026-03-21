@@ -3,7 +3,7 @@
  * Composes header, filters, list/kanban views, copilot, and admin modals.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CopilotPanel } from '../../features/copilot';
 import { KanbanBoard } from '../../components/roadmap/KanbanBoard';
 import { useRoadmapData } from './useRoadmapData';
@@ -15,13 +15,46 @@ import { Modal } from '../../components/ui/Modal';
 import { SpecReviewPanel } from './SpecReviewPanel';
 import { ImplementationPanel } from './ImplementationPanel';
 import { TestRunPanel } from './TestRunPanel';
+import { usePipelineStatus } from './usePipelineStatus';
 import type { ProductFeature } from './roadmap-helpers';
+import type { PipelineStageName } from './pipeline-types';
 
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
+  const pipeline = usePipelineStatus();
   const [reviewingFeature, setReviewingFeature] = useState<ProductFeature | null>(null);
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
+
+  /** Handle pipeline stage click — open the corresponding panel */
+  const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
+    if (!roadmap.isAdmin) return;
+    switch (stage) {
+      case 'spec':
+        setReviewingFeature(feature);
+        break;
+      case 'build':
+        setImplementingFeature(feature);
+        break;
+      case 'test':
+        setTestingFeature(feature);
+        break;
+      case 'deploy':
+        if (feature.status === 'released') return; // Already released — no action
+        roadmap.handleTransitionRequest({
+          featureId: feature.id,
+          fromStatus: feature.status,
+          toStatus: 'released',
+        });
+        break;
+    }
+  }, [roadmap.isAdmin, roadmap.handleTransitionRequest]);
+
+  /** Handle pipeline stage click from kanban (featureId-based) */
+  const handleKanbanPipelineClick = useCallback((featureId: string, stage: PipelineStageName) => {
+    const feature = roadmap.features.find((f) => f.id === featureId);
+    if (feature) handlePipelineStageClick(feature, stage);
+  }, [roadmap.features, handlePipelineStageClick]);
 
   // Sync modal feature state when features list refreshes (e.g. after test submission)
   useEffect(() => {
@@ -105,6 +138,8 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           onTransitionRequest={roadmap.handleTransitionRequest}
           updatingId={roadmap.isTransitioning ? roadmap.pendingTransition?.featureId : null}
           onFeatureClick={roadmap.handleKanbanFeatureClick}
+          getPipeline={pipeline.getPipeline}
+          onPipelineStageClick={roadmap.isAdmin ? handleKanbanPipelineClick : undefined}
         />
       )}
 
@@ -123,9 +158,8 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           onEditFeature={roadmap.setEditingFeature}
           onDeleteFeature={roadmap.setDeletingFeature}
           onLinkCriteria={roadmap.setLinkingCriteriaFeature}
-          onReviewFeature={roadmap.isAdmin ? setReviewingFeature : undefined}
-          onImplementFeature={roadmap.isAdmin ? setImplementingFeature : undefined}
-          onRunTests={roadmap.isAdmin ? setTestingFeature : undefined}
+          getPipeline={pipeline.getPipeline}
+          onPipelineStageClick={roadmap.isAdmin ? handlePipelineStageClick : undefined}
         />
       )}
 
@@ -156,6 +190,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             onReviewComplete={() => {
               setReviewingFeature(null);
               roadmap.fetchFeatures();
+              pipeline.invalidate();
             }}
           />
         )}
@@ -180,6 +215,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             onComplete={() => {
               setImplementingFeature(null);
               roadmap.fetchFeatures();
+              pipeline.invalidate();
             }}
           />
         )}
@@ -199,13 +235,15 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             featureId={testingFeature.id}
             featureCode={testingFeature.feature_code}
             featureTitle={testingFeature.title}
+            featureStatus={testingFeature.status}
             testCases={testingFeature.test_cases ?? []}
             onClose={() => setTestingFeature(null)}
             onComplete={() => {
               setTestingFeature(null);
               roadmap.fetchFeatures();
+              pipeline.invalidate();
             }}
-            onRefresh={roadmap.fetchFeatures}
+            onRefresh={() => { roadmap.fetchFeatures(); pipeline.invalidate(); }}
           />
         )}
       </Modal>

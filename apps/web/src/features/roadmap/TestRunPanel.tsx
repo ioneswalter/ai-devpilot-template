@@ -15,6 +15,7 @@ interface TestRunPanelProps {
   featureId: string;
   featureCode: string;
   featureTitle: string;
+  featureStatus: string;
   testCases: TestCase[];
   onClose: () => void;
   onComplete: () => void;
@@ -24,7 +25,7 @@ interface TestRunPanelProps {
 type PanelView = 'status' | 'execute';
 
 export function TestRunPanel({
-  featureId, featureCode, featureTitle, testCases, onClose, onComplete, onRefresh,
+  featureId, featureCode, featureTitle, featureStatus, testCases, onClose, onComplete, onRefresh,
 }: TestRunPanelProps) {
   const exec = useTestExecution(featureId);
   const [view, setView] = useState<PanelView>('status');
@@ -112,14 +113,6 @@ export function TestRunPanel({
                 <div>
                   <h4 className="text-sm font-semibold text-green-800">All Tests Passed</h4>
                   <p className="text-sm text-green-700 mt-0.5">{passedCount} of {testCases.length} tests passed successfully.</p>
-                  <div className="mt-3 text-sm text-green-700">
-                    <p className="font-medium">Next steps:</p>
-                    <ul className="list-disc ml-4 mt-1 space-y-0.5 text-xs">
-                      <li>Feature is ready to transition to Released status</li>
-                      <li>Drag to Released column on Kanban board, or use the transition button</li>
-                      <li>Run tests again if you need to re-verify</li>
-                    </ul>
-                  </div>
                 </div>
               </div>
             </div>
@@ -187,7 +180,7 @@ export function TestRunPanel({
                 className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
               >Run Tests</button>
             )}
-            {allPassed && (
+            {allPassed && featureStatus !== 'released' && (
               <button
                 onClick={onComplete}
                 className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
