@@ -40,8 +40,8 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember }: RoadmapH
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 max-w-6xl mx-auto">
           <div className="flex items-center justify-between md:block">
             <div>
-              <h1 className="text-xl lg:text-2xl font-bold">Product Roadmap</h1>
-              <p className="text-xs lg:text-sm text-blue-200">Members vote on feature priorities</p>
+              <h1 className="text-xl lg:text-2xl font-bold">AI DevPilot</h1>
+              <p className="text-xs lg:text-sm text-blue-200">Product roadmap &amp; feature pipeline</p>
             </div>
             {/* Mobile ideation button */}
             {ideationButton && (
