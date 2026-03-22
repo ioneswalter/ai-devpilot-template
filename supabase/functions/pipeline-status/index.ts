@@ -50,22 +50,42 @@ interface StageStatus {
 }
 
 function computeSpecStage(reviews: SpecReviewRow[], featureId: string): StageStatus {
-  const review = reviews.find((r) => r.feature_id === featureId);
-  if (!review) return { status: 'not_started', label: 'Not Started' };
-  if (review.status === 'in_review') return { status: 'in_progress', label: 'In Review' };
-  if (review.status === 'approved') return { status: 'completed', label: 'Approved' };
-  if (review.status === 'sent_back') return { status: 'warning', label: 'Sent Back' };
+  // Check ALL spec reviews for this feature (not just latest)
+  const featureReviews = reviews.filter((r) => r.feature_id === featureId);
+  if (featureReviews.length === 0) return { status: 'not_started', label: 'Not Started' };
+
+  // If any review is approved → completed
+  if (featureReviews.some((r) => r.status === 'approved')) {
+    return { status: 'completed', label: 'Approved' };
+  }
+  // If any is in review → in progress
+  if (featureReviews.some((r) => r.status === 'in_review')) {
+    return { status: 'in_progress', label: 'In Review' };
+  }
+  // If sent back → warning
+  if (featureReviews.some((r) => r.status === 'sent_back')) {
+    return { status: 'warning', label: 'Sent Back' };
+  }
   return { status: 'not_started', label: 'Not Started' };
 }
 
 function computeBuildStage(impls: ImplRequestRow[], featureId: string): StageStatus {
-  const impl = impls.find((r) => r.feature_id === featureId);
-  if (!impl) return { status: 'not_started', label: 'Not Started' };
-  if (impl.status === 'pending' || impl.status === 'in_progress') {
+  // Check ALL implementation requests for this feature (not just latest)
+  const featureImpls = impls.filter((r) => r.feature_id === featureId);
+  if (featureImpls.length === 0) return { status: 'not_started', label: 'Not Started' };
+
+  // If any request is completed/implemented → completed
+  if (featureImpls.some((r) => r.status === 'completed' || r.status === 'implemented')) {
+    return { status: 'completed', label: 'Completed' };
+  }
+  // If any is in progress → building
+  if (featureImpls.some((r) => r.status === 'pending' || r.status === 'in_progress')) {
     return { status: 'in_progress', label: 'Building' };
   }
-  if (impl.status === 'completed') return { status: 'completed', label: 'Completed' };
-  if (impl.status === 'failed') return { status: 'warning', label: 'Failed' };
+  // If all failed → warning
+  if (featureImpls.some((r) => r.status === 'failed')) {
+    return { status: 'warning', label: 'Failed' };
+  }
   return { status: 'not_started', label: 'Not Started' };
 }
 
@@ -161,14 +181,13 @@ Deno.serve(async (req) => {
     if (implResult.error) return errorResponse('DB_ERROR', implResult.error.message, 500);
     if (testResult.error) return errorResponse('DB_ERROR', testResult.error.message, 500);
 
-    // Deduplicate spec_reviews and impl_requests to latest per feature
-    const latestSpecs = deduplicateByFeature(specResult.data as SpecReviewRow[]);
-    const latestImpls = deduplicateByFeature(implResult.data as ImplRequestRow[]);
+    const allSpecs = (specResult.data ?? []) as SpecReviewRow[];
+    const allImpls = (implResult.data ?? []) as ImplRequestRow[];
 
     const pipelines = (features as FeatureRow[]).map((f) => ({
       feature_id: f.id,
-      spec: computeSpecStage(latestSpecs, f.id),
-      build: computeBuildStage(latestImpls, f.id),
+      spec: computeSpecStage(allSpecs, f.id),
+      build: computeBuildStage(allImpls, f.id),
       test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
       deploy: computeDeployStage(f.status),
     }));
@@ -180,12 +199,3 @@ Deno.serve(async (req) => {
   }
 });
 
-/** Keep only the first (latest) record per feature_id — assumes descending order */
-function deduplicateByFeature<T extends { feature_id: string }>(rows: T[]): T[] {
-  const seen = new Set<string>();
-  return rows.filter((row) => {
-    if (seen.has(row.feature_id)) return false;
-    seen.add(row.feature_id);
-    return true;
-  });
-}
