@@ -29,18 +29,28 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   /** Handle pipeline stage click — open the corresponding panel */
   const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
     if (!roadmap.isAdmin) return;
+
+    // For released features, only open panels if there's actual SpecKit data
+    const pipelineData = pipeline.getPipeline(feature.id);
+
     switch (stage) {
-      case 'spec':
+      case 'spec': {
+        const specLabel = pipelineData?.spec?.label;
+        if (feature.status === 'released' && specLabel === 'Done') return;
         setReviewingFeature(feature);
         break;
-      case 'build':
+      }
+      case 'build': {
+        const buildLabel = pipelineData?.build?.label;
+        if (feature.status === 'released' && buildLabel === 'Done') return;
         setImplementingFeature(feature);
         break;
+      }
       case 'test':
         setTestingFeature(feature);
         break;
       case 'deploy':
-        if (feature.status === 'released') return; // Already released — no action
+        if (feature.status === 'released') return;
         roadmap.handleTransitionRequest({
           featureId: feature.id,
           fromStatus: feature.status,
@@ -48,7 +58,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         });
         break;
     }
-  }, [roadmap.isAdmin, roadmap.handleTransitionRequest]);
+  }, [roadmap.isAdmin, roadmap.handleTransitionRequest, pipeline]);
 
   /** Handle pipeline stage click from kanban (featureId-based) */
   const handleKanbanPipelineClick = useCallback((featureId: string, stage: PipelineStageName) => {
