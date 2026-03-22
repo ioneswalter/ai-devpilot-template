@@ -25,8 +25,8 @@ export async function handleCreateRequest(req: Request, ctx: AuthContext): Promi
     return errorResponse('NOT_FOUND', 'Feature not found', 404);
   }
 
-  if (feature.status !== 'approved') {
-    return errorResponse('INVALID_STATE', `Feature must be "approved", currently "${feature.status}"`, 400);
+  if (feature.status !== 'approved' && feature.status !== 'in_development') {
+    return errorResponse('INVALID_STATE', `Feature must be "approved" or "in_development", currently "${feature.status}"`, 400);
   }
 
   // Check for existing active request
