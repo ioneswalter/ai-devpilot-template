@@ -3,7 +3,7 @@
  * Shows original proposal alongside AI-generated enhancements
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSpecReview } from './useSpecReview';
 import { ReviewItemCard } from './ReviewItemCard';
 import { ReviewApprovalBar } from './ReviewApprovalBar';
@@ -42,9 +42,26 @@ export function SpecReviewPanel({
   onClose,
   onReviewComplete,
 }: SpecReviewPanelProps) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 800);
+    return () => clearTimeout(t);
+  }, []);
+
   const spec = useSpecReview(featureId);
   const [newItemType, setNewItemType] = useState<ReviewItemType>('criterion');
   const [newItemContent, setNewItemContent] = useState('');
+
+  // Show loading while data is being fetched or component just mounted
+  if (!ready || spec.isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        <p className="text-sm text-gray-500">Loading spec review...</p>
+      </div>
+    );
+  }
 
   const grouped = groupItemsByType(spec.items);
 
@@ -118,29 +135,6 @@ export function SpecReviewPanel({
         </div>
         <div className="border-t p-3 flex justify-end">
           <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (spec.isLoading) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b">
-          <div className="h-4 w-32 bg-gray-200 rounded animate-pulse mb-2" />
-          <div className="h-3 w-48 bg-gray-100 rounded animate-pulse" />
-        </div>
-        <div className="flex-1 p-4 space-y-3">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="border rounded-lg p-3 animate-pulse">
-              <div className="flex gap-2 mb-2">
-                <div className="h-5 w-16 bg-gray-200 rounded" />
-                <div className="h-5 w-12 bg-gray-100 rounded" />
-              </div>
-              <div className="h-4 w-full bg-gray-100 rounded" />
-            </div>
-          ))}
         </div>
       </div>
     );

@@ -128,7 +128,7 @@ export function useSpecReview(featureId: string, options?: { enabled?: boolean }
     rejectedCount,
 
     // Loading states
-    isLoading: reviewQuery.isLoading || reviewQuery.isFetching,
+    isLoading: reviewQuery.isLoading,
     isStarting: startMutation.isPending,
     isUpdating: updateMutation.isPending,
     isApproving: approveMutation.isPending,
