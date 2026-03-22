@@ -165,40 +165,13 @@ Deno.serve(async (req) => {
     const latestSpecs = deduplicateByFeature(specResult.data as SpecReviewRow[]);
     const latestImpls = deduplicateByFeature(implResult.data as ImplRequestRow[]);
 
-    const pipelines = (features as FeatureRow[]).map((f) => {
-      const isReleased = f.status === 'released';
-      const isInDev = f.status === 'in_development';
-      let spec = computeSpecStage(latestSpecs, f.id);
-      let build = computeBuildStage(latestImpls, f.id);
-
-      // Released: spec and build must have been completed
-      if (isReleased) {
-        if (spec.status === 'not_started') {
-          spec = { status: 'completed', label: 'Done' };
-        }
-        if (build.status === 'not_started') {
-          build = { status: 'completed', label: 'Done' };
-        }
-      }
-
-      // In development: spec is done, build is in progress
-      if (isInDev) {
-        if (spec.status === 'not_started') {
-          spec = { status: 'completed', label: 'Done' };
-        }
-        if (build.status === 'not_started') {
-          build = { status: 'in_progress', label: 'Building' };
-        }
-      }
-
-      return {
-        feature_id: f.id,
-        spec,
-        build,
-        test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
-        deploy: computeDeployStage(f.status),
-      };
-    });
+    const pipelines = (features as FeatureRow[]).map((f) => ({
+      feature_id: f.id,
+      spec: computeSpecStage(latestSpecs, f.id),
+      build: computeBuildStage(latestImpls, f.id),
+      test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
+      deploy: computeDeployStage(f.status),
+    }));
 
     return jsonResponse({ pipelines });
   } catch (err) {

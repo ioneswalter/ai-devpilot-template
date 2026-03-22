@@ -35,14 +35,14 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
 
     switch (stage) {
       case 'spec': {
-        const specLabel = pipelineData?.spec?.label;
-        if (feature.status === 'released' && specLabel === 'Done') return;
+        // Only open spec panel if there's SpecKit data
+        if (pipelineData?.spec?.status === 'not_started') return;
         setReviewingFeature(feature);
         break;
       }
       case 'build': {
-        const buildLabel = pipelineData?.build?.label;
-        if (feature.status === 'released' && buildLabel === 'Done') return;
+        // Only open build panel if there's SpecKit data
+        if (pipelineData?.build?.status === 'not_started') return;
         setImplementingFeature(feature);
         break;
       }
