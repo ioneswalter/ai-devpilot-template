@@ -167,16 +167,27 @@ Deno.serve(async (req) => {
 
     const pipelines = (features as FeatureRow[]).map((f) => {
       const isReleased = f.status === 'released';
+      const isInDev = f.status === 'in_development';
       let spec = computeSpecStage(latestSpecs, f.id);
       let build = computeBuildStage(latestImpls, f.id);
 
-      // Released features were necessarily spec'd and built — infer completion
+      // Released: spec and build must have been completed
       if (isReleased) {
         if (spec.status === 'not_started') {
           spec = { status: 'completed', label: 'Done' };
         }
         if (build.status === 'not_started') {
           build = { status: 'completed', label: 'Done' };
+        }
+      }
+
+      // In development: spec is done, build is in progress
+      if (isInDev) {
+        if (spec.status === 'not_started') {
+          spec = { status: 'completed', label: 'Done' };
+        }
+        if (build.status === 'not_started') {
+          build = { status: 'in_progress', label: 'Building' };
         }
       }
 
