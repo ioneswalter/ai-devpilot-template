@@ -71,30 +71,24 @@ function computeBuildStage(impls: ImplRequestRow[], featureId: string): StageSta
 
 function computeTestStage(testCases: TestCaseRow[], featureId: string): StageStatus {
   const cases = testCases.filter((tc) => tc.feature_id === featureId);
-  if (cases.length === 0) return { status: 'not_started', label: 'No Tests' };
+  if (cases.length === 0) return { status: 'not_started', label: 'Not Started' };
 
   const allNull = cases.every((tc) => tc.passed === null);
   if (allNull) return { status: 'not_started', label: 'Not Run' };
 
-  const failed = cases.filter((tc) => tc.passed === false).length;
-  if (failed > 0) {
-    return { status: 'warning', label: `${failed}/${cases.length} failed` };
-  }
-
   const passed = cases.filter((tc) => tc.passed === true).length;
+  const failed = cases.filter((tc) => tc.passed === false).length;
   const total = cases.length;
-  if (passed === total) return { status: 'completed', label: 'All Passed' };
 
+  if (failed > 0) return { status: 'warning', label: `${passed}/${total} passed` };
+  if (passed === total) return { status: 'completed', label: 'All Passed' };
   return { status: 'in_progress', label: `${passed}/${total} passed` };
 }
 
 function computeDeployStage(featureStatus: string): StageStatus {
-  if (featureStatus === 'proposed') return { status: 'not_started', label: 'Proposed' };
-  if (featureStatus === 'approved') return { status: 'not_started', label: 'Approved' };
-  if (featureStatus === 'in_development') return { status: 'in_progress', label: 'In Development' };
   if (featureStatus === 'released') return { status: 'completed', label: 'Released' };
   if (featureStatus === 'deprecated') return { status: 'warning', label: 'Deprecated' };
-  return { status: 'not_started', label: featureStatus };
+  return { status: 'not_started', label: 'Not Started' };
 }
 
 Deno.serve(async (req) => {

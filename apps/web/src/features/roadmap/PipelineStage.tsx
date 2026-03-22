@@ -117,9 +117,9 @@ export function PipelineStage({ stage, status, isAdmin, onClick }: PipelineStage
     >
       <StageIcon stage={stage} statusValue={status.status} />
       <span className="hidden sm:inline">{STAGE_LABELS[stage]}</span>
-      <span className="hidden lg:inline text-[10px] opacity-75">
-        {status.label !== STAGE_LABELS[stage] ? `· ${status.label}` : ''}
-      </span>
+      {status.label !== 'Not Started' && status.label !== STAGE_LABELS[stage] && (
+        <span className="hidden lg:inline text-[10px] opacity-75">· {status.label}</span>
+      )}
     </button>
   );
 }
