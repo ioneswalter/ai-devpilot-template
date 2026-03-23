@@ -3,13 +3,52 @@
  * Opens to status overview; admin clicks "Run Tests" to enter marking mode.
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTestExecution } from './useTestExecution';
 import { TestCaseExecutionCard } from './TestCaseExecutionCard';
 import { TestCaseStatusCard } from './TestCaseStatusCard';
 import { TestRunHistory } from './TestRunHistory';
 import type { TestCase } from './roadmap-helpers';
 import type { TestRunResult, TestResultInput } from './test-execution-types';
+
+interface TestRunDraft {
+  view: PanelView;
+  environment: string;
+  results: Record<string, TestRunResult | null>;
+  notes: Record<string, string>;
+  savedAt: number;
+}
+
+const DRAFT_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
+function getDraftKey(featureId: string): string {
+  return `test-run-draft-${featureId}`;
+}
+
+function loadDraft(featureId: string): TestRunDraft | null {
+  try {
+    const raw = sessionStorage.getItem(getDraftKey(featureId));
+    if (!raw) return null;
+    const draft = JSON.parse(raw) as TestRunDraft;
+    if (Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS) {
+      sessionStorage.removeItem(getDraftKey(featureId));
+      return null;
+    }
+    return draft;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(featureId: string, draft: Omit<TestRunDraft, 'savedAt'>): void {
+  try {
+    sessionStorage.setItem(getDraftKey(featureId), JSON.stringify({ ...draft, savedAt: Date.now() }));
+  } catch { /* sessionStorage full or unavailable */ }
+}
+
+function clearDraft(featureId: string): void {
+  try { sessionStorage.removeItem(getDraftKey(featureId)); } catch { /* ignore */ }
+}
 
 interface TestRunPanelProps {
   featureId: string;
@@ -28,11 +67,22 @@ export function TestRunPanel({
   featureId, featureCode, featureTitle, featureStatus, testCases, onClose, onComplete, onRefresh,
 }: TestRunPanelProps) {
   const exec = useTestExecution(featureId);
-  const [view, setView] = useState<PanelView>('status');
-  const [environment, setEnvironment] = useState('development');
-  const [results, setResults] = useState<Record<string, TestRunResult | null>>({});
-  const [notes, setNotes] = useState<Record<string, string>>({});
+  const draft = useRef(loadDraft(featureId)).current;
+  const [view, setView] = useState<PanelView>(draft?.view ?? 'status');
+  const [environment, setEnvironment] = useState(draft?.environment ?? 'development');
+  const [results, setResults] = useState<Record<string, TestRunResult | null>>(draft?.results ?? {});
+  const [notes, setNotes] = useState<Record<string, string>>(draft?.notes ?? {});
+  const [hasDraft, setHasDraft] = useState(draft?.view === 'execute');
   const lastSubmitRef = useRef<{ passed: number; failed: number; skipped: number; total: number } | null>(null);
+
+  // Persist draft to sessionStorage when in execute view
+  const persistDraft = useCallback(() => {
+    if (view === 'execute') {
+      saveDraft(featureId, { view, environment, results, notes });
+    }
+  }, [featureId, view, environment, results, notes]);
+
+  useEffect(() => { persistDraft(); }, [persistDraft]);
 
   // Compute last run result per test case from history (ordered by executed_at desc)
   const lastRunResults: Record<string, TestRunResult> = {};
@@ -62,6 +112,8 @@ export function TestRunPanel({
     exec.submitResults(environment, entries);
     setResults({});
     setNotes({});
+    clearDraft(featureId);
+    setHasDraft(false);
   };
 
   // After successful submission — refresh parent data and return to status view
@@ -70,6 +122,8 @@ export function TestRunPanel({
     setView('status');
     exec.resetSubmit();
     lastSubmitRef.current = null;
+    clearDraft(featureId);
+    setHasDraft(false);
   }
 
   // Compute test status from test case data + history
@@ -80,10 +134,7 @@ export function TestRunPanel({
   const allPassed = testCases.length > 0 && failedCount === 0 && notRunCount === 0 && skippedCount === 0;
   const hasFailed = failedCount > 0;
 
-  if (view === 'status') return <StatusView />;
-  return <ExecuteView />;
-
-  function StatusView() {
+  if (view === 'status') {
     return (
       <div className="flex flex-col min-h-[400px]">
         <div className="p-4 border-b bg-white">
@@ -98,7 +149,7 @@ export function TestRunPanel({
               key={tc.id}
               testCode={tc.test_code}
               title={tc.title}
-              passed={tc.passed}
+              passed={tc.passed ?? null}
               isSkipped={tc.id ? lastRunResults[tc.id] === 'skipped' : false}
             />
           ))}
@@ -175,6 +226,7 @@ export function TestRunPanel({
                   }
                   setResults(prefilled);
                   setNotes({});
+                  setHasDraft(false);
                   setView('execute');
                 }}
                 className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
@@ -192,68 +244,82 @@ export function TestRunPanel({
     );
   }
 
-  function ExecuteView() {
-    return (
-      <div className="flex flex-col min-h-[400px]">
-        <div className="p-4 border-b bg-white">
-          <div className="flex items-center gap-2 mb-1">
-            <code className="text-xs font-mono text-blue-600">{featureCode}</code>
-            <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
-          </div>
-          <p className="text-xs text-gray-500">Mark each test case as Pass, Fail, or Skip</p>
+  return (
+    <div className="flex flex-col min-h-[400px]">
+      <div className="p-4 border-b bg-white">
+        <div className="flex items-center gap-2 mb-1">
+          <code className="text-xs font-mono text-blue-600">{featureCode}</code>
+          <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
         </div>
-        <div className="px-4 py-2 border-b bg-gray-50 flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-500">Environment:</label>
-          <select value={environment} onChange={(e) => setEnvironment(e.target.value)} className="text-xs border rounded px-2 py-1 bg-white">
-            <option value="development">Development</option>
-            <option value="staging">Staging</option>
-            <option value="production">Production</option>
-          </select>
+        <p className="text-xs text-gray-500">Mark each test case as Pass, Fail, or Skip</p>
+      </div>
+      <div className="px-4 py-2 border-b bg-gray-50 flex items-center gap-2">
+        <label className="text-xs font-medium text-gray-500">Environment:</label>
+        <select value={environment} onChange={(e) => setEnvironment(e.target.value)} className="text-xs border rounded px-2 py-1 bg-white">
+          <option value="development">Development</option>
+          <option value="staging">Staging</option>
+          <option value="production">Production</option>
+        </select>
+      </div>
+      {exec.submitError && (
+        <div className="px-4 py-3 bg-red-50 border-b border-red-200 flex items-center gap-2">
+          <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm text-red-700">
+            {exec.submitError instanceof Error ? exec.submitError.message : 'Failed to submit'}
+          </span>
         </div>
-        {exec.submitError && (
-          <div className="px-4 py-3 bg-red-50 border-b border-red-200 flex items-center gap-2">
-            <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm text-red-700">
-              {exec.submitError instanceof Error ? exec.submitError.message : 'Failed to submit'}
-            </span>
-          </div>
-        )}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            Mark Results ({markedCount}/{testCases.length})
-          </h4>
-          {testCases.map((tc) => (
-            <TestCaseExecutionCard
-              key={tc.id}
-              testCase={tc}
-              result={results[tc.id!] ?? null}
-              notes={notes[tc.id!] ?? ''}
-              onResultChange={(r) => setResults((prev) => ({ ...prev, [tc.id!]: r }))}
-              onNotesChange={(n) => setNotes((prev) => ({ ...prev, [tc.id!]: n }))}
-              lastRunResult={tc.id ? lastRunResults[tc.id] ?? null : null}
-            />
-          ))}
-        </div>
-        <div className="border-t p-3 flex items-center justify-between bg-white">
-          <button onClick={() => { setView('status'); setResults({}); setNotes({}); }} className="text-xs text-gray-500 hover:text-gray-700">
-            Back to Overview
+      )}
+      {hasDraft && (
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+          <span className="text-xs text-blue-700">Draft restored — your previous progress was saved.</span>
+          <button
+            onClick={() => {
+              setResults({});
+              setNotes({});
+              clearDraft(featureId);
+              setHasDraft(false);
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Discard
           </button>
-          <div className="flex gap-2">
-            <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-            {markedCount > 0 && (
-              <button
-                onClick={handleSubmit}
-                disabled={exec.isSubmitting}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                {exec.isSubmitting ? 'Submitting...' : `Submit ${markedCount} Result${markedCount > 1 ? 's' : ''}`}
-              </button>
-            )}
-          </div>
+        </div>
+      )}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Mark Results ({markedCount}/{testCases.length})
+        </h4>
+        {testCases.map((tc) => (
+          <TestCaseExecutionCard
+            key={tc.id}
+            testCase={{ ...tc, id: tc.id!, description: tc.description ?? null, passed: tc.passed ?? null }}
+            result={results[tc.id!] ?? null}
+            notes={notes[tc.id!] ?? ''}
+            onResultChange={(r) => setResults((prev) => ({ ...prev, [tc.id!]: r }))}
+            onNotesChange={(n) => setNotes((prev) => ({ ...prev, [tc.id!]: n }))}
+            lastRunResult={tc.id ? lastRunResults[tc.id] ?? null : null}
+          />
+        ))}
+      </div>
+      <div className="border-t p-3 flex items-center justify-between bg-white">
+        <button onClick={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); setHasDraft(false); }} className="text-xs text-gray-500 hover:text-gray-700">
+          Back to Overview
+        </button>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
+          {markedCount > 0 && (
+            <button
+              onClick={handleSubmit}
+              disabled={exec.isSubmitting}
+              className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {exec.isSubmitting ? 'Submitting...' : `Submit ${markedCount} Result${markedCount > 1 ? 's' : ''}`}
+            </button>
+          )}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 }
