@@ -50,7 +50,7 @@ export function useTestExecution(featureId: string | null) {
     queryFn: async (): Promise<TestExecutionEntry[]> => {
       if (!featureId) return [];
       const res = await adminApi.getTestRunHistory(featureId);
-      return (res.test_runs ?? []).map(mapTestRun);
+      return ((res.test_runs ?? []) as unknown as RawTestRun[]).map(mapTestRun);
     },
     staleTime: 10_000,
     retry: false,

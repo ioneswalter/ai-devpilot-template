@@ -134,7 +134,7 @@ export function useImplementation(featureId: string | null) {
 
   const taskItems = implQuery.data?.task_items ?? [];
   // Exclude split parent tasks — their subtasks replace them
-  const activeItems = taskItems.filter(t => t.implementation_status !== 'split');
+  const activeItems = taskItems.filter(t => (t.implementation_status as string) !== 'split');
   const acceptedItems = activeItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
   // Only show as "implementing" if the frontend loop is actually running.
   const isImplementing = implementMutation.isPending;
