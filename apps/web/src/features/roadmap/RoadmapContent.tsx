@@ -18,6 +18,7 @@ import { TestRunPanel } from './TestRunPanel';
 import { usePipelineStatus } from './usePipelineStatus';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
+import { apiClient } from '../../lib/supabase-client';
 
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
@@ -248,7 +249,11 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             featureStatus={testingFeature.status}
             testCases={testingFeature.test_cases ?? []}
             onClose={() => setTestingFeature(null)}
-            onComplete={() => {
+            onComplete={async () => {
+              await apiClient('roadmap-admin-features', {
+                method: 'PATCH',
+                body: JSON.stringify({ feature_id: testingFeature.id, status: 'released' }),
+              });
               setTestingFeature(null);
               roadmap.fetchFeatures();
               pipeline.invalidate();

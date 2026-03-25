@@ -45,6 +45,16 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
   const task = tasks[0];
   const feature = implRequest.feature;
 
+  // Fetch all sibling file paths so AI knows what files exist in this feature
+  const { data: allTasks } = await ctx.supabase
+    .from('implementation_task_items')
+    .select('file_path')
+    .eq('request_id', requestId)
+    .in('decision', ['accepted', 'modified']);
+  const siblingFilePaths = (allTasks || [])
+    .map(t => t.file_path)
+    .filter(p => p !== task.file_path);
+
   // Ensure request status is 'implementing'
   if (implRequest.status !== 'implementing') {
     await ctx.supabase
@@ -63,6 +73,7 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
   const result = await generateCode(
     { title: task.title, description: task.description, file_path: task.file_path, task_type: task.task_type },
     { feature_code: feature.feature_code, title: feature.title, description: feature.description, criteria: feature.acceptance_criteria || [] },
+    siblingFilePaths,
   );
 
   // If rejected for exceeding line limit, auto-split into smaller subtasks

@@ -5,6 +5,8 @@
 interface ImplementationFooterProps {
   isImplementing: boolean;
   canImplement: boolean;
+  isComplete: boolean;
+  codeApplied: boolean;
   taskCount: number;
   pendingCount: number;
   acceptedCount: number;
@@ -12,12 +14,15 @@ interface ImplementationFooterProps {
   implementedCount: number;
   failedImplCount: number;
   onImplement: () => void;
+  onWriteCode: () => void;
   onClose: () => void;
 }
 
 export function ImplementationFooter({
   isImplementing,
   canImplement,
+  isComplete,
+  codeApplied,
   taskCount,
   pendingCount,
   acceptedCount,
@@ -25,6 +30,7 @@ export function ImplementationFooter({
   implementedCount,
   failedImplCount,
   onImplement,
+  onWriteCode,
   onClose,
 }: ImplementationFooterProps) {
   const progressPct = acceptedCount > 0 ? (implementedCount / acceptedCount) * 100 : 0;
@@ -65,7 +71,7 @@ export function ImplementationFooter({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
-            {isImplementing ? 'Minimize' : 'Close'}
+            {isImplementing ? 'Minimise' : isComplete && !codeApplied ? 'Minimise' : 'Close'}
           </button>
           {canImplement && !isImplementing && (
             <button
@@ -79,6 +85,17 @@ export function ImplementationFooter({
               Implement
             </button>
           )}
+          {isComplete && !codeApplied && !isImplementing && (
+            <button
+              onClick={onWriteCode}
+              className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+              </svg>
+              Write Code
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -88,7 +105,7 @@ export function ImplementationFooter({
 function TaskCounts({
   taskCount, isImplementing, pendingCount, acceptedCount,
   rejectedCount, implementedCount, failedImplCount,
-}: Omit<ImplementationFooterProps, 'canImplement' | 'onImplement' | 'onClose'>) {
+}: Omit<ImplementationFooterProps, 'canImplement' | 'isComplete' | 'codeApplied' | 'onImplement' | 'onWriteCode' | 'onClose'>) {
   const hasImplProgress = implementedCount > 0 || failedImplCount > 0;
   const remainingImplCount = acceptedCount - implementedCount - failedImplCount;
 

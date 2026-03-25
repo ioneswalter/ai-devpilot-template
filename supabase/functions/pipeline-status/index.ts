@@ -32,6 +32,7 @@ interface SpecReviewRow {
 interface ImplRequestRow {
   feature_id: string;
   status: string;
+  code_applied: boolean | null;
 }
 
 interface TestCaseRow {
@@ -74,9 +75,13 @@ function computeBuildStage(impls: ImplRequestRow[], featureId: string): StageSta
   const featureImpls = impls.filter((r) => r.feature_id === featureId);
   if (featureImpls.length === 0) return { status: 'not_started', label: 'Not Started' };
 
-  // If any request is completed/implemented → completed
-  if (featureImpls.some((r) => r.status === 'completed' || r.status === 'implemented')) {
+  // If any request is completed/implemented with code applied → completed
+  if (featureImpls.some((r) => (r.status === 'completed' || r.status === 'implemented') && r.code_applied)) {
     return { status: 'completed', label: 'Completed' };
+  }
+  // If completed but code not applied → plan ready (in_progress)
+  if (featureImpls.some((r) => r.status === 'completed' || r.status === 'implemented')) {
+    return { status: 'in_progress', label: 'Plan Ready' };
   }
   // If any is in progress → building
   if (featureImpls.some((r) => r.status === 'pending' || r.status === 'in_progress')) {
@@ -168,7 +173,7 @@ Deno.serve(async (req) => {
         .order('created_at', { ascending: false }),
       supabase
         .from('implementation_requests')
-        .select('feature_id, status')
+        .select('feature_id, status, code_applied')
         .in('feature_id', featureIds)
         .order('created_at', { ascending: false }),
       supabase

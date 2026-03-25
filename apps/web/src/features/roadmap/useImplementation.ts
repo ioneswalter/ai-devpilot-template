@@ -173,5 +173,12 @@ export function useImplementation(featureId: string | null) {
     isAdding: addItemMutation.isPending,
     addTaskItem: (data: { title: string; description?: string; file_path: string; task_type: string }) =>
       addItemMutation.mutateAsync(data),
+
+    markCodeApplied: async () => {
+      const requestId = implQuery.data?.id;
+      if (!requestId) return;
+      await adminApi.markCodeApplied(requestId);
+      queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
+    },
   };
 }

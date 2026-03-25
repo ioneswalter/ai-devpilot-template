@@ -37,11 +37,12 @@ Tech stack:
 - Add a top comment listing companion files the developer should also create
 
 ## Output rules:
-- Return ONLY the code for the PRIMARY file (the one in the task file_path)
-- Do NOT include markdown fences or explanations
+- Return ONLY raw source code — no markdown fences, no \`\`\` blocks, no explanations
+- For config files (JSON, YAML, TOML): return ONLY valid config content, no markdown wrapping
 - If companion files are needed, add a comment at the top: \`// COMPANION FILES NEEDED: [list paths]\`
 - Include all necessary imports
-- Add brief JSDoc comment at the top`;
+- Add brief JSDoc comment at the top (skip for JSON/config files)
+- ONLY reference files that exist in the sibling task list provided below — do NOT invent filenames`;
 
 /**
  * Generate code for a single implementation task
@@ -49,6 +50,7 @@ Tech stack:
 export async function generateCode(
   task: { title: string; description: string | null; file_path: string; task_type: string },
   featureContext: { feature_code: string; title: string; description: string; criteria: string[] },
+  siblingFilePaths: string[] = [],
 ): Promise<CodeGenResult | null> {
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
@@ -68,7 +70,10 @@ export async function generateCode(
 **Acceptance Criteria:**
 ${featureContext.criteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 
-Generate the complete code for this task. Return ONLY the code, no explanations.`;
+## Sibling Files in This Feature
+${siblingFilePaths.length > 0 ? siblingFilePaths.map(p => `- ${p}`).join('\n') : 'None — this is a standalone task.'}
+
+Generate the complete code for this task. Return ONLY raw source code, no markdown fences, no explanations.`;
 
   try {
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
@@ -90,11 +95,17 @@ Generate the complete code for this task. Return ONLY the code, no explanations.
       return null;
     }
 
-    // Strip markdown fences if present
-    let code = textBlock.text;
-    const fenceMatch = code.match(/^```(?:typescript|tsx?|javascript|jsx?)?\s*\n([\s\S]*?)\n```$/);
+    // Strip markdown fences if present (any language tag or none)
+    let code = textBlock.text.trim();
+    const fenceMatch = code.match(/^```[\w]*\s*\n([\s\S]*?)\n```\s*$/);
     if (fenceMatch) {
       code = fenceMatch[1];
+    } else {
+      // Handle fences embedded in surrounding text
+      const innerMatch = code.match(/```[\w]*\s*\n([\s\S]*?)\n```/);
+      if (innerMatch) {
+        code = innerMatch[1];
+      }
     }
 
     const lineCount = code.split('\n').length;

@@ -7,6 +7,7 @@
  *   POST                           — Create request, trigger AI plan
  *   POST  ?action=add-task         — Add a manual task item
  *   POST  ?action=implement        — Execute ONE AI code generation task
+ *   POST  ?action=mark-applied    — Mark code as applied to codebase
  *   PATCH                          — Update task item decision/comment
  */
 
@@ -33,6 +34,7 @@ Deno.serve(async (req) => {
     if (req.method === 'GET') return handleGetRequest(url, ctx);
     if (req.method === 'POST' && action === 'add-task') return handleAddTask(req, ctx);
     if (req.method === 'POST' && action === 'implement') return handleImplementTask(req, ctx);
+    if (req.method === 'POST' && action === 'mark-applied') return handleMarkApplied(req, ctx);
     if (req.method === 'POST') return handleCreateRequest(req, ctx);
     if (req.method === 'PATCH') return handleUpdateTask(req, ctx);
 
@@ -42,6 +44,23 @@ Deno.serve(async (req) => {
     return errorResponse('INTERNAL_ERROR', 'An unexpected error occurred', 500);
   }
 });
+
+async function handleMarkApplied(req: Request, ctx: AuthContext): Promise<Response> {
+  const { request_id } = await req.json();
+  if (!request_id) return errorResponse('VALIDATION_ERROR', 'request_id is required', 400);
+
+  const { error } = await ctx.supabase
+    .from('implementation_requests')
+    .update({ code_applied: true, code_applied_at: new Date().toISOString() })
+    .eq('id', request_id);
+
+  if (error) return errorResponse('DB_ERROR', error.message, 500);
+
+  return new Response(JSON.stringify({ data: { code_applied: true } }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 
 async function authenticate(req: Request): Promise<AuthContext | Response> {
   const supabase = createClient(

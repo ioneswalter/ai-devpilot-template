@@ -12,6 +12,7 @@ import { ImplementationLog } from './ImplementationLog';
 import { ImplementationFooter } from './ImplementationFooter';
 import { ImplementationSummary } from './ImplementationSummary';
 import { AddTaskForm } from './AddTaskForm';
+import { WriteCodeProgress } from './WriteCodeProgress';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -33,6 +34,7 @@ export function ImplementationPanel({
   const logRef = useRef<HTMLDivElement>(null);
   const hasScrolledToLog = useRef(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isWritingCode, setIsWritingCode] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -218,13 +220,27 @@ export function ImplementationPanel({
           />
         )}
 
+        {/* Write code progress animation */}
+        {isWritingCode && (
+          <WriteCodeProgress
+            files={impl.taskItems
+              .filter(t => t.implementation_status === 'completed' && t.generated_code)
+              .map(t => ({ title: t.title, filePath: t.file_path, code: t.generated_code! }))}
+            onComplete={() => {
+              setIsWritingCode(false);
+              impl.markCodeApplied();
+            }}
+          />
+        )}
+
         {/* Completion summary — shown when all tasks processed, not currently running */}
-        {!impl.isImplementing && !impl.canImplement && (impl.implementedCount > 0 || impl.failedImplCount > 0) && (
+        {!isWritingCode && !impl.isImplementing && !impl.canImplement && (impl.implementedCount > 0 || impl.failedImplCount > 0) && (
           <ImplementationSummary
             implementedCount={impl.implementedCount}
             failedCount={impl.failedImplCount}
             totalAccepted={impl.acceptedCount}
             featureCode={featureCode}
+            codeApplied={impl.request?.code_applied ?? false}
           />
         )}
       </div>
@@ -232,6 +248,8 @@ export function ImplementationPanel({
       <ImplementationFooter
         isImplementing={impl.isImplementing}
         canImplement={impl.canImplement}
+        isComplete={!impl.canImplement && impl.implementedCount > 0 && !isWritingCode}
+        codeApplied={impl.request?.code_applied ?? false}
         taskCount={impl.taskItems.length}
         pendingCount={impl.pendingCount}
         acceptedCount={impl.acceptedCount}
@@ -239,6 +257,7 @@ export function ImplementationPanel({
         implementedCount={impl.implementedCount}
         failedImplCount={impl.failedImplCount}
         onImplement={() => impl.startImplementation()}
+        onWriteCode={() => setIsWritingCode(true)}
         onClose={onComplete}
       />
     </div>
