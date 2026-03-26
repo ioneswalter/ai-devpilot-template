@@ -54,39 +54,36 @@ export async function handleUpdateReview(
     for (const update of updates) {
       const updateFields: Record<string, unknown> = { updated_at: now };
 
+      // Fetch existing item once if we need content or comments
+      const needsFetch = (update.decision === 'modified' && update.content) || update.comment;
+      let existingItem: Record<string, unknown> | null = null;
+
+      if (needsFetch) {
+        const { data } = await supabase
+          .from('review_items')
+          .select('content, original_content, comments')
+          .eq('id', update.item_id)
+          .single();
+        existingItem = data;
+      }
+
       if (update.decision) {
         updateFields.decision = update.decision;
         updateFields.decided_by = userId;
         updateFields.decided_at = now;
 
         // If modified, store the new content and preserve original
-        if (update.decision === 'modified' && update.content) {
-          // Get original content first
-          const { data: existingItem } = await supabase
-            .from('review_items')
-            .select('content, original_content')
-            .eq('id', update.item_id)
-            .single();
-
-          if (existingItem) {
-            updateFields.content = update.content;
-            // Preserve original_content if not already set
-            if (!existingItem.original_content) {
-              updateFields.original_content = existingItem.content;
-            }
+        if (update.decision === 'modified' && update.content && existingItem) {
+          updateFields.content = update.content;
+          if (!existingItem.original_content) {
+            updateFields.original_content = existingItem.content;
           }
         }
       }
 
       // 3. Handle comments (Journey 3)
-      if (update.comment) {
-        const { data: existingItem } = await supabase
-          .from('review_items')
-          .select('comments')
-          .eq('id', update.item_id)
-          .single();
-
-        const existingComments = (existingItem?.comments as Array<unknown>) || [];
+      if (update.comment && existingItem) {
+        const existingComments = (existingItem.comments as Array<Record<string, unknown>>) || [];
         const newComment = {
           user_id: userId,
           user_name: userName ?? 'Admin',
@@ -150,10 +147,15 @@ export async function handleUpdateReview(
 
   // 5. Increment version
   const newVersion = version + 1;
-  await supabase
+  const { error: versionErr } = await supabase
     .from('spec_reviews')
     .update({ version: newVersion, updated_at: now })
     .eq('id', review_id);
+
+  if (versionErr) {
+    console.error('Failed to increment review version:', versionErr);
+    return { error: { code: 'DATABASE_ERROR', message: 'Failed to update review version' }, status: 500 };
+  }
 
   return {
     data: {

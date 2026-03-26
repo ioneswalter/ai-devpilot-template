@@ -99,6 +99,7 @@ export async function handleStartReview(
     const { error: itemsErr } = await supabase.from('review_items').insert(originalItems);
     if (itemsErr) {
       console.error('Failed to insert original items:', itemsErr);
+      return { error: { code: 'DATABASE_ERROR', message: 'Failed to insert original review items' }, status: 500 };
     }
   }
 
@@ -133,14 +134,20 @@ export async function handleStartReview(
       const { error: aiItemsErr } = await supabase.from('review_items').insert(aiItems);
       if (aiItemsErr) {
         console.error('Failed to insert AI items:', aiItemsErr);
+        // Non-fatal: continue with original items only (manual-only mode)
+        aiItems = [];
       }
     }
 
     // Store AI enrichment data on the review
-    await supabase
+    const { error: enrichUpdateErr } = await supabase
       .from('spec_reviews')
       .update({ ai_enrichment: aiEnrichment })
       .eq('id', reviewId);
+
+    if (enrichUpdateErr) {
+      console.error('Failed to store AI enrichment data:', enrichUpdateErr);
+    }
   } else {
     console.warn('AI enrichment unavailable — manual-only review mode');
   }
