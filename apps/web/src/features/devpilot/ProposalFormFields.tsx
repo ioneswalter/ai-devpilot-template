@@ -1,11 +1,17 @@
 /**
- * Form fields for the proposal panel — title, description, criteria, admin fields
+ * Form fields for the proposal panel — title, description, journeys, admin fields
+ * Supports both legacy flat criteria and new SpecKit journey structure
  */
 
 import { useState } from 'react';
 import { CheckCircleIcon } from './icons';
+import { JourneyFields } from './JourneyFields';
+import type { JourneyFormState } from './JourneyFields';
+import type { ProposalJourney } from './types';
 
-interface ProposalFormState {
+export type { JourneyFormState };
+
+export interface ProposalFormState {
   title: string;
   description: string;
   criteria: string;
@@ -14,6 +20,21 @@ interface ProposalFormState {
   specSection: string;
   submitted: boolean;
   submittedCode: string | null;
+  /** SpecKit journey data — populated when AI provides structured journeys */
+  journeys: JourneyFormState[];
+  edgeCases: string;
+  successCriteria: string;
+}
+
+export function initJourneyForm(j: ProposalJourney): JourneyFormState {
+  return {
+    title: j.title,
+    priority: j.priority,
+    description: j.description,
+    why_priority: j.why_priority ?? '',
+    independent_test: j.independent_test ?? '',
+    acceptance_scenarios: j.acceptance_scenarios.join('\n'),
+  };
 }
 
 interface ProposalFormFieldsProps {
@@ -25,6 +46,13 @@ interface ProposalFormFieldsProps {
 
 export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections = [] }: ProposalFormFieldsProps) {
   const [customSection, setCustomSection] = useState(false);
+  const hasJourneys = form.journeys.length > 0;
+
+  const updateJourney = (idx: number, updates: Partial<JourneyFormState>) => {
+    const next = form.journeys.map((j, i) => (i === idx ? { ...j, ...updates } : j));
+    onUpdate({ journeys: next });
+  };
+
   return (
     <>
       {form.submitted && (
@@ -50,20 +78,66 @@ export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections 
           value={form.description}
           onChange={(e) => onUpdate({ description: e.target.value })}
           disabled={form.submitted}
-          rows={4}
+          rows={3}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none disabled:bg-gray-50 disabled:text-gray-500"
         />
       </Field>
 
-      <Field label="Acceptance Criteria" hint="One per line">
-        <textarea
-          value={form.criteria}
-          onChange={(e) => onUpdate({ criteria: e.target.value })}
-          disabled={form.submitted}
-          rows={5}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
-        />
-      </Field>
+      {/* SpecKit Journey Structure */}
+      {hasJourneys ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">User Journeys</span>
+            <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">SpecKit</span>
+          </div>
+          {form.journeys.map((j, idx) => (
+            <JourneyFields
+              key={idx}
+              journey={j}
+              index={idx}
+              disabled={form.submitted}
+              isAdmin={isAdmin}
+              onUpdate={(updates) => updateJourney(idx, updates)}
+            />
+          ))}
+        </div>
+      ) : (
+        <Field label="Acceptance Criteria" hint="One per line">
+          <textarea
+            value={form.criteria}
+            onChange={(e) => onUpdate({ criteria: e.target.value })}
+            disabled={form.submitted}
+            rows={5}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
+          />
+        </Field>
+      )}
+
+      {/* Edge Cases (SpecKit) */}
+      {hasJourneys && (
+        <Field label="Edge Cases" hint="One per line">
+          <textarea
+            value={form.edgeCases}
+            onChange={(e) => onUpdate({ edgeCases: e.target.value })}
+            disabled={form.submitted}
+            rows={3}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
+          />
+        </Field>
+      )}
+
+      {/* Success Criteria (SpecKit) */}
+      {hasJourneys && (
+        <Field label="Success Criteria" hint="Measurable outcomes, one per line">
+          <textarea
+            value={form.successCriteria}
+            onChange={(e) => onUpdate({ successCriteria: e.target.value })}
+            disabled={form.submitted}
+            rows={3}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
+          />
+        </Field>
+      )}
 
       {isAdmin && (
         <>
@@ -143,6 +217,7 @@ export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections 
     </>
   );
 }
+
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (

@@ -7,7 +7,8 @@
 import { useState, useEffect } from 'react';
 import { SendIcon, XIcon, LoaderIcon, CheckCircleIcon } from './icons';
 import { DeduplicationWarning } from './DeduplicationWarning';
-import { ProposalFormFields } from './ProposalFormFields';
+import { ProposalFormFields, initJourneyForm } from './ProposalFormFields';
+import type { ProposalFormState } from './ProposalFormFields';
 import { devpilotApi } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase-client';
 import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
@@ -38,17 +39,6 @@ interface ProposalPanelProps {
   onSubmitted: (results: SubmitProposalResponse[]) => void;
 }
 
-interface ProposalFormState {
-  title: string;
-  description: string;
-  criteria: string;
-  priority: string;
-  category: string;
-  specSection: string;
-  submitted: boolean;
-  submittedCode: string | null;
-}
-
 function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
   return {
     title: p.title,
@@ -59,6 +49,9 @@ function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
     specSection: 'spec_section' in p ? p.spec_section : 'Community Proposals',
     submitted: false,
     submittedCode: null,
+    journeys: p.journeys ? p.journeys.map(initJourneyForm) : [],
+    edgeCases: 'edge_cases' in p && p.edge_cases ? p.edge_cases.join('\n') : '',
+    successCriteria: 'success_criteria' in p && p.success_criteria ? p.success_criteria.join('\n') : '',
   };
 }
 
@@ -133,12 +126,33 @@ export function ProposalPanel({
     let firstDedupResult: SubmitProposalResponse | null = null;
 
     for (const { form: f, index } of unsubmittedForms) {
-      const criteriaArray = f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
+      // Build criteria from journeys if available, else from flat criteria
+      const hasJourneys = f.journeys.length > 0;
+      const criteriaArray = hasJourneys
+        ? f.journeys.flatMap((j) =>
+            j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean)
+          )
+        : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
+
       const proposalData: Record<string, unknown> = {
         title: f.title,
         description: f.description,
         acceptance_criteria: criteriaArray,
       };
+
+      // Include SpecKit journey data for spec.md generation
+      if (hasJourneys) {
+        proposalData.journeys = f.journeys.map((j) => ({
+          title: j.title,
+          priority: j.priority,
+          description: j.description,
+          why_priority: j.why_priority,
+          independent_test: j.independent_test,
+          acceptance_scenarios: j.acceptance_scenarios.split('\n').map((s: string) => s.trim()).filter(Boolean),
+        }));
+        proposalData.edge_cases = f.edgeCases.split('\n').map((e: string) => e.trim()).filter(Boolean);
+        proposalData.success_criteria = f.successCriteria.split('\n').map((s: string) => s.trim()).filter(Boolean);
+      }
 
       if (isAdmin) {
         proposalData.priority = f.priority;

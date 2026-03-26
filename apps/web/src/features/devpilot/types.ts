@@ -52,6 +52,16 @@ export interface DedupMatch {
   recommendation: 'use_existing' | 'enhance_existing' | 'converge';
 }
 
+/** A single user journey within a SpecKit-compatible proposal */
+export interface ProposalJourney {
+  title: string;
+  priority: 'P1' | 'P2' | 'P3' | 'P4';
+  description: string;
+  why_priority?: string;
+  independent_test?: string;
+  acceptance_scenarios: string[];
+}
+
 export interface AdminProposal {
   title: string;
   description: string;
@@ -61,12 +71,18 @@ export interface AdminProposal {
   spec_section: string;
   problem_statement?: string;
   solution?: string;
+  /** SpecKit-compatible journeys (new format from AI) */
+  journeys?: ProposalJourney[];
+  edge_cases?: string[];
+  success_criteria?: string[];
 }
 
 export interface MemberProposal {
   title: string;
   description: string;
   acceptance_criteria: string[];
+  /** SpecKit-compatible journeys (new format from AI) */
+  journeys?: ProposalJourney[];
 }
 
 export interface TriageResult {
@@ -84,6 +100,10 @@ export interface SubmitProposalResponse {
     category: string | null;
   };
   dedup_check: TriageResult;
+  /** SpecKit spec generated from proposal + conversation context */
+  speckit_spec?: string;
+  /** SpecKit research notes extracted from conversation */
+  speckit_research?: string;
 }
 
 /** Type guard: check if proposal has admin fields */

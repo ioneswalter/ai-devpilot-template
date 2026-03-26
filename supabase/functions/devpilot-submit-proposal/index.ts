@@ -5,9 +5,11 @@
  * FR-090 Feature Ideation Chat
  */
 
-import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
+import { performDedupCheck } from '../_shared/dedup-check.ts';
+import { generateSpecMarkdown, extractResearchNotes } from '../_shared/speckit-generator.ts';
+import type { SpecKitProposal } from '../_shared/speckit-generator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,6 +28,15 @@ function errorResponse(code: string, message: string, status: number) {
   return jsonResponse({ error: { code, message } }, status);
 }
 
+const journeySchema = z.object({
+  title: z.string().min(1),
+  priority: z.enum(['P1', 'P2', 'P3', 'P4']),
+  description: z.string().min(1),
+  why_priority: z.string().optional(),
+  independent_test: z.string().optional(),
+  acceptance_scenarios: z.array(z.string()).min(1),
+});
+
 const proposalSchema = z.object({
   conversation_id: z.string().min(1),
   proposal: z.object({
@@ -35,85 +46,15 @@ const proposalSchema = z.object({
     priority: z.enum(['P1', 'P2', 'P3', 'P4']).optional(),
     category: z.enum(['toolkit', 'business_module']).nullable().optional(),
     spec_section: z.string().optional(),
+    // SpecKit journey data (optional — backward compatible)
+    journeys: z.array(journeySchema).optional(),
+    edge_cases: z.array(z.string()).optional(),
+    success_criteria: z.array(z.string()).optional(),
+    problem_statement: z.string().optional(),
+    solution: z.string().optional(),
   }),
 });
 
-interface DedupMatch {
-  feature_code: string;
-  title: string;
-  similarity: 'high' | 'medium';
-  status: string;
-  description_excerpt: string;
-  recommendation: 'use_existing' | 'enhance_existing' | 'converge';
-}
-
-async function performDedupCheck(
-  proposal: { title: string; description: string; acceptance_criteria: string[] },
-  features: Array<{ feature_code: string; title: string; description: string; status: string }>,
-  anthropicApiKey: string
-): Promise<{ passed: boolean; matches: DedupMatch[] }> {
-  if (!anthropicApiKey || features.length === 0) {
-    return { passed: true, matches: [] };
-  }
-
-  const featureList = features
-    .map((f) => `- ${f.feature_code}: "${f.title}" [${f.status}] — ${f.description.substring(0, 150)}`)
-    .join('\n');
-
-  const prompt = `Compare this proposal against the existing features and identify semantic overlaps.
-
-PROPOSAL:
-Title: ${proposal.title}
-Description: ${proposal.description}
-Criteria: ${proposal.acceptance_criteria.join('; ')}
-
-EXISTING FEATURES:
-${featureList}
-
-Respond with ONLY a JSON object (no markdown, no explanation):
-{
-  "matches": [
-    {
-      "feature_code": "FR-XXX",
-      "title": "Feature title",
-      "similarity": "high|medium",
-      "status": "released|proposed|approved|in_development",
-      "description_excerpt": "Brief excerpt",
-      "recommendation": "use_existing|enhance_existing|converge"
-    }
-  ]
-}
-
-Rules:
-- Only include features with MEANINGFUL semantic overlap (not superficial keyword matches)
-- "high" = covers 70%+ of the proposal scope
-- "medium" = covers 30-70% of the proposal scope
-- Ignore features with < 30% overlap
-- If no meaningful overlap, return {"matches": []}`;
-
-  try {
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    const textBlock = response.content.find((b) => b.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') return { passed: true, matches: [] };
-
-    let text = textBlock.text.trim();
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) text = jsonMatch[1].trim();
-
-    const result = JSON.parse(text);
-    const matches: DedupMatch[] = Array.isArray(result.matches) ? result.matches : [];
-    return { passed: matches.length === 0, matches };
-  } catch (err) {
-    console.error('Dedup check error:', err);
-    return { passed: true, matches: [] };
-  }
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -204,6 +145,22 @@ Deno.serve(async (req) => {
       anthropicApiKey
     );
 
+    // Generate SpecKit artifacts from proposal + conversation
+    const specMarkdown = generateSpecMarkdown(proposal as SpecKitProposal, featureCode);
+
+    // Fetch conversation messages for research notes
+    const { data: convMessages } = await supabase
+      .from('conversation_messages')
+      .select('role, content')
+      .eq('conversation_id', conversation_id)
+      .order('created_at', { ascending: true })
+      .limit(50);
+
+    const researchMarkdown = extractResearchNotes(
+      (convMessages ?? []) as Array<{ role: string; content: string }>,
+      proposal.title,
+    );
+
     // Create feature
     const { data: feature, error: createErr } = await supabase
       .from('product_features')
@@ -229,6 +186,34 @@ Deno.serve(async (req) => {
       return errorResponse('INTERNAL_ERROR', 'Failed to create feature', 500);
     }
 
+    // Store SpecKit artifacts (spec.md + research.md) in feature_spec_artifacts
+    const now = new Date().toISOString();
+    const artifacts = [
+      {
+        feature_id: feature.id,
+        artifact_type: 'spec',
+        file_name: 'spec.md',
+        content: specMarkdown,
+        synced_at: now,
+      },
+      {
+        feature_id: feature.id,
+        artifact_type: 'research',
+        file_name: 'research.md',
+        content: researchMarkdown,
+        synced_at: now,
+      },
+    ];
+
+    const { error: artifactErr } = await supabase
+      .from('feature_spec_artifacts')
+      .insert(artifacts);
+
+    if (artifactErr) {
+      // Non-blocking: log but don't fail the submission
+      console.error('Failed to save SpecKit artifacts:', artifactErr);
+    }
+
     // Update conversation — keep first submitted feature as the primary link
     // Status stays 'draft' to allow multi-proposal flow; set to 'submitted' only on first submission
     const updateData: Record<string, unknown> = {
@@ -247,6 +232,8 @@ Deno.serve(async (req) => {
       data: {
         feature,
         dedup_check: dedupResult,
+        speckit_spec: specMarkdown,
+        speckit_research: researchMarkdown,
       },
     }, 201);
   } catch (error) {

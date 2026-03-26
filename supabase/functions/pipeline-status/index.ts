@@ -40,6 +40,11 @@ interface TestCaseRow {
   passed: boolean | null;
 }
 
+interface SpecArtifactRow {
+  feature_id: string;
+  artifact_type: string;
+}
+
 interface FeatureRow {
   id: string;
   status: string;
@@ -50,10 +55,13 @@ interface StageStatus {
   label: string;
 }
 
-function computeSpecStage(reviews: SpecReviewRow[], featureId: string): StageStatus {
+function computeSpecStage(
+  reviews: SpecReviewRow[],
+  artifacts: SpecArtifactRow[],
+  featureId: string,
+): StageStatus {
   // Check ALL spec reviews for this feature (not just latest)
   const featureReviews = reviews.filter((r) => r.feature_id === featureId);
-  if (featureReviews.length === 0) return { status: 'not_started', label: 'Not Started' };
 
   // If any review is approved → completed
   if (featureReviews.some((r) => r.status === 'approved')) {
@@ -67,6 +75,15 @@ function computeSpecStage(reviews: SpecReviewRow[], featureId: string): StageSta
   if (featureReviews.some((r) => r.status === 'sent_back')) {
     return { status: 'warning', label: 'Sent Back' };
   }
+
+  // Check for SpecKit artifacts from DevPilot — spec.md generated means spec draft exists
+  const featureArtifacts = artifacts.filter((a) => a.feature_id === featureId);
+  const hasSpec = featureArtifacts.some((a) => a.artifact_type === 'spec');
+  if (hasSpec) {
+    return { status: 'in_progress', label: 'Draft (DevPilot)' };
+  }
+
+  if (featureReviews.length === 0) return { status: 'not_started', label: 'Not Started' };
   return { status: 'not_started', label: 'Not Started' };
 }
 
@@ -146,11 +163,11 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const featureIdParam = url.searchParams.get('feature_id');
 
-    // Fetch features (only pipeline-visible statuses)
+    // Fetch features (pipeline-visible statuses — includes proposed for SpecKit integration)
     let featuresQuery = supabase
       .from('product_features')
       .select('id, status')
-      .in('status', ['approved', 'in_development', 'released']);
+      .in('status', ['proposed', 'approved', 'in_development', 'released']);
 
     if (featureIdParam) {
       featuresQuery = featuresQuery.eq('id', featureIdParam);
@@ -164,8 +181,8 @@ Deno.serve(async (req) => {
 
     const featureIds = (features as FeatureRow[]).map((f) => f.id);
 
-    // Batch fetch all stage data in parallel
-    const [specResult, implResult, testResult] = await Promise.all([
+    // Batch fetch all stage data in parallel (includes SpecKit artifacts)
+    const [specResult, implResult, testResult, artifactResult] = await Promise.all([
       supabase
         .from('spec_reviews')
         .select('feature_id, status')
@@ -180,18 +197,24 @@ Deno.serve(async (req) => {
         .from('test_cases')
         .select('feature_id, passed')
         .in('feature_id', featureIds),
+      supabase
+        .from('feature_spec_artifacts')
+        .select('feature_id, artifact_type')
+        .in('feature_id', featureIds),
     ]);
 
     if (specResult.error) return errorResponse('DB_ERROR', specResult.error.message, 500);
     if (implResult.error) return errorResponse('DB_ERROR', implResult.error.message, 500);
     if (testResult.error) return errorResponse('DB_ERROR', testResult.error.message, 500);
+    // Artifact fetch is non-blocking — default to empty if it fails
+    const allArtifacts = (artifactResult.data ?? []) as SpecArtifactRow[];
 
     const allSpecs = (specResult.data ?? []) as SpecReviewRow[];
     const allImpls = (implResult.data ?? []) as ImplRequestRow[];
 
     const pipelines = (features as FeatureRow[]).map((f) => ({
       feature_id: f.id,
-      spec: computeSpecStage(allSpecs, f.id),
+      spec: computeSpecStage(allSpecs, allArtifacts, f.id),
       build: computeBuildStage(allImpls, f.id),
       test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
       deploy: computeDeployStage(f.status),

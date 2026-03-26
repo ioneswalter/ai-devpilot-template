@@ -38,4 +38,4 @@ export const STAGE_CONFIG: Record<PipelineStageName, { label: string; icon: stri
 };
 
 /** Feature statuses that show the pipeline bar */
-export const PIPELINE_VISIBLE_STATUSES = ['approved', 'in_development', 'released'] as const;
+export const PIPELINE_VISIBLE_STATUSES = ['proposed', 'approved', 'in_development', 'released'] as const;
