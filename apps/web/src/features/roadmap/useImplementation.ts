@@ -4,7 +4,7 @@
  * the frontend triggers the next until all are done.
  */
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
 import type { ImplementationRequestWithItems } from '@/lib/api/admin-api';
@@ -95,6 +95,21 @@ export function useImplementation(featureId: string | null) {
       queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
     },
   });
+
+  // Auto-resume: if the backend says 'implementing' but our loop isn't running
+  // (e.g. panel was closed and reopened), restart the loop automatically.
+  const hasAutoResumed = useRef(false);
+  useEffect(() => {
+    const data = implQuery.data;
+    if (
+      data?.status === 'implementing' &&
+      !implementMutation.isPending &&
+      !hasAutoResumed.current
+    ) {
+      hasAutoResumed.current = true;
+      implementMutation.mutate();
+    }
+  }, [implQuery.data?.status]);
 
   const updateItemMutation = useMutation({
     mutationFn: (data: { item_id: string; decision?: string; title?: string; description?: string; comment?: string }) =>
