@@ -190,7 +190,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onClose={() => setReviewingFeature(null)}
         size="xl"
         showCloseButton={false}
-        className="h-[80vh]"
+        className="h-[92vh]"
       >
         {reviewingFeature && (
           <SpecReviewPanel
@@ -213,7 +213,8 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onClose={() => setImplementingFeature(null)}
         size="xl"
         showCloseButton={false}
-        className="h-[80vh]"
+        flush
+        className="h-[92vh]"
       >
         {implementingFeature && (
           <ImplementationPanel
@@ -238,7 +239,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onClose={() => setTestingFeature(null)}
         size="xl"
         showCloseButton={false}
-        className="h-[80vh]"
+        className="h-[92vh]"
       >
         {testingFeature && (
           <TestRunPanel
