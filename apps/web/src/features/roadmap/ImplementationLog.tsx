@@ -22,21 +22,21 @@ export const ImplementationLog = forwardRef<HTMLDivElement, ImplementationLogPro
     const visibleTasks = taskItems.filter(t => t.implementation_status !== 'pending');
 
     return (
-      <div ref={ref} className="bg-gray-900 rounded-lg p-3 font-mono text-xs">
+      <div ref={ref} className="bg-gray-900 rounded-lg p-3 font-mono text-xs overflow-hidden">
         <div className="flex items-center gap-2 mb-2 text-gray-400">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
           <span className="uppercase tracking-wider font-semibold">Implementation Log</span>
         </div>
         {visibleTasks.map((t) => (
-          <div key={t.id} className="flex items-start gap-2 py-0.5">
+          <div key={t.id} className="flex items-start gap-2 py-0.5 min-w-0">
             <TaskStatusIcon status={t.implementation_status} />
-            <span className={statusTextClass(t.implementation_status)}>
-              {t.title}
-              <span className="text-gray-500 ml-2">{t.file_path}</span>
-              {t.ai_log && <span className="text-gray-400 ml-2">— {t.ai_log}</span>}
-            </span>
+            <div className={`${statusTextClass(t.implementation_status)} min-w-0`}>
+              <span className="font-medium">{t.title}</span>
+              <span className="text-gray-500 ml-1 break-all">{t.file_path}</span>
+              {t.ai_log && <span className="text-gray-400 block mt-0.5 break-words">— {t.ai_log}</span>}
+            </div>
           </div>
         ))}
         {isImplementing && (

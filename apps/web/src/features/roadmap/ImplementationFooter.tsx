@@ -82,7 +82,9 @@ export function ImplementationFooter({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Implement
+              Implement{acceptedCount - implementedCount - failedImplCount > 0
+                ? ` (${acceptedCount - implementedCount - failedImplCount} tasks)`
+                : ''}
             </button>
           )}
           {isComplete && !codeApplied && !isImplementing && (
@@ -120,10 +122,10 @@ function TaskCounts({
         <>
           <span className="text-blue-600">{implementedCount} generated</span>
           {failedImplCount > 0 && (
-            <span className="text-red-500">{failedImplCount} failed</span>
+            <span className="text-red-500">{failedImplCount} failed (auto-split)</span>
           )}
           {remainingImplCount > 0 && (
-            <span className="text-amber-600">{remainingImplCount} remaining</span>
+            <span className="text-amber-600">{remainingImplCount} remaining — click Implement to process</span>
           )}
         </>
       )}
