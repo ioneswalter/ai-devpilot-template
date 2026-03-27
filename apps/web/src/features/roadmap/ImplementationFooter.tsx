@@ -5,7 +5,8 @@
 interface ImplementationFooterProps {
   isImplementing: boolean;
   canImplement: boolean;
-  isComplete: boolean;
+  /** True when at least some tasks have generated code ready to write */
+  hasGeneratedCode: boolean;
   codeApplied: boolean;
   taskCount: number;
   pendingCount: number;
@@ -21,7 +22,7 @@ interface ImplementationFooterProps {
 export function ImplementationFooter({
   isImplementing,
   canImplement,
-  isComplete,
+  hasGeneratedCode,
   codeApplied,
   taskCount,
   pendingCount,
@@ -71,12 +72,16 @@ export function ImplementationFooter({
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
           >
-            {isImplementing ? 'Minimise' : isComplete && !codeApplied ? 'Minimise' : 'Close'}
+            {isImplementing ? 'Minimise' : hasGeneratedCode && !codeApplied ? 'Minimise' : 'Close'}
           </button>
           {canImplement && !isImplementing && (
             <button
               onClick={onImplement}
-              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 ${
+                hasGeneratedCode && !codeApplied
+                  ? 'bg-white text-blue-600 border border-blue-300 hover:bg-blue-50'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -87,7 +92,7 @@ export function ImplementationFooter({
                 : ''}
             </button>
           )}
-          {isComplete && !codeApplied && !isImplementing && (
+          {hasGeneratedCode && !codeApplied && !isImplementing && (
             <button
               onClick={onWriteCode}
               className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
@@ -95,7 +100,7 @@ export function ImplementationFooter({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
-              Write Code
+              Write Code ({implementedCount})
             </button>
           )}
         </div>
@@ -107,7 +112,7 @@ export function ImplementationFooter({
 function TaskCounts({
   taskCount, isImplementing, pendingCount, acceptedCount,
   rejectedCount, implementedCount, failedImplCount,
-}: Omit<ImplementationFooterProps, 'canImplement' | 'isComplete' | 'codeApplied' | 'onImplement' | 'onWriteCode' | 'onClose'>) {
+}: Omit<ImplementationFooterProps, 'canImplement' | 'hasGeneratedCode' | 'codeApplied' | 'onImplement' | 'onWriteCode' | 'onClose'>) {
   const hasImplProgress = implementedCount > 0 || failedImplCount > 0;
   const remainingImplCount = acceptedCount - implementedCount - failedImplCount;
 

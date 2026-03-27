@@ -248,7 +248,7 @@ export function ImplementationPanel({
       <ImplementationFooter
         isImplementing={impl.isImplementing}
         canImplement={impl.canImplement}
-        isComplete={!impl.canImplement && impl.implementedCount > 0 && !isWritingCode}
+        hasGeneratedCode={impl.implementedCount > 0 && !isWritingCode}
         codeApplied={impl.request?.code_applied ?? false}
         taskCount={impl.taskItems.length}
         pendingCount={impl.pendingCount}
