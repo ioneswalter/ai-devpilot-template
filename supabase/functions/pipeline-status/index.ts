@@ -87,10 +87,9 @@ function computeSpecStage(
   return { status: 'not_started', label: 'Not Started' };
 }
 
-function computeBuildStage(impls: ImplRequestRow[], featureId: string): StageStatus {
+function computeBuildStage(impls: ImplRequestRow[], featureId: string, featureStatus: string): StageStatus {
   // Check ALL implementation requests for this feature (not just latest)
   const featureImpls = impls.filter((r) => r.feature_id === featureId);
-  if (featureImpls.length === 0) return { status: 'not_started', label: 'Not Started' };
 
   // If any request is completed/implemented with code applied → completed
   if (featureImpls.some((r) => (r.status === 'completed' || r.status === 'implemented') && r.code_applied)) {
@@ -108,6 +107,14 @@ function computeBuildStage(impls: ImplRequestRow[], featureId: string): StageSta
   if (featureImpls.some((r) => r.status === 'failed')) {
     return { status: 'warning', label: 'Failed' };
   }
+
+  // Infer build status from feature lifecycle when no implementation requests exist
+  // Features built via SpecKit (/speckit.implement) won't have implementation_requests records
+  if (featureImpls.length === 0) {
+    if (featureStatus === 'released') return { status: 'completed', label: 'Completed' };
+    if (featureStatus === 'in_development') return { status: 'in_progress', label: 'In Progress' };
+  }
+
   return { status: 'not_started', label: 'Not Started' };
 }
 
@@ -215,7 +222,7 @@ Deno.serve(async (req) => {
     const pipelines = (features as FeatureRow[]).map((f) => ({
       feature_id: f.id,
       spec: computeSpecStage(allSpecs, allArtifacts, f.id),
-      build: computeBuildStage(allImpls, f.id),
+      build: computeBuildStage(allImpls, f.id, f.status),
       test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
       deploy: computeDeployStage(f.status),
     }));
