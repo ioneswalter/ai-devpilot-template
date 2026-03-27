@@ -108,12 +108,10 @@ function computeBuildStage(impls: ImplRequestRow[], featureId: string, featureSt
     return { status: 'warning', label: 'Failed' };
   }
 
-  // Infer build status from feature lifecycle when no implementation requests exist
-  // Features built via SpecKit (/speckit.implement) won't have implementation_requests records
-  if (featureImpls.length === 0) {
-    if (featureStatus === 'released') return { status: 'completed', label: 'Completed' };
-    if (featureStatus === 'in_development') return { status: 'in_progress', label: 'In Progress' };
-  }
+  // Infer build status from feature lifecycle — covers features built via SpecKit
+  // or with implementation_requests in unhandled statuses (e.g. cancelled)
+  if (featureStatus === 'released') return { status: 'completed', label: 'Completed' };
+  if (featureStatus === 'in_development') return { status: 'in_progress', label: 'In Progress' };
 
   return { status: 'not_started', label: 'Not Started' };
 }
