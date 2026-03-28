@@ -123,7 +123,7 @@ function TaskCounts({
         <>
           <span className="text-blue-600">{implementedCount} generated</span>
           {failedImplCount > 0 && (
-            <span className="text-red-500">{failedImplCount} failed (auto-split)</span>
+            <span className="text-gray-400">{failedImplCount} skipped</span>
           )}
           {remainingImplCount > 0 && (
             <span className="text-amber-600">{remainingImplCount} remaining — click Implement to process</span>
