@@ -3,7 +3,7 @@
  * Called repeatedly by the frontend until all tasks are done.
  */
 
-import { generateCode } from './ai-codegen.ts';
+import { generateCode, type SpecArtifacts } from './ai-codegen.ts';
 import { autoSplitTask } from './split-task.ts';
 import { jsonResponse, errorResponse, countRemainingTasks, finalizeRequest, type AuthContext } from './shared.ts';
 
@@ -55,6 +55,9 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     .map(t => t.file_path)
     .filter(p => p !== task.file_path);
 
+  // Load SpecKit artifacts for rich AI context
+  const artifacts = await loadSpecArtifacts(ctx, feature.id);
+
   // Ensure request status is 'implementing'
   if (implRequest.status !== 'implementing') {
     await ctx.supabase
@@ -69,16 +72,18 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     .update({ implementation_status: 'generating', updated_at: new Date().toISOString() })
     .eq('id', task.id);
 
-  // Generate code for this ONE task
+  // Generate code for this ONE task — now with SpecKit artifacts
   const result = await generateCode(
     { title: task.title, description: task.description, file_path: task.file_path, task_type: task.task_type },
     { feature_code: feature.feature_code, title: feature.title, description: feature.description, criteria: feature.acceptance_criteria || [] },
     siblingFilePaths,
+    artifacts,
   );
 
-  // If rejected for exceeding line limit, auto-split into smaller subtasks
+  // If rejected for exceeding line limit, auto-split — but only for original tasks (not already-split subtasks)
   const isConstitutionReject = !result?.code && result?.log?.includes('REJECTED');
-  if (isConstitutionReject) {
+  const isAlreadySplit = task.source === 'auto-split';
+  if (isConstitutionReject && !isAlreadySplit) {
     const splitCount = await autoSplitTask(ctx, { ...task, request_id: requestId });
     if (splitCount > 0) {
       const remaining = await countRemainingTasks(ctx.supabase, requestId);
@@ -147,4 +152,30 @@ async function saveTaskResult(
       })
       .eq('id', taskId);
   }
+}
+
+/** Load SpecKit artifacts from DB for a feature */
+async function loadSpecArtifacts(ctx: AuthContext, featureId: string): Promise<SpecArtifacts> {
+  const { data: rows } = await ctx.supabase
+    .from('feature_spec_artifacts')
+    .select('artifact_type, content')
+    .eq('feature_id', featureId);
+
+  if (!rows || rows.length === 0) return {};
+
+  const artifacts: SpecArtifacts = {};
+  const contracts: string[] = [];
+
+  for (const row of rows) {
+    switch (row.artifact_type) {
+      case 'plan': artifacts.plan = row.content; break;
+      case 'data_model': artifacts.data_model = row.content; break;
+      case 'spec': artifacts.spec = row.content; break;
+      case 'research': artifacts.research = row.content; break;
+      case 'contract': contracts.push(row.content); break;
+    }
+  }
+
+  if (contracts.length > 0) artifacts.contracts = contracts;
+  return artifacts;
 }
