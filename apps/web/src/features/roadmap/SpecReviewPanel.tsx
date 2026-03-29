@@ -189,7 +189,7 @@ export function SpecReviewPanel({
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 {sectionLabels[type]} ({items.length})
               </h4>
-              <div className="space-y-2">
+              <div className={spec.isReviewActive ? 'space-y-2' : 'space-y-1'}>
                 {items.map(item => (
                   <ReviewItemCard
                     key={item.id}

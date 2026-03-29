@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     // Fetch product features for context
     const { data: features } = await supabase
       .from('product_features')
-      .select('feature_code, title, description, status, category, acceptance_criteria, spec_section')
+      .select('feature_code, title, description, status, category, spec_section')
       .order('feature_code');
 
     // Extract distinct roadmap sections from existing features
@@ -152,12 +152,12 @@ Deno.serve(async (req) => {
     }));
 
     let messages = allMessages;
-    if (allMessages.length > 50) {
+    if (allMessages.length > 20) {
       const first = allMessages.slice(0, 2);
-      const recent = allMessages.slice(-20);
+      const recent = allMessages.slice(-10);
       const summaryNote = {
         role: 'assistant' as const,
-        content: `[Note: ${allMessages.length - 22} earlier messages were omitted to stay within context limits. The conversation started with the messages above and continued with the messages below.]`,
+        content: `[Note: ${allMessages.length - 12} earlier messages were omitted to stay within context limits. The conversation started with the messages above and continued with the messages below.]`,
       };
       messages = [...first, summaryNote, ...recent];
     }
@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
     try {
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        max_tokens: 2048,
         system: systemPrompt,
         messages,
       });

@@ -98,7 +98,7 @@ async function askAiToSplit(apiKey: string, task: { title: string; description: 
     const anthropic = new Anthropic({ apiKey });
     const res = await Promise.race([
       anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 2048,
         system: SPLIT_PROMPT,
         messages: [{ role: 'user', content: `Split this task:\nTitle: ${task.title}\nFile: ${task.file_path}\nDescription: ${task.description || 'N/A'}` }],

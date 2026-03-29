@@ -71,65 +71,93 @@ export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: 
 
   const comments = item.comments ?? [];
 
+  const isDecided = item.decision !== 'pending';
+  const isCompact = isDecided && !isReviewActive;
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div className={`border rounded-lg p-3 transition-colors ${decisionStyles[item.decision]}`}>
-      {/* Header: badges + decision indicator */}
-      <div className="flex items-center gap-2 mb-2">
-        <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${typeBadge.color}`}>
-          {typeBadge.label}
-        </span>
-        <span className={`px-1.5 py-0.5 text-xs rounded ${sourceBadge.color}`}>
-          {sourceBadge.label}
-        </span>
-        {item.decision !== 'pending' && (
-          <span className={`ml-auto text-xs font-medium ${
+    <div
+      className={`border rounded-lg transition-colors ${isCompact ? 'px-3 py-1.5 cursor-pointer hover:bg-gray-50/80' : 'p-3'} ${decisionStyles[item.decision]}`}
+      onClick={isCompact ? () => setExpanded(!expanded) : undefined}
+    >
+      {/* Compact: single truncated line; Full: two rows */}
+      {isCompact ? (
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`px-1 py-0.5 text-[10px] rounded shrink-0 ${sourceBadge.color}`}>
+            {sourceBadge.label}
+          </span>
+          <p className={`text-xs text-gray-600 flex-1 min-w-0 ${expanded ? '' : 'truncate'}`}>
+            {item.content}
+          </p>
+          <span className={`text-[10px] font-medium shrink-0 ${
             item.decision === 'accepted' ? 'text-green-600' :
             item.decision === 'rejected' ? 'text-red-500' :
             'text-blue-600'
           }`}>
-            {item.decision.charAt(0).toUpperCase() + item.decision.slice(1)}
+            {item.decision === 'accepted' ? '✓' : item.decision === 'rejected' ? '✗' : '~'}
           </span>
-        )}
-      </div>
-
-      {/* Content */}
-      {isEditing ? (
-        <div className="mb-2">
-          <textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            className="w-full text-sm border rounded-md p-2 resize-y min-h-[60px] focus:ring-1 focus:ring-blue-300 focus:border-blue-300"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') handleCancelEdit();
-            }}
-          />
-          <div className="flex gap-2 mt-1">
-            <button
-              onClick={handleSaveEdit}
-              className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Save
-            </button>
-            <button
-              onClick={handleCancelEdit}
-              className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
-            >
-              Cancel
-            </button>
-          </div>
         </div>
       ) : (
-        <p className="text-sm text-gray-700 mb-2">{item.content}</p>
+        <>
+          {/* Header: badges + decision indicator */}
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${typeBadge.color}`}>
+              {typeBadge.label}
+            </span>
+            <span className={`px-1.5 py-0.5 text-xs rounded ${sourceBadge.color}`}>
+              {sourceBadge.label}
+            </span>
+            {isDecided && (
+              <span className={`ml-auto text-xs font-medium ${
+                item.decision === 'accepted' ? 'text-green-600' :
+                item.decision === 'rejected' ? 'text-red-500' :
+                'text-blue-600'
+              }`}>
+                {item.decision.charAt(0).toUpperCase() + item.decision.slice(1)}
+              </span>
+            )}
+          </div>
+
+          {/* Content */}
+          {isEditing ? (
+            <div className="mb-2">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full text-sm border rounded-md p-2 resize-y min-h-[60px] focus:ring-1 focus:ring-blue-300 focus:border-blue-300"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') handleCancelEdit();
+                }}
+              />
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-700 mb-2">{item.content}</p>
+          )}
+        </>
       )}
 
       {/* Original content diff (when modified) */}
-      {item.decision === 'modified' && item.original_content && (
+      {!isCompact && item.decision === 'modified' && item.original_content && (
         <div className="text-xs text-gray-400 mb-2 line-through">{item.original_content}</div>
       )}
 
       {/* Action buttons */}
-      {isReviewActive && !isEditing && (
+      {isReviewActive && !isEditing && !isCompact && (
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleAccept}
@@ -173,7 +201,7 @@ export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: 
       )}
 
       {/* Comments section */}
-      {showComments && (
+      {!isCompact && showComments && (
         <div className="mt-3 pt-3 border-t border-gray-100">
           {comments.length > 0 && (
             <div className="space-y-2 mb-2">
