@@ -509,7 +509,7 @@ OwnYourGig operates as a **member-governed platform** - owned and governed by it
 
 | Tier | Investment | Transaction Fee | Benefits |
 |------|------------|-----------------|----------|
-| **Member** | $1,500 (first 300 at $1,000) | 10% | AI Business Coach, Voting Rights, Certification Path, Equity |
+| **Member** | $1,500 (first 300 at $1,000) | 10% | AI Coach, Voting Rights, Certification Path, Equity |
 | **Associate** | $0 | 20% | Marketplace access, Job matching, Bid & provide services |
 
 ### Fee Structure
@@ -519,7 +519,7 @@ OwnYourGig operates as a **member-governed platform** - owned and governed by it
 - Fees applied at the point of transaction—no monthly rebate complexity
 - Fee tier determined by provider's enrollment status (enrollment_fee_paid)
 
-### AI Business Coach (Members Only)
+### AI Coach (Members Only)
 
 Exclusive 24/7 AI-powered business advisor providing:
 
