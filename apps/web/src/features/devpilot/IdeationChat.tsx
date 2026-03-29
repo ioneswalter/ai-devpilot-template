@@ -50,7 +50,7 @@ export function IdeationChat({ messages, isLoading, error, onSendMessage, forceC
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.shiftKey || e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -116,7 +116,7 @@ export function IdeationChat({ messages, isLoading, error, onSendMessage, forceC
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Describe your idea or request changes to the proposal...&#10;&#10;Shift+Enter for new line, Enter to send"
+              placeholder="Describe your idea or request changes to the proposal...&#10;&#10;Enter for new line, Shift+Enter to send"
               className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               disabled={isLoading}
             />
