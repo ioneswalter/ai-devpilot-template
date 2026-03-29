@@ -33,7 +33,7 @@ export function initJourneyForm(j: ProposalJourney): JourneyFormState {
     description: j.description,
     why_priority: j.why_priority ?? '',
     independent_test: j.independent_test ?? '',
-    acceptance_scenarios: j.acceptance_scenarios.join('\n'),
+    acceptance_scenarios: (j.acceptance_scenarios ?? []).join('\n'),
   };
 }
 
