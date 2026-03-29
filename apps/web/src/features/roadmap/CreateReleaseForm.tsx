@@ -3,10 +3,12 @@
  * Collects name, version, description, feature selection, and schedule
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useCreateRelease } from './useReleases'
 import { FeatureSelector } from './FeatureSelector'
 import { generateVersionSuggestions } from './version-utils'
+import { productApi } from '../../lib/api/product-api'
 
 const ArrowLeftIcon = ({ className = '' }: { className?: string }) => (
   <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
@@ -37,6 +39,29 @@ export function CreateReleaseForm({
   const [showFeatureSelector, setShowFeatureSelector] = useState(false)
 
   const createMutation = useCreateRelease()
+
+  // Fetch all features and map to FeatureSelector's expected shape
+  const { data: allFeatures = [] } = useQuery({
+    queryKey: ['product-features-for-release'],
+    queryFn: async () => {
+      const response = await productApi.getFeatures()
+      return response.data ?? []
+    },
+  })
+
+  const releasableFeatures = useMemo(() => {
+    return allFeatures
+      .filter(f => f.status === 'released')
+      .map(f => ({
+        id: f.id,
+        title: `${f.feature_code} — ${f.title}`,
+        description: f.description,
+        status: 'released' as const,
+        category: f.category ?? 'Uncategorised',
+        impact_level: (f.priority === 'P1 - MVP' ? 'high' : f.priority === 'P2' ? 'medium' : 'low') as 'low' | 'medium' | 'high',
+        created_at: f.created_at,
+      }))
+  }, [allFeatures])
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -185,7 +210,7 @@ export function CreateReleaseForm({
           {showFeatureSelector && (
             <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
               <FeatureSelector
-                features={[]}
+                features={releasableFeatures}
                 selectedFeatureIds={featureIds}
                 onSelectionChange={setFeatureIds}
               />
