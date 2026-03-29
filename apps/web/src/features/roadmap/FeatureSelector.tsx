@@ -21,6 +21,7 @@ interface Feature {
   description: string
   status: 'backlog' | 'in-progress' | 'released' | 'deployed'
   category: string
+  section?: string
   impact_level: 'low' | 'medium' | 'high'
   created_at: string
   completed_at?: string
@@ -41,6 +42,7 @@ export function FeatureSelector({
 }: FeatureSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedSection, setSelectedSection] = useState<string>('all')
   const [selectedImpact, setSelectedImpact] = useState<string>('all')
 
   // Filter features to only show released ones not in active releases
@@ -54,6 +56,11 @@ export function FeatureSelector({
     return cats.sort()
   }, [eligibleFeatures])
 
+  const sections = useMemo(() => {
+    const secs = Array.from(new Set(eligibleFeatures.map(f => f.section).filter(Boolean)))
+    return secs.sort()
+  }, [eligibleFeatures])
+
   const impactLevels = ['low', 'medium', 'high'] as const
 
   // Apply search and filters
@@ -64,11 +71,12 @@ export function FeatureSelector({
         feature.description.toLowerCase().includes(searchQuery.toLowerCase())
       
       const matchesCategory = selectedCategory === 'all' || feature.category === selectedCategory
+      const matchesSection = selectedSection === 'all' || feature.section === selectedSection
       const matchesImpact = selectedImpact === 'all' || feature.impact_level === selectedImpact
 
-      return matchesSearch && matchesCategory && matchesImpact
+      return matchesSearch && matchesCategory && matchesSection && matchesImpact
     })
-  }, [eligibleFeatures, searchQuery, selectedCategory, selectedImpact])
+  }, [eligibleFeatures, searchQuery, selectedCategory, selectedSection, selectedImpact])
 
   const toggleFeature = (featureId: string) => {
     const isSelected = selectedFeatureIds.includes(featureId)
@@ -135,11 +143,24 @@ export function FeatureSelector({
         </div>
 
         {/* Filters */}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={selectedSection}
+            onChange={(e) => setSelectedSection(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Sections</option>
+            {sections.map(section => (
+              <option key={section} value={section}>
+                {section}
+              </option>
+            ))}
+          </select>
+
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Categories</option>
             {categories.map(category => (
@@ -152,12 +173,12 @@ export function FeatureSelector({
           <select
             value={selectedImpact}
             onChange={(e) => setSelectedImpact(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="all">All Impact Levels</option>
+            <option value="all">All Priorities</option>
             {impactLevels.map(impact => (
               <option key={impact} value={impact}>
-                {impact.charAt(0).toUpperCase() + impact.slice(1)} Impact
+                {impact === 'high' ? 'P1 - MVP' : impact === 'medium' ? 'P2' : 'P3+'}
               </option>
             ))}
           </select>
@@ -228,8 +249,13 @@ export function FeatureSelector({
                     {feature.description}
                   </p>
                   
-                  <div className="flex items-center gap-4 text-xs text-gray-500">
-                    <span className="px-2 py-1 bg-gray-100 rounded">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    {feature.section && (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded">
+                        {feature.section}
+                      </span>
+                    )}
+                    <span className="px-2 py-0.5 bg-gray-100 rounded">
                       {feature.category}
                     </span>
                     {feature.completed_at && (

@@ -58,6 +58,7 @@ export function CreateReleaseForm({
         description: f.description,
         status: 'released' as const,
         category: f.category ?? 'Uncategorised',
+        section: f.spec_section ?? 'Other',
         impact_level: (f.priority === 'P1 - MVP' ? 'high' : f.priority === 'P2' ? 'medium' : 'low') as 'low' | 'medium' | 'high',
         created_at: f.created_at,
       }))
