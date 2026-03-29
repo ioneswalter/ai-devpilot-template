@@ -69,18 +69,30 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
   }, [fileStatus]);
 
   const startWrite = useCallback(async () => {
-    // Backup all files we're about to write
+    // Pause HMR so Vite doesn't reload the page while we write files
+    await controlHMR('pause');
     const selectedPaths = files.filter(f => selected.has(f.filePath)).map(f => f.filePath);
     await backupFiles(selectedPaths);
     setPhase('writing');
   }, [files, selected]);
 
+  const handleComplete = useCallback(async () => {
+    await controlHMR('resume');
+    onComplete();
+  }, [onComplete]);
+
   const handleRollback = useCallback(async () => {
     setIsRollingBack(true);
     await rollbackFiles();
+    await controlHMR('resume');
     setIsRollingBack(false);
     setPhase('rolled-back');
   }, []);
+
+  const handleCancel = useCallback(async () => {
+    await controlHMR('resume');
+    onCancel();
+  }, [onCancel]);
 
   const selectedFiles = files.filter(f => selected.has(f.filePath));
   const newCount = fileStatus.filter(f => !f.exists).length;
@@ -101,7 +113,7 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
         <p className="text-xs text-amber-700 mb-3">
           All files have been restored to their previous state.
         </p>
-        <button onClick={onCancel} className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50">
+        <button onClick={handleCancel} className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50">
           Close
         </button>
       </div>
@@ -120,7 +132,7 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
   if (phase === 'build-check') {
     return (
       <BuildCheckPanel
-        onBuildPass={onComplete}
+        onBuildPass={handleComplete}
         onRollback={handleRollback}
         isRollingBack={isRollingBack}
         writtenFiles={selectedFiles.map(f => f.filePath)}
@@ -224,6 +236,14 @@ async function backupFiles(paths: string[]): Promise<void> {
 
 async function rollbackFiles(): Promise<void> {
   await fetch('/__api/rollback-files', { method: 'POST' });
+}
+
+async function controlHMR(action: 'pause' | 'resume'): Promise<void> {
+  await fetch('/__api/hmr-control', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action }),
+  });
 }
 
 // --- Inline icons ---
