@@ -19,11 +19,26 @@ Each subtask must produce a file UNDER 200 lines. Return a JSON array of subtask
 Rules:
 - Split by concern: types, utils/helpers, subcomponents, main file
 - React components: separate container (logic) from presentational (JSX) components
-- Edge Functions: router + handler + shared modules
+- Edge Functions: router + handler modules (all in same directory, no subdirectories)
 - Services: split by entity or workflow step
 - Each subtask gets its own file_path — never duplicate the original
 - 2-4 subtasks is ideal, never more than 5
 - task_type must be one of: create, modify, test, config
+- Each subtask file MUST be self-contained — do not create cross-dependencies between subtasks
+
+File placement rules:
+- Frontend features: apps/web/src/features/<domain>/
+- Edge Function handlers: supabase/functions/<function-name>/ (flat, no subdirectories)
+- Do NOT use: components/<feature>/, hooks/, handlers/, services/, utils/ subdirectories
+
+Export naming:
+- Edge Function handlers: named exports matching filename, e.g., get-releases.ts → export function getReleases()
+- React components: named exports matching filename, e.g., ReleasePanel.tsx → export function ReleasePanel()
+
+Overwrite protection — NEVER target these shared files as subtasks:
+- apps/web/src/lib/api/admin-api.ts
+- apps/web/src/features/roadmap/RoadmapContent.tsx
+- prisma/schema.prisma
 
 Return ONLY a JSON array, no explanation:
 [{"title":"...","description":"...","file_path":"...","task_type":"create"}, ...]`;

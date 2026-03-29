@@ -8,6 +8,7 @@
  *   POST  ?action=add-task         — Add a manual task item
  *   POST  ?action=implement        — Execute ONE AI code generation task
  *   POST  ?action=mark-applied    — Mark code as applied to codebase
+ *   POST  ?action=fix-errors      — AI-powered build error fixer
  *   PATCH                          — Update task item decision/comment
  */
 
@@ -34,6 +35,10 @@ Deno.serve(async (req) => {
     if (req.method === 'GET') return handleGetRequest(url, ctx);
     if (req.method === 'POST' && action === 'add-task') return handleAddTask(req, ctx);
     if (req.method === 'POST' && action === 'implement') return handleImplementTask(req, ctx);
+    if (req.method === 'POST' && action === 'fix-errors') {
+      const { handleFixErrors } = await import('./fix-errors.ts');
+      return handleFixErrors(req, ctx);
+    }
     if (req.method === 'POST' && action === 'mark-applied') return handleMarkApplied(req, ctx);
     if (req.method === 'POST') return handleCreateRequest(req, ctx);
     if (req.method === 'PATCH') return handleUpdateTask(req, ctx);

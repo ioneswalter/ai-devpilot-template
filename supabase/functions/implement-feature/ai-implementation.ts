@@ -34,6 +34,28 @@ You are working in a full-stack TypeScript monorepo:
 - Auth: Supabase Auth (SMS OTP)
 - Validation: Zod
 
+## Existing project structure (MUST follow):
+
+### Frontend conventions:
+- Feature components: \`apps/web/src/features/<domain>/ComponentName.tsx\`
+- Feature hooks: \`apps/web/src/features/<domain>/useHookName.ts\`
+- Feature types: \`apps/web/src/features/<domain>/<feature>-types.ts\`
+- API functions: ADD to existing \`apps/web/src/lib/api/admin-api.ts\` (do NOT create new API files)
+- Shared UI: \`apps/web/src/components/ui/\`
+- Features integrate into the Roadmap page as modal panels — do NOT create standalone route pages
+- Do NOT use \`apps/web/src/components/<feature>/\` — use \`features/<domain>/\` instead
+- Do NOT use \`apps/web/src/hooks/\` for feature hooks — colocate with feature
+
+### Backend conventions:
+- Edge Functions: \`supabase/functions/<function-name>/index.ts\` with handler files alongside
+- Handler files go directly in function directory (e.g., \`supabase/functions/my-fn/handler.ts\`)
+- Do NOT create \`handlers/\`, \`services/\`, or \`utils/\` subdirectories inside Edge Functions
+- Validation schemas: colocate in function directory (e.g., \`schemas.ts\`)
+
+### Database:
+- Migrations: \`supabase/migrations/\` (SQL files, NOT prisma/migrations/)
+- Schema updates: \`prisma/schema.prisma\`
+
 Return ONLY valid JSON (no markdown, no code fences) in this exact format:
 {
   "summary": "Brief implementation overview (2-3 sentences)",
@@ -48,14 +70,33 @@ Return ONLY valid JSON (no markdown, no code fences) in this exact format:
   ]
 }
 
+## Overwrite protection — NEVER regenerate these shared files:
+- \`apps/web/src/lib/api/admin-api.ts\` — use task_type "modify" to append new functions
+- \`apps/web/src/features/roadmap/RoadmapContent.tsx\` — use task_type "modify" to add integration
+- \`prisma/schema.prisma\` — use task_type "modify" to append models
+- \`apps/web/src/lib/supabase-client.ts\` — never target this file
+
+## Frontend/backend contract alignment:
+When planning both frontend API client additions AND backend Edge Function handlers,
+ensure the field names MATCH exactly:
+- If frontend sends \`{ id }\`, backend must expect \`{ id }\` (not \`{ releaseId }\`)
+- If frontend sends \`{ title }\`, backend must use \`title\` (not \`name }\`)
+- Define the contract once and use it consistently across both layers
+
+## Database conventions:
+- All tables use TEXT ids (not UUID) with NO auto-generation — handlers must generate \`crypto.randomUUID()\`
+- Always include \`created_at\` and \`updated_at\` timestamps on inserts
+
 Guidelines:
 - Generate 5-15 specific, actionable implementation tasks
 - Each task should target a single file
 - Order tasks by dependency (setup first, then models, services, UI)
 - Include test tasks for key acceptance criteria
 - Follow SRP: max 300 lines per file
-- Use existing patterns from the codebase
-- Be specific about what code to write, not vague instructions`;
+- Each file MUST be self-contained — do NOT create cross-dependencies between tasks
+- Be specific about what code to write, not vague instructions
+- Edge Function handlers: use named exports matching the filename pattern \`{verb}{Entity}\`
+- Include CORS headers in ALL Edge Function responses`;
 
 /**
  * Call Claude AI to generate an implementation plan

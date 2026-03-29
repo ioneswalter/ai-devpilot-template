@@ -1,10 +1,13 @@
 /**
- * POST handler: Create a new implementation request and trigger AI plan generation
+ * POST handler: Create a new implementation request
+ * Loads tasks from SpecKit artifacts (tasks.md) instead of AI-inventing them.
+ * Falls back to AI generation only if no SpecKit artifacts exist.
  */
 
 import { CreateRequestSchema } from './schemas.ts';
 import { generateImplementation } from './ai-implementation.ts';
 import { jsonResponse, errorResponse, type AuthContext } from './shared.ts';
+import { parseTasksMarkdown } from './parse-tasks.ts';
 
 export async function handleCreateRequest(req: Request, ctx: AuthContext): Promise<Response> {
   const rawBody = await req.json();
@@ -41,15 +44,18 @@ export async function handleCreateRequest(req: Request, ctx: AuthContext): Promi
     return errorResponse('DUPLICATE', 'An implementation request is already active', 409);
   }
 
-  const { data: testCases } = await ctx.supabase
-    .from('test_cases')
-    .select('test_code, title, description')
+  // Load SpecKit artifacts from DB
+  const { data: artifacts } = await ctx.supabase
+    .from('feature_spec_artifacts')
+    .select('artifact_type, file_name, content')
     .eq('feature_id', feature_id);
 
-  const criteria = feature.acceptance_criteria || [];
-  const prompt = buildPrompt(feature, criteria, testCases || [], implementation_notes);
+  const tasksArtifact = artifacts?.find((a: { artifact_type: string }) => a.artifact_type === 'tasks');
 
   // Create request record
+  const criteria = feature.acceptance_criteria || [];
+  const prompt = buildPrompt(feature, criteria, implementation_notes);
+
   const { data: implRequest, error: insertErr } = await ctx.supabase
     .from('implementation_requests')
     .insert({
@@ -73,7 +79,17 @@ export async function handleCreateRequest(req: Request, ctx: AuthContext): Promi
     .update({ status: 'in_development' })
     .eq('id', feature_id);
 
-  // Generate AI plan
+  // Strategy: Use SpecKit tasks.md if available, fall back to AI generation
+  if (tasksArtifact) {
+    return await saveSpecKitTasks(ctx, implRequest, feature, tasksArtifact.content);
+  }
+
+  // Fallback: AI-generated tasks (legacy behavior)
+  const { data: testCases } = await ctx.supabase
+    .from('test_cases')
+    .select('test_code, title, description')
+    .eq('feature_id', feature_id);
+
   const aiPlan = await generateImplementation(
     feature.feature_code, feature.title, feature.description,
     criteria, testCases || [], implementation_notes || null,
@@ -86,13 +102,69 @@ export async function handleCreateRequest(req: Request, ctx: AuthContext): Promi
   return await saveManualFallback(ctx, implRequest);
 }
 
+/** Parse tasks.md from SpecKit and save as implementation task items */
+async function saveSpecKitTasks(
+  ctx: AuthContext,
+  implRequest: Record<string, unknown>,
+  feature: Record<string, unknown>,
+  tasksContent: string,
+): Promise<Response> {
+  const tasks = parseTasksMarkdown(tasksContent);
+
+  if (tasks.length === 0) {
+    // tasks.md exists but couldn't parse — fall back to manual
+    return await saveManualFallback(ctx, implRequest);
+  }
+
+  await ctx.supabase
+    .from('implementation_requests')
+    .update({
+      status: 'completed',
+      ai_response: { summary: `Loaded ${tasks.length} tasks from SpecKit tasks.md`, architecture_notes: 'Tasks sourced from SpecKit workflow artifacts.' },
+      completed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', implRequest.id);
+
+  const taskRows = tasks.map((t, i) => ({
+    request_id: implRequest.id as string,
+    title: t.title,
+    description: t.description || null,
+    file_path: t.file_path || 'TBD',
+    task_type: t.task_type,
+    source: 'speckit',
+    decision: 'pending',
+    sort_order: i,
+  }));
+
+  const { data: savedItems, error: taskErr } = await ctx.supabase
+    .from('implementation_task_items')
+    .insert(taskRows)
+    .select();
+
+  if (taskErr) {
+    console.error(`Failed to save SpecKit tasks: ${taskErr.message}`);
+  }
+
+  const code = (feature as Record<string, string>).feature_code;
+  console.log(`SpecKit tasks: ${code} — ${savedItems?.length ?? 0}/${tasks.length} tasks saved`);
+
+  return jsonResponse({
+    data: {
+      ...implRequest,
+      status: 'completed',
+      ai_response: { summary: `Loaded ${tasks.length} tasks from SpecKit`, architecture_notes: 'SpecKit-sourced' },
+      task_items: savedItems || [],
+    },
+  }, 201);
+}
+
 async function saveAiPlan(
   ctx: AuthContext,
   implRequest: Record<string, unknown>,
   feature: Record<string, unknown>,
   aiPlan: { summary: string; architecture_notes: string; tasks: Array<{ title: string; description?: string; file_path: string; task_type: string }> },
 ): Promise<Response> {
-  // Store tasks in ai_response for recovery if task insert fails
   await ctx.supabase
     .from('implementation_requests')
     .update({
@@ -123,7 +195,8 @@ async function saveAiPlan(
     console.error(`Failed to save task items: ${taskErr.message}`);
   }
 
-  console.log(`AI implementation: ${(feature as Record<string, string>).feature_code} — ${savedItems?.length ?? 0}/${aiPlan.tasks.length} tasks saved`);
+  const code = (feature as Record<string, string>).feature_code;
+  console.log(`AI fallback: ${code} — ${savedItems?.length ?? 0}/${aiPlan.tasks.length} tasks saved`);
 
   return jsonResponse({
     data: {
@@ -143,7 +216,7 @@ async function saveManualFallback(
     .from('implementation_requests')
     .update({
       status: 'completed',
-      error_message: 'AI unavailable. Add implementation tasks manually.',
+      error_message: 'No SpecKit artifacts found and AI unavailable. Add tasks manually.',
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -154,7 +227,7 @@ async function saveManualFallback(
       ...implRequest,
       status: 'completed',
       task_items: [],
-      error_message: 'AI unavailable. Add implementation tasks manually.',
+      error_message: 'No SpecKit artifacts found and AI unavailable. Add tasks manually.',
     },
   }, 201);
 }
@@ -162,28 +235,14 @@ async function saveManualFallback(
 function buildPrompt(
   feature: { feature_code: string; title: string; description: string; priority: string; feature_type: string },
   criteria: string[],
-  testCases: { test_code: string; title: string; description?: string }[],
   notes: string | undefined,
 ): string {
-  return `## Feature Implementation Request
-
-**Feature Code:** ${feature.feature_code}
-**Title:** ${feature.title}
-**Description:** ${feature.description}
-**Priority:** ${feature.priority}
-**Type:** ${feature.feature_type}
+  return `## Feature: ${feature.feature_code} — ${feature.title}
+${feature.description}
 
 ### Acceptance Criteria:
 ${criteria.map((c: string, i: number) => `${i + 1}. ${c}`).join('\n')}
 
-### Test Cases:
-${testCases.length > 0 ? testCases.map(tc => `- ${tc.test_code}: ${tc.title}`).join('\n') : 'None defined.'}
-
-### Implementation Notes:
-${notes || 'No additional notes provided.'}
-
-### Instructions:
-Implement this feature following the project coding standards and patterns.
-Create test cases for each acceptance criterion.
-Update the roadmap when complete.`.trim();
+### Notes:
+${notes || 'None.'}`.trim();
 }

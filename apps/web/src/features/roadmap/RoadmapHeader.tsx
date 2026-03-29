@@ -10,9 +10,10 @@ interface RoadmapHeaderProps {
   isFiltered: boolean;
   isAdmin: boolean;
   isMember: boolean;
+  onOpenReleases?: () => void;
 }
 
-export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember }: RoadmapHeaderProps) {
+export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenReleases }: RoadmapHeaderProps) {
   const navigate = useNavigate();
 
   const ideationButton = isAdmin ? (
@@ -43,9 +44,17 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember }: RoadmapH
               <h1 className="text-xl lg:text-2xl font-bold">AI DevPilot</h1>
               <p className="text-xs lg:text-sm text-blue-200">Product roadmap &amp; feature pipeline</p>
             </div>
-            {/* Mobile ideation button */}
-            {ideationButton && (
-              <div className="md:hidden">
+            {/* Mobile action buttons */}
+            {(ideationButton || (isAdmin && onOpenReleases)) && (
+              <div className="md:hidden flex items-center gap-2">
+                {isAdmin && onOpenReleases && (
+                  <button
+                    onClick={onOpenReleases}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  >
+                    Releases
+                  </button>
+                )}
                 {isAdmin ? (
                   <button
                     onClick={() => navigate({ to: '/admin/devpilot' })}
@@ -88,8 +97,19 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember }: RoadmapH
               <div className="text-lg lg:text-xl font-bold text-blue-200">{stats.proposed}</div>
               <div className="text-[10px] lg:text-xs text-blue-200">Proposed</div>
             </div>
-            {/* Desktop ideation button */}
-            <div className="hidden md:block">
+            {/* Desktop action buttons */}
+            <div className="hidden md:flex items-center gap-2">
+              {isAdmin && onOpenReleases && (
+                <button
+                  onClick={onOpenReleases}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                  </svg>
+                  Releases
+                </button>
+              )}
               {ideationButton}
             </div>
           </div>

@@ -15,6 +15,7 @@ import { Modal } from '../../components/ui/Modal';
 import { SpecReviewPanel } from './SpecReviewPanel';
 import { ImplementationPanel } from './ImplementationPanel';
 import { TestRunPanel } from './TestRunPanel';
+import { ReleasePanel } from './ReleasePanel';
 import { usePipelineStatus } from './usePipelineStatus';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
@@ -26,6 +27,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   const [reviewingFeature, setReviewingFeature] = useState<ProductFeature | null>(null);
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
+  const [showReleases, setShowReleases] = useState(false);
 
   /** Handle pipeline stage click — open the corresponding panel */
   const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
@@ -42,8 +44,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         break;
       }
       case 'build': {
-        // Only open build panel if there's SpecKit data
-        if (pipelineData?.build?.status === 'not_started') return;
+        // Always allow opening build panel — handles both new and existing implementations
         setImplementingFeature(feature);
         break;
       }
@@ -87,6 +88,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         isFiltered={roadmap.isFiltered}
         isAdmin={roadmap.isAdmin}
         isMember={isMember}
+        onOpenReleases={() => setShowReleases(true)}
       />
 
       {/* Loading / Error State */}
@@ -264,6 +266,9 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         )}
       </Modal>
 
+      {/* Release Manager */}
+      <ReleasePanel isOpen={showReleases} onClose={() => setShowReleases(false)} />
+
       {/* Admin Modals */}
       <AdminModals
         features={roadmap.features}
@@ -279,7 +284,10 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onLinkCriteriaSuccess={roadmap.fetchFeatures}
         pendingTransition={roadmap.pendingTransition}
         isTransitioning={roadmap.isTransitioning}
-        onTransitionConfirm={roadmap.handleTransitionConfirm}
+        onTransitionConfirm={async () => {
+          await roadmap.handleTransitionConfirm();
+          pipeline.invalidate();
+        }}
         onTransitionCancel={roadmap.handleTransitionCancel}
         onReviewWithAI={setReviewingFeature}
         onStartImplementation={setImplementingFeature}

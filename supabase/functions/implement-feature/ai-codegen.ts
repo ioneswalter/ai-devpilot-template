@@ -28,6 +28,80 @@ Tech stack:
 - Validation: Zod
 - Auth: Supabase Auth (SMS OTP)
 
+## Existing project conventions (MUST follow):
+
+### Frontend file placement:
+- Feature UI components go in \`apps/web/src/features/<domain>/\` (e.g., \`features/roadmap/\`, \`features/admin/\`)
+- Feature hooks go next to their components (e.g., \`features/roadmap/useSpecReview.ts\`)
+- Feature types go next to their components (e.g., \`features/roadmap/spec-review-types.ts\`)
+- Shared UI primitives go in \`apps/web/src/components/ui/\`
+- API client functions go in \`apps/web/src/lib/api/admin-api.ts\` (add to existing file)
+- Do NOT create \`apps/web/src/components/<feature>/\` directories — use \`features/<domain>/\` instead
+- Do NOT create \`apps/web/src/hooks/\` for feature-specific hooks — colocate with feature
+- Do NOT create standalone route pages for features that belong in the Roadmap — use modal panels in RoadmapContent.tsx
+
+### Backend file placement:
+- Each Edge Function lives in \`supabase/functions/<function-name>/\`
+- Handler files go directly in the function directory (e.g., \`supabase/functions/spec-review/start-review.ts\`)
+- Do NOT create \`handlers/\` or \`services/\` subdirectories inside Edge Functions
+- Do NOT create \`supabase/functions/_shared/services/\` — keep handlers in the function directory
+- Shared utilities: \`supabase/functions/_shared/\` (only for truly cross-function code)
+
+### Import rules:
+- Frontend path alias: \`@/\` maps to \`apps/web/src/\`
+- Supabase client: import from \`@/lib/supabase-client\`
+- API calls: import from \`@/lib/api/admin-api\`
+- Edge Functions use Deno imports: \`https://deno.land/std@0.168.0/\`, \`https://esm.sh/\`
+- Edge Functions use \`npm:\` prefix for npm packages (e.g., \`npm:@anthropic-ai/sdk@0.39.0\`)
+
+## CRITICAL: Self-contained files only
+
+Each generated file MUST be independently functional:
+- Do NOT import from sibling task files unless those files already exist on disk
+- The "Sibling Files" list shows PLANNED files — they may not be written yet or may be skipped
+- Instead: define types inline, use existing shared modules, or use the API client
+- If you need a type defined in another task, define it locally or in a shared types file
+- If a companion file is essential, add a comment: \`// COMPANION: [path] — [what it should export]\`
+
+## CRITICAL: Overwrite protection
+
+Some files are SHARED across features and must NOT be regenerated from scratch:
+- \`apps/web/src/lib/api/admin-api.ts\` — append new functions, never overwrite
+- \`apps/web/src/features/roadmap/RoadmapContent.tsx\` — orchestrator, modify only
+- \`prisma/schema.prisma\` — append models, never overwrite
+- \`apps/web/src/lib/supabase-client.ts\` — shared utility, never overwrite
+
+If your task targets one of these files with task_type "create", generate ONLY the new additions
+wrapped in a comment block showing where to insert them. Do NOT generate the entire file.
+
+## CRITICAL: Export naming conventions
+
+When generating Edge Function handler files that will be imported by an index.ts router:
+- Use NAMED exports (not default exports) with descriptive names matching the file
+- Example: \`get-releases.ts\` → \`export async function getReleases(req: Request)\`
+- Example: \`create-release.ts\` → \`export async function createRelease(req: Request)\`
+- The index.ts router will import like: \`const { getReleases } = await import('./get-releases.ts')\`
+- Keep export names consistent: \`{verb}{Entity}\` pattern (e.g., getRelease, createRelease, deployRelease)
+
+When generating React components:
+- Use named exports matching the filename: \`ReleasePanel.tsx\` → \`export function ReleasePanel()\`
+- Export types/interfaces that other files might need
+
+## CRITICAL: Database ID generation
+
+When inserting rows into Supabase tables:
+- ALWAYS include \`id: crypto.randomUUID()\` in insert objects unless you know the table has a default
+- ALWAYS include \`created_at: new Date().toISOString()\` and \`updated_at: new Date().toISOString()\`
+- Supabase tables in this project use TEXT ids with no auto-generation
+
+## CRITICAL: Frontend/backend contract alignment
+
+When generating an Edge Function handler, the request/response shape MUST match what the frontend sends:
+- Check the admin-api.ts client functions to see what field names the frontend uses
+- Example: if frontend sends \`{ id }\`, backend must destructure \`{ id }\` not \`{ releaseId }\`
+- Example: if frontend sends \`{ title }\`, backend must use \`title\` not \`name\`
+- Include CORS headers in ALL responses: \`'Access-Control-Allow-Origin': '*'\`
+
 ## Code quality guidelines:
 
 1. **Aim for concise files.** Keep files under 300 lines (test files, migrations, and schemas can go up to 500). Outputs exceeding these limits are rejected.
@@ -36,15 +110,12 @@ Tech stack:
 4. **Single Responsibility Principle.** One concern per file where practical.
 5. **React components:** Extract large subcomponents into separate files when it improves clarity.
 6. **Edge Functions:** Use thin router pattern — index.ts delegates to handler modules.
-7. If companion files are needed, add a comment: \`// COMPANION FILES NEEDED: [list paths]\`
 
 ## Output rules:
 - Return ONLY raw source code — no markdown fences, no \`\`\` blocks, no explanations
 - For config files (JSON, YAML, TOML): return ONLY valid config content
-- If companion files are needed, add a comment: \`// COMPANION FILES NEEDED: [list paths]\`
 - Include all necessary imports
-- Add brief JSDoc comment at the top
-- ONLY reference files that exist in the sibling task list`;
+- Add brief JSDoc comment at the top`;
 
 /**
  * Generate code for a single implementation task.
