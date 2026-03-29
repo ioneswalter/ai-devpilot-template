@@ -65,9 +65,12 @@ export function SpecReviewPanel({
 
   const grouped = groupItemsByType(spec.items);
 
+  const [showSuccess, setShowSuccess] = useState<string | null>(null);
+
   function handleApprove() {
     spec.approveReview().then(() => {
-      onReviewComplete();
+      setShowSuccess('approved');
+      setTimeout(() => onReviewComplete(), 1500);
     }).catch(() => {
       // Error is available via spec.approveError
     });
@@ -75,7 +78,8 @@ export function SpecReviewPanel({
 
   function handleSendBack(feedback: string) {
     spec.sendBack(feedback).then(() => {
-      onReviewComplete();
+      setShowSuccess('sent_back');
+      setTimeout(() => onReviewComplete(), 1500);
     }).catch(() => {
       // Error is available via spec.sendBackError
     });
@@ -141,6 +145,32 @@ export function SpecReviewPanel({
   }
 
   const anyError = spec.approveError || spec.sendBackError || spec.updateError;
+
+  if (showSuccess) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3 p-8">
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center ${
+          showSuccess === 'approved' ? 'bg-green-100' : 'bg-amber-100'
+        }`}>
+          <svg className={`w-7 h-7 ${showSuccess === 'approved' ? 'text-green-600' : 'text-amber-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {showSuccess === 'approved' ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            )}
+          </svg>
+        </div>
+        <h4 className="text-base font-semibold text-gray-900">
+          {showSuccess === 'approved' ? 'Spec Approved' : 'Sent Back for Revision'}
+        </h4>
+        <p className="text-sm text-gray-500 text-center">
+          {showSuccess === 'approved'
+            ? `${spec.acceptedCount} items added to ${featureCode}`
+            : `Feedback sent — ${featureCode} returned to ideation`}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
