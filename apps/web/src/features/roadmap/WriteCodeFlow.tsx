@@ -123,6 +123,7 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
         onBuildPass={onComplete}
         onRollback={handleRollback}
         isRollingBack={isRollingBack}
+        writtenFiles={selectedFiles.map(f => f.filePath)}
       />
     );
   }
