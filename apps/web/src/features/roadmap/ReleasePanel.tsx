@@ -3,11 +3,12 @@
  * Handles state management, view switching, and Create Release functionality
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { ReleaseHistory } from './ReleaseHistory'
 import { ReleaseListView } from './ReleaseListView'
 import { ReleaseDetailView } from './ReleaseDetailView'
 import { CreateReleaseForm } from './CreateReleaseForm'
+import { useReleases } from './useReleases'
 
 const XIcon = ({ className = '' }: { className?: string }) => (
   <svg className={className} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -40,6 +41,29 @@ export function ReleasePanel({
   const [currentView, setCurrentView] = useState<ViewMode>(initialView)
   const [selectedReleaseId, setSelectedReleaseId] = useState<string | null>(initialReleaseId || null)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  const { data: releases = [], isLoading: releasesLoading } = useReleases()
+
+  // Map API release data to ReleaseHistory's expected shape
+  const historyReleases = useMemo(() => releases.map(r => {
+    const status = r.status === 'deployed' ? 'released' as const
+      : r.status === 'draft' || r.status === 'scheduled' ? 'planned' as const
+      : 'active' as const
+    return {
+      id: r.id,
+      version: r.version,
+      name: r.name,
+      status,
+      releaseDate: r.released_at ?? r.target_date ?? null,
+      createdAt: r.created_at,
+      features: (r.features ?? []).map(f => ({
+        id: f.feature_id,
+        title: f.title ?? 'Feature',
+        status: 'released' as const,
+      })),
+      releaseNotes: r.release_notes,
+    }
+  }), [releases])
 
   // Navigation handlers
   const handleViewRelease = useCallback((releaseId: string) => {
@@ -160,8 +184,9 @@ export function ReleasePanel({
 
           {currentView === 'history' && (
             <ReleaseHistory
-              releases={[]}
-              onReleaseClick={() => {}}
+              releases={historyReleases}
+              onReleaseClick={(r) => handleViewRelease(r.id)}
+              loading={releasesLoading}
             />
           )}
         </div>
