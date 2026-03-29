@@ -41,7 +41,7 @@ export function CreateReleaseForm({
   const createMutation = useCreateRelease()
 
   // Fetch all features and map to FeatureSelector's expected shape
-  const { data: allFeatures = [] } = useQuery({
+  const { data: allFeatures = [], isLoading: featuresLoading } = useQuery({
     queryKey: ['product-features-for-release'],
     queryFn: async () => {
       const response = await productApi.getFeatures()
@@ -210,11 +210,25 @@ export function CreateReleaseForm({
 
           {showFeatureSelector && (
             <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-              <FeatureSelector
-                features={releasableFeatures}
-                selectedFeatureIds={featureIds}
-                onSelectionChange={setFeatureIds}
-              />
+              {featuresLoading ? (
+                <div className="space-y-3 animate-pulse">
+                  <div className="h-5 w-32 bg-gray-200 rounded" />
+                  <div className="h-10 w-full bg-gray-200 rounded-lg" />
+                  <div className="flex gap-2">
+                    <div className="h-8 w-28 bg-gray-200 rounded-lg" />
+                    <div className="h-8 w-28 bg-gray-200 rounded-lg" />
+                  </div>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-16 w-full bg-gray-200 rounded-lg" />
+                  ))}
+                </div>
+              ) : (
+                <FeatureSelector
+                  features={releasableFeatures}
+                  selectedFeatureIds={featureIds}
+                  onSelectionChange={setFeatureIds}
+                />
+              )}
             </div>
           )}
         </div>
