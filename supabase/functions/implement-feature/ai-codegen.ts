@@ -126,13 +126,14 @@ export async function generateCode(
   featureContext: { feature_code: string; title: string; description: string; criteria: string[] },
   siblingFilePaths: string[],
   artifacts: SpecArtifacts = {},
+  existingContent?: string,
 ): Promise<CodeGenResult | null> {
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
     return null;
   }
 
-  const userMessage = buildUserMessage(task, featureContext, siblingFilePaths, artifacts);
+  const userMessage = buildUserMessage(task, featureContext, siblingFilePaths, artifacts, existingContent);
 
   try {
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
@@ -178,6 +179,7 @@ function buildUserMessage(
   ctx: { feature_code: string; title: string; description: string; criteria: string[] },
   siblingFilePaths: string[],
   artifacts: SpecArtifacts,
+  existingContent?: string,
 ): string {
   const sections: string[] = [];
 
@@ -216,10 +218,29 @@ ${contractText}`);
 ${truncateArtifact(artifacts.research, 2000)}`);
   }
 
+  // If the file already exists, include current content so AI can MODIFY instead of replace
+  if (existingContent) {
+    sections.push(`## EXISTING FILE CONTENT (CRITICAL)
+This file already exists in the codebase. You MUST:
+1. Preserve ALL existing imports, functions, and logic that are not related to your task
+2. ADD your changes to the existing code — do NOT remove or replace unrelated code
+3. Merge your additions with the existing structure
+4. Keep the same export names and component signatures
+
+Current content of \`${task.file_path}\`:
+\`\`\`
+${truncateArtifact(existingContent, 6000)}
+\`\`\``);
+  }
+
   sections.push(`## Sibling Files in This Feature
 ${siblingFilePaths.length > 0 ? siblingFilePaths.map(p => `- ${p}`).join('\n') : 'None — standalone task.'}`);
 
-  sections.push('Generate the complete code for this task. Return ONLY raw source code.');
+  if (existingContent) {
+    sections.push('Generate the COMPLETE updated file incorporating your changes into the existing code. Return ONLY raw source code.');
+  } else {
+    sections.push('Generate the complete code for this task. Return ONLY raw source code.');
+  }
 
   return sections.join('\n\n');
 }

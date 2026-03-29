@@ -10,6 +10,10 @@ import type { BuildErrorItem, FixResultItem } from '@/lib/api/admin-api';
 interface BuildCheckPanelProps {
   /** Called after fixes are applied and build passes */
   onBuildPass: () => void;
+  /** Called when user clicks rollback — restores files from backup */
+  onRollback?: () => void;
+  /** Whether rollback is in progress */
+  isRollingBack?: boolean;
 }
 
 type BuildState =
@@ -21,7 +25,7 @@ type BuildState =
   | { phase: 'applying'; fixes: FixResultItem[] }
   | { phase: 'fix-failed'; message: string; errors: BuildErrorItem[] };
 
-export function BuildCheckPanel({ onBuildPass }: BuildCheckPanelProps) {
+export function BuildCheckPanel({ onBuildPass, onRollback, isRollingBack }: BuildCheckPanelProps) {
   const [state, setState] = useState<BuildState>({ phase: 'idle' });
   const [fixAttempts, setFixAttempts] = useState(0);
 
@@ -124,6 +128,8 @@ export function BuildCheckPanel({ onBuildPass }: BuildCheckPanelProps) {
           fixAttempts={fixAttempts}
           onFix={() => fixErrors(state.errors)}
           onRecheck={runBuildCheck}
+          onRollback={onRollback}
+          isRollingBack={isRollingBack}
         />
       )}
 
@@ -138,24 +144,37 @@ export function BuildCheckPanel({ onBuildPass }: BuildCheckPanelProps) {
       {state.phase === 'fix-failed' && (
         <div className="space-y-2">
           <StatusRow icon={<XIcon />} color="red" text={`Fix failed: ${state.message}`} />
-          <button
-            onClick={() => fixErrors(state.errors)}
-            disabled={fixAttempts >= 3}
-            className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 disabled:opacity-50"
-          >
-            {fixAttempts >= 3 ? 'Max retries reached' : 'Retry Fix'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => fixErrors(state.errors)}
+              disabled={fixAttempts >= 3}
+              className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 disabled:opacity-50"
+            >
+              {fixAttempts >= 3 ? 'Max retries reached' : 'Retry Fix'}
+            </button>
+            {onRollback && (
+              <button
+                onClick={onRollback}
+                disabled={isRollingBack}
+                className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 disabled:opacity-50"
+              >
+                {isRollingBack ? 'Rolling back...' : 'Rollback All Changes'}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function ErrorsView({ errors, fixAttempts, onFix, onRecheck }: {
+function ErrorsView({ errors, fixAttempts, onFix, onRecheck, onRollback, isRollingBack }: {
   errors: BuildErrorItem[];
   fixAttempts: number;
   onFix: () => void;
   onRecheck: () => void;
+  onRollback?: () => void;
+  isRollingBack?: boolean;
 }) {
   const byFile = new Map<string, BuildErrorItem[]>();
   for (const e of errors) {
@@ -185,6 +204,15 @@ function ErrorsView({ errors, fixAttempts, onFix, onRecheck }: {
             <WandIcon />
             {fixAttempts >= 3 ? 'Max retries' : fixAttempts > 0 ? `Fix Errors (attempt ${fixAttempts + 1})` : 'Fix Errors with AI'}
           </button>
+          {onRollback && (
+            <button
+              onClick={onRollback}
+              disabled={isRollingBack}
+              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 disabled:opacity-50"
+            >
+              {isRollingBack ? 'Rolling back...' : 'Rollback'}
+            </button>
+          )}
         </div>
       </div>
 

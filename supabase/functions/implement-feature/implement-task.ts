@@ -10,6 +10,7 @@ import { jsonResponse, errorResponse, countRemainingTasks, finalizeRequest, type
 export async function handleImplementTask(req: Request, ctx: AuthContext): Promise<Response> {
   const rawBody = await req.json();
   const requestId = rawBody.request_id;
+  const fileContexts: Record<string, string> = rawBody.file_contexts ?? {};
   if (!requestId) {
     return errorResponse('VALIDATION_ERROR', 'request_id is required', 400);
   }
@@ -72,12 +73,14 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     .update({ implementation_status: 'generating', updated_at: new Date().toISOString() })
     .eq('id', task.id);
 
-  // Generate code for this ONE task — now with SpecKit artifacts
+  // Generate code for this ONE task — with SpecKit artifacts + existing file content
+  const existingContent = fileContexts[task.file_path] ?? undefined;
   const result = await generateCode(
     { title: task.title, description: task.description, file_path: task.file_path, task_type: task.task_type },
     { feature_code: feature.feature_code, title: feature.title, description: feature.description, criteria: feature.acceptance_criteria || [] },
     siblingFilePaths,
     artifacts,
+    existingContent,
   );
 
   // If rejected for exceeding line limit, auto-split — but only for original tasks (not already-split subtasks)

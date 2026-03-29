@@ -7,7 +7,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
-import type { ImplementationRequestWithItems } from '@/lib/api/admin-api';
+import type { ImplementationRequestWithItems, ImplementationTaskItem } from '@/lib/api/admin-api';
 
 const IMPL_KEY = ['implementation-request'];
 
@@ -51,19 +51,21 @@ export function useImplementation(featureId: string | null) {
 
   /**
    * Implementation loop: calls implement-next repeatedly, one task at a time.
-   * Each call processes ONE task and returns. Frontend refetches between calls
-   * so the UI updates in real time.
+   * Reads existing file contents first so AI can modify rather than replace.
    */
   const implementMutation = useMutation({
     mutationFn: async () => {
       const requestId = implQuery.data!.id;
       abortRef.current = false;
 
+      // Read existing files for accepted tasks so AI generates compatible code
+      const fileContexts = await readExistingFileContexts(implQuery.data!.task_items);
+
       // Loop: process one task per iteration
       let consecutiveErrors = 0;
       while (!abortRef.current) {
         try {
-          const res = await adminApi.implementNextTask(requestId);
+          const res = await adminApi.implementNextTask(requestId, fileContexts);
           consecutiveErrors = 0;
 
           // Refetch to update UI with latest task statuses
@@ -147,7 +149,7 @@ export function useImplementation(featureId: string | null) {
     },
   });
 
-  const taskItems = implQuery.data?.task_items ?? [];
+  const taskItems: ImplementationTaskItem[] = implQuery.data?.task_items ?? [];
   // Exclude split parent tasks — their subtasks replace them
   const activeItems = taskItems.filter(t => (t.implementation_status as string) !== 'split');
   const acceptedItems = activeItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
@@ -197,3 +199,30 @@ export function useImplementation(featureId: string | null) {
     },
   };
 }
+
+/** Read existing file contents for accepted tasks so AI can modify rather than replace */
+async function readExistingFileContexts(
+  taskItems: ImplementationTaskItem[],
+): Promise<Record<string, string>> {
+  const accepted = taskItems.filter(
+    t => (t.decision === 'accepted' || t.decision === 'modified') && t.implementation_status === 'pending',
+  );
+  const uniquePaths = [...new Set(accepted.map(t => t.file_path))];
+  const contexts: Record<string, string> = {};
+
+  await Promise.all(
+    uniquePaths.map(async (filePath) => {
+      try {
+        const res = await fetch(`/__api/read-file?path=${encodeURIComponent(filePath)}`);
+        if (res.ok) {
+          contexts[filePath] = await res.text();
+        }
+      } catch {
+        // File doesn't exist or dev server unavailable — skip
+      }
+    }),
+  );
+
+  return contexts;
+}
+

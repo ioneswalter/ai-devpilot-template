@@ -12,8 +12,7 @@ import { ImplementationLog } from './ImplementationLog';
 import { ImplementationFooter } from './ImplementationFooter';
 import { ImplementationSummary } from './ImplementationSummary';
 import { AddTaskForm } from './AddTaskForm';
-import { WriteCodeProgress } from './WriteCodeProgress';
-import { BuildCheckPanel } from './BuildCheckPanel';
+import { WriteCodeFlow } from './WriteCodeFlow';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -36,7 +35,6 @@ export function ImplementationPanel({
   const hasScrolledToLog = useRef(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isWritingCode, setIsWritingCode] = useState(false);
-  const [showBuildCheck, setShowBuildCheck] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -222,25 +220,17 @@ export function ImplementationPanel({
           />
         )}
 
-        {/* Write code progress animation */}
+        {/* Write code flow: review → backup → write → build check → rollback */}
         {isWritingCode && (
-          <WriteCodeProgress
+          <WriteCodeFlow
             files={impl.taskItems
               .filter(t => t.implementation_status === 'completed' && t.generated_code)
               .map(t => ({ title: t.title, filePath: t.file_path, code: t.generated_code! }))}
             onComplete={() => {
               setIsWritingCode(false);
-              setShowBuildCheck(true);
-            }}
-          />
-        )}
-
-        {showBuildCheck && (
-          <BuildCheckPanel
-            onBuildPass={() => {
-              setShowBuildCheck(false);
               impl.markCodeApplied();
             }}
+            onCancel={() => setIsWritingCode(false)}
           />
         )}
 
