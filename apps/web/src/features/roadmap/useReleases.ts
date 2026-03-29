@@ -25,7 +25,14 @@ export interface Release {
   created_at: string
   updated_at: string
   released_by?: string
-  features?: Array<{ id: string; feature_id: string; implementation_status: string }>
+  features?: Array<{
+    id: string
+    feature_id: string
+    implementation_status: string
+    feature_code?: string
+    title?: string
+    status?: string
+  }>
 }
 
 const RELEASES_KEY = ['releases'] as const

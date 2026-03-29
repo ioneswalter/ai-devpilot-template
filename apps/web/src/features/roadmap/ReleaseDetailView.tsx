@@ -168,9 +168,9 @@ export function ReleaseDetailView({
             status: release.status as 'draft' | 'scheduled' | 'deployed' | 'rolled_back',
             features: (release.features ?? []).map(f => ({
               id: f.feature_id,
-              feature_code: f.feature_id.slice(0, 8),
-              title: f.implementation_status ?? 'Feature',
-              status: 'released' as const,
+              feature_code: f.feature_code ?? f.feature_id.slice(0, 8),
+              title: f.title ?? 'Unknown Feature',
+              status: (f.status ?? 'released') as 'released',
             })),
           }}
         />
