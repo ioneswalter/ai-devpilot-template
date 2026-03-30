@@ -9,7 +9,8 @@ import type { CIResults, CIStageResult } from '@/lib/api/admin-api';
 const CI_STAGE_LABELS: Record<string, string> = { typecheck: 'TypeScript', lint: 'ESLint', test: 'Tests' };
 
 function CIStageRow({ stage, result }: { stage: string; result: CIStageResult }) {
-  const lastAttempt = result.attempts[result.attempts.length - 1];
+  const attempts = result?.attempts ?? [];
+  const lastAttempt = attempts[attempts.length - 1];
   const errorCount = lastAttempt?.errors?.length ?? 0;
 
   return (
@@ -23,7 +24,7 @@ function CIStageRow({ stage, result }: { stage: string; result: CIStageResult })
         <span className="text-xs font-medium text-gray-800">{CI_STAGE_LABELS[stage] ?? stage}</span>
       </div>
       <div className="flex items-center gap-2 text-xs text-gray-500">
-        {result.attempts.length > 1 && <span>{result.attempts.length} attempts</span>}
+        {attempts.length > 1 && <span>{attempts.length} attempts</span>}
         {!result.passed && errorCount > 0 && (
           <span className="text-red-600">{errorCount} error{errorCount !== 1 ? 's' : ''}</span>
         )}
@@ -39,14 +40,18 @@ interface CIResultsPanelProps {
 }
 
 export function CIResultsPanel({ ciResults, onRerun, isRerunning }: CIResultsPanelProps) {
-  const allPassed = ciResults.typecheck.passed && ciResults.lint.passed && ciResults.test.passed;
+  const tc = ciResults.typecheck ?? { passed: true, attempts: [] };
+  const ln = ciResults.lint ?? { passed: true, attempts: [] };
+  const ts = ciResults.test ?? { passed: true, attempts: [] };
+  const safeResults: CIResults = { typecheck: tc, lint: ln, test: ts };
+  const allPassed = tc.passed && ln.passed && ts.passed;
   const [showErrors, setShowErrors] = useState(false);
 
   const failedErrors: Array<{ stage: string; file: string; line: number; message: string; code: string }> = [];
-  for (const [stage, result] of Object.entries(ciResults)) {
-    if (!(result as CIStageResult).passed && (result as CIStageResult).attempts.length > 0) {
+  for (const [stage, result] of Object.entries(safeResults)) {
+    if (!(result as CIStageResult).passed && (result as CIStageResult).attempts?.length > 0) {
       const last = (result as CIStageResult).attempts[(result as CIStageResult).attempts.length - 1];
-      for (const err of last.errors) {
+      for (const err of last?.errors ?? []) {
         failedErrors.push({ stage, ...err });
       }
     }
@@ -71,7 +76,7 @@ export function CIResultsPanel({ ciResults, onRerun, isRerunning }: CIResultsPan
 
       <div className="divide-y divide-gray-100">
         {(['typecheck', 'lint', 'test'] as const).map(stage => (
-          <CIStageRow key={stage} stage={stage} result={ciResults[stage]} />
+          <CIStageRow key={stage} stage={stage} result={safeResults[stage]} />
         ))}
       </div>
 
