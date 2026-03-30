@@ -28,8 +28,14 @@ function StepBadge({ status }: { status: string }) {
   );
 }
 
+const EMPTY_STEP = { status: 'skipped' as const, duration_ms: 0, errors: [], records: 0, created: 0, skipped: 0 };
+const EMPTY_STATUS = { status: 'skipped' as const, from: '', to: '' };
+
 export function ReadinessStatusPanel({ readinessResults, onRerunReadiness, isRerunning }: ReadinessStatusPanelProps) {
-  const { seed_data, test_cases, status_update, overall_status } = readinessResults;
+  const seed_data = readinessResults.seed_data ?? EMPTY_STEP;
+  const test_cases = readinessResults.test_cases ?? EMPTY_STEP;
+  const status_update = readinessResults.status_update ?? EMPTY_STATUS;
+  const overall_status = readinessResults.overall_status ?? 'failed';
 
   const overallColor = overall_status === 'success' ? 'border-green-200 bg-green-50'
     : overall_status === 'partial' ? 'border-amber-200 bg-amber-50'
@@ -92,12 +98,12 @@ export function ReadinessStatusPanel({ readinessResults, onRerunReadiness, isRer
       </div>
 
       {/* Show errors if any step failed */}
-      {(seed_data.errors.length > 0 || test_cases.errors.length > 0) && (
+      {((seed_data.errors?.length ?? 0) > 0 || (test_cases.errors?.length ?? 0) > 0) && (
         <div className="mt-2 text-xs text-red-600 space-y-0.5">
-          {seed_data.errors.slice(0, 2).map((e, i) => (
+          {(seed_data.errors ?? []).slice(0, 2).map((e, i) => (
             <p key={`seed-${i}`} className="truncate">Seed: {e}</p>
           ))}
-          {test_cases.errors.slice(0, 2).map((e, i) => (
+          {(test_cases.errors ?? []).slice(0, 2).map((e, i) => (
             <p key={`tc-${i}`} className="truncate">Test case: {e}</p>
           ))}
         </div>
