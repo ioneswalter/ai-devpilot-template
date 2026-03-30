@@ -224,7 +224,32 @@ async function handleReleaseSummary(
   const lastRunAt = lastRun?.executed_at ?? null;
   const isReady = total > 0 && failed === 0 && notRun === 0;
 
-  return jsonResponse({ total, passed, failed, notRun, lastRunAt, isReady });
+  // Count auto-verified vs human-verified (FR-109 J4)
+  const caseIds = cases.map((c: { id: string }) => c.id);
+  let autoVerified = 0;
+  let humanVerified = 0;
+
+  if (caseIds.length > 0) {
+    const { data: latestRuns } = await supabase
+      .from('test_runs')
+      .select('test_case_id, evidence')
+      .in('test_case_id', caseIds)
+      .order('executed_at', { ascending: false });
+
+    const seenCases = new Set<string>();
+    for (const run of latestRuns ?? []) {
+      if (seenCases.has(run.test_case_id)) continue;
+      seenCases.add(run.test_case_id);
+      const ev = run.evidence as Record<string, unknown> | null;
+      if (ev?.type === 'automated') autoVerified++;
+      else humanVerified++;
+    }
+  }
+
+  return jsonResponse({
+    total, passed, failed, notRun, lastRunAt, isReady,
+    autoVerified, humanVerified,
+  });
 }
 
 const CreateTestCaseSchema = z.object({

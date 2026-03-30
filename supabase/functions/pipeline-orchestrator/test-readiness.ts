@@ -31,9 +31,17 @@ interface StatusUpdateResult {
   to: string;
 }
 
+interface AutomatedTestsResult extends ReadinessStepResult {
+  total: number;
+  passed: number;
+  failed: number;
+  is_release_ready: boolean;
+}
+
 interface ReadinessResults {
   seed_data: SeedDataResult;
   test_cases: TestCaseResult;
+  automated_tests: AutomatedTestsResult;
   status_update: StatusUpdateResult;
   started_at: string;
   completed_at: string;
@@ -60,6 +68,7 @@ export async function runTestReadiness(
   const results: ReadinessResults = {
     seed_data: { status: 'skipped', duration_ms: 0, errors: [], records: 0 },
     test_cases: { status: 'skipped', duration_ms: 0, errors: [], created: 0, skipped: 0 },
+    automated_tests: { status: 'skipped', duration_ms: 0, errors: [], total: 0, passed: 0, failed: 0, is_release_ready: false },
     status_update: { status: 'failed', from: '', to: 'testing' },
     started_at: new Date().toISOString(),
     completed_at: '',
@@ -101,6 +110,9 @@ export async function runTestReadiness(
   // Step 2: Generate test cases
   results.test_cases = await generateTestCases(supabase, pipelineId, featureId, feature, specContext);
 
+  // Step 2.5: Run automated tests (FR-109 J4)
+  results.automated_tests = await runAutomatedTests(supabase, pipelineId, featureId);
+
   // Step 3: Update feature status
   results.status_update = await updateFeatureStatus(supabase, pipelineId, featureId, feature?.status ?? '');
 
@@ -109,12 +121,13 @@ export async function runTestReadiness(
 
   // Finalize
   results.completed_at = new Date().toISOString();
-  const allSuccess = results.seed_data.status === 'success' &&
-    results.test_cases.status === 'success' &&
-    results.status_update.status === 'success';
-  const allFailed = results.seed_data.status === 'failed' &&
-    results.test_cases.status === 'failed' &&
-    results.status_update.status === 'failed';
+  const stepStatuses = [results.seed_data.status, results.test_cases.status, results.status_update.status];
+  // Include automated tests only if they actually ran
+  if (results.automated_tests.status !== 'skipped') {
+    stepStatuses.push(results.automated_tests.status);
+  }
+  const allSuccess = stepStatuses.every((s) => s === 'success');
+  const allFailed = stepStatuses.every((s) => s === 'failed');
 
   results.overall_status = allSuccess ? 'success' : allFailed ? 'failed' : 'partial';
 
@@ -418,6 +431,71 @@ async function createNotification(
     // Non-blocking — just log
     await appendLog(supabase, pipelineId, 'warn',
       `Notification creation failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+// ── Step 2.5: Run Automated Tests (FR-109 J4) ──
+
+async function runAutomatedTests(
+  supabase: ReturnType<typeof createClient>,
+  pipelineId: string,
+  featureId: string,
+): Promise<AutomatedTestsResult> {
+  const start = Date.now();
+  try {
+    // Check if any automated scripts exist for this feature
+    const { data: scripts, error: queryErr } = await supabase
+      .from('automated_test_scripts')
+      .select('id')
+      .eq('feature_id', featureId)
+      .eq('is_stale', false);
+
+    if (queryErr || !scripts?.length) {
+      await appendLog(supabase, pipelineId, 'info', 'No automated scripts — skipping');
+      return { status: 'skipped', duration_ms: Date.now() - start, errors: [], total: 0, passed: 0, failed: 0, is_release_ready: false };
+    }
+
+    // Call the test-automation Edge Function execute-suite
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/test-automation?action=execute-suite`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        feature_id: featureId,
+        environment: 'development',
+        pipeline_run_id: pipelineId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Suite execution failed: ${errText.substring(0, 200)}`);
+    }
+
+    const result = await response.json();
+    const data = result.data;
+
+    await appendLog(supabase, pipelineId, 'info',
+      `Automated tests: ${data.passed}/${data.total_scripts} passed, ${data.failed} failed`);
+
+    return {
+      status: data.failed > 0 ? 'failed' : 'success',
+      duration_ms: Date.now() - start,
+      errors: data.failed > 0 ? [`${data.failed} automated test(s) failed`] : [],
+      total: data.total_scripts,
+      passed: data.passed,
+      failed: data.failed,
+      is_release_ready: data.is_release_ready,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await appendLog(supabase, pipelineId, 'warn', `Automated tests failed: ${msg}`);
+    return { status: 'failed', duration_ms: Date.now() - start, errors: [msg], total: 0, passed: 0, failed: 0, is_release_ready: false };
   }
 }
 

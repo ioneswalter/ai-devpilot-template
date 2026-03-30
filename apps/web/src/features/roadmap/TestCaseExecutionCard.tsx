@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { getTestTypeBadge } from '@/components/roadmap/badge-utils';
 import { GuidedTestingPanel } from './GuidedTestingPanel';
+import { AutomationConvertPanel } from './AutomationConvertPanel';
 import type { TestRunResult } from './test-execution-types';
 import type { GuidedTestEvidence } from './guided-testing-types';
 
@@ -184,6 +185,17 @@ export function TestCaseExecutionCard({
                 testCaseId={testCase.id}
                 onComplete={handleGuidedComplete}
                 onClose={() => setShowGuided(false)}
+              />
+            </div>
+          )}
+
+          {/* Convert to Automated (FR-109 J3) */}
+          {!showGuided && featureId && (
+            <div className="mt-2">
+              <AutomationConvertPanel
+                testCaseId={testCase.id}
+                hasGuidedEvidence={lastRunResult !== null && lastRunResult !== undefined}
+                isAutomated={false}
               />
             </div>
           )}

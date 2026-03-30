@@ -9,6 +9,8 @@ import { TestCaseExecutionCard } from './TestCaseExecutionCard';
 import { TestCaseStatusCard } from './TestCaseStatusCard';
 import { TestRunHistory } from './TestRunHistory';
 import { TestDataActions } from './TestDataActions';
+import { AutomatedTestPanel } from './AutomatedTestPanel';
+import { AutomationDashboard } from './AutomationDashboard';
 import { CriteriaCoverageBar } from './CriteriaCoverageBar';
 import { useCriteriaCoverage } from './useCriteriaCoverage';
 import type { TestCase } from './roadmap-helpers';
@@ -166,6 +168,7 @@ export function TestRunPanel({
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <TestDataActions featureId={featureId} featureCode={featureCode} />
+          <AutomatedTestPanel featureId={featureId} testCaseCount={testCases.length} />
           {testCases.map((tc) => (
             <TestCaseStatusCard
               key={tc.id}
@@ -228,6 +231,7 @@ export function TestRunPanel({
               </div>
             </div>
           )}
+          <AutomationDashboard featureId={featureId} />
           {acceptanceCriteria && acceptanceCriteria.length > 0 && (
             <CriteriaCoverageBar coverage={coverage} />
           )}

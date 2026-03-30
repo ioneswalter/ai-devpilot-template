@@ -56,6 +56,10 @@ function isGuidedEvidence(evidence: Record<string, unknown> | null): evidence is
   return evidence !== null && evidence.type === 'guided' && Array.isArray(evidence.steps);
 }
 
+function isAutomatedEvidence(evidence: Record<string, unknown> | null): boolean {
+  return evidence !== null && evidence.type === 'automated';
+}
+
 export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [viewingEvidence, setViewingEvidence] = useState<GuidedTestEvidence | null>(null);
@@ -113,6 +117,16 @@ export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
                       </div>
                       {entry.test_code && entry.test_title && (
                         <code className="text-[10px] font-mono text-gray-400">{entry.test_code}</code>
+                      )}
+                      {isAutomatedEvidence(entry.evidence) && (
+                        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-medium bg-indigo-50 text-indigo-600 rounded">
+                          Auto
+                        </span>
+                      )}
+                      {isGuidedEvidence(entry.evidence) && (
+                        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-medium bg-purple-50 text-purple-600 rounded">
+                          Guided
+                        </span>
                       )}
                       {entry.notes && (
                         <p className="text-[10px] text-gray-500 mt-0.5 italic">{entry.notes}</p>
