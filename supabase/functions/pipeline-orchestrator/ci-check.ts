@@ -8,6 +8,7 @@ import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { appendLog } from './shared.ts';
 import { runDeploy } from './deploy.ts';
+import { captureFailure } from './failure-capture.ts';
 
 const MAX_FIX_ATTEMPTS = 3;
 const AI_MODEL = 'claude-sonnet-4-20250514';
@@ -249,7 +250,11 @@ export async function runCICheck(pipelineId: string, requestId: string): Promise
     if (!stagePassed) {
       allPassed = false;
       await appendLog(supabase, pipelineId, 'error', `${STAGE_LABELS[stage]} failed after ${MAX_FIX_ATTEMPTS} attempts`);
-      // Continue to next stage — validate everything even if one fails
+      // FR-118: Capture CI failure for learning
+      const lastErrors = ciResults[stage].attempts[ciResults[stage].attempts.length - 1]?.errors ?? [];
+      for (const err of lastErrors.slice(0, 3)) {
+        captureFailure({ pipeline_id: pipelineId, feature_id: pipeline?.feature_id ?? '', error_type: `ci_${stage}` as 'ci_typecheck' | 'ci_lint' | 'ci_test', error_code: err.code || stage, error_message: err.message, file_path: err.file }).catch(() => {});
+      }
     }
   }
 

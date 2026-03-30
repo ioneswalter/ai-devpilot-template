@@ -127,13 +127,14 @@ export async function generateCode(
   siblingFilePaths: string[],
   artifacts: SpecArtifacts = {},
   existingContent?: string,
+  learnedConstraints?: string[],
 ): Promise<CodeGenResult | null> {
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
     return null;
   }
 
-  const userMessage = buildUserMessage(task, featureContext, siblingFilePaths, artifacts, existingContent);
+  const userMessage = buildUserMessage(task, featureContext, siblingFilePaths, artifacts, existingContent, learnedConstraints);
 
   try {
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
@@ -180,6 +181,7 @@ function buildUserMessage(
   siblingFilePaths: string[],
   artifacts: SpecArtifacts,
   existingContent?: string,
+  learnedConstraints?: string[],
 ): string {
   const sections: string[] = [];
 
@@ -240,6 +242,11 @@ ${siblingFilePaths.length > 0 ? siblingFilePaths.map(p => `- ${p}`).join('\n') :
     sections.push('Generate the COMPLETE updated file incorporating your changes into the existing code. Return ONLY raw source code.');
   } else {
     sections.push('Generate the complete code for this task. Return ONLY raw source code.');
+  }
+
+  // FR-118: Inject learned constraints from adaptive learning engine
+  if (learnedConstraints && learnedConstraints.length > 0) {
+    sections.push(`## Learned Constraints (from past failures)\n${learnedConstraints.map((c, i) => `${i + 1}. ${c}`).join('\n')}`);
   }
 
   return sections.join('\n\n');

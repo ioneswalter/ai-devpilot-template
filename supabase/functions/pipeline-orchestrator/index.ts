@@ -88,6 +88,18 @@ Deno.serve(async (req) => {
         if (error) return errorResponse('INTERNAL_ERROR', error.message, 500);
         return jsonResponse({ data: data ?? [] });
       }
+      // FR-118: Learning insights
+      if (url.searchParams.get('action') === 'learning-insights') {
+        const [pats, fails, recs, metrics] = await Promise.all([
+          supabase.from('failure_patterns').select('*').eq('is_active', true).order('frequency', { ascending: false }).limit(10),
+          supabase.from('pipeline_failures').select('id, error_type, error_code, error_message, file_path, outcome, created_at').order('created_at', { ascending: false }).limit(20),
+          supabase.from('constitution_recommendations').select('*').order('created_at', { ascending: false }).limit(10),
+          supabase.from('pipeline_failures').select('id', { count: 'exact', head: true }),
+        ]);
+        const patCount = (await supabase.from('failure_patterns').select('id', { count: 'exact', head: true })).count ?? 0;
+        const activeCount = (await supabase.from('failure_patterns').select('id', { count: 'exact', head: true }).eq('is_active', true)).count ?? 0;
+        return jsonResponse({ data: { top_patterns: pats.data ?? [], recent_failures: fails.data ?? [], recommendations: recs.data ?? [], metrics: { total_failures: metrics.count ?? 0, patterns_detected: patCount, adaptations_active: activeCount } } });
+      }
       return handleStatus(req, ctx);
     }
 
@@ -195,6 +207,20 @@ Deno.serve(async (req) => {
           if (!nid) return errorResponse('VALIDATION_ERROR', 'notification_id is required', 400);
           await supabase.from('pipeline_notifications').update({ read: true }).eq('id', nid);
           return jsonResponse({ data: { id: nid, read: true } });
+        }
+
+        case 'approve-recommendation': {
+          const recId = body.recommendation_id as string;
+          if (!recId) return errorResponse('VALIDATION_ERROR', 'recommendation_id required', 400);
+          await supabase.from('constitution_recommendations').update({ status: 'approved', decided_by: ctx.admin.id, decided_at: new Date().toISOString() }).eq('id', recId);
+          return jsonResponse({ data: { id: recId, status: 'approved' } });
+        }
+
+        case 'dismiss-recommendation': {
+          const dRecId = body.recommendation_id as string;
+          if (!dRecId) return errorResponse('VALIDATION_ERROR', 'recommendation_id required', 400);
+          await supabase.from('constitution_recommendations').update({ status: 'dismissed', decided_by: ctx.admin.id, decided_at: new Date().toISOString() }).eq('id', dRecId);
+          return jsonResponse({ data: { id: dRecId, status: 'dismissed' } });
         }
 
         case 'health-check':

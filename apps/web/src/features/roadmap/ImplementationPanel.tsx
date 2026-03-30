@@ -15,6 +15,7 @@ import { AddTaskForm } from './AddTaskForm';
 import { WriteCodeFlow } from './WriteCodeFlow';
 import { PipelineStatusSection } from './PipelineStatusSection';
 import { ComplexityScorePanel } from './ComplexityScorePanel';
+import { LearningInsightsPanel } from './LearningInsightsPanel';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -56,8 +57,6 @@ export function ImplementationPanel({
       });
     }
   }, [impl.isImplementing]);
-
-  // Show loading while data is being fetched or component just mounted
   if (!ready || impl.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -243,6 +242,8 @@ export function ImplementationPanel({
           isRerunningReadiness={impl.isRerunningReadiness}
           pipeline={impl.pipeline}
         />
+
+        <LearningInsightsPanel />
 
         {showLog && (
           <ImplementationLog

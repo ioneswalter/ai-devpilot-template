@@ -9,6 +9,7 @@ import { autoSplitTask, intelligentSplit } from '../implement-feature/split-task
 import { scoreTask } from '../implement-feature/complexity-scorer.ts';
 import { appendLog, updateHeartbeat, triggerNextTask, loadSpecArtifacts } from './shared.ts';
 import { runCICheck } from './ci-check.ts';
+import { captureFailure, getAdaptations } from './failure-capture.ts';
 
 interface NextParams {
   pipeline_id: string;
@@ -124,19 +125,17 @@ export async function handleNext(params: NextParams): Promise<void> {
       const splitCount = await intelligentSplit(authCtx, { ...task, request_id }, complexityScore);
 
       if (splitCount > 0) {
+        // FR-118: Capture complexity split as failure for learning
+        captureFailure({ pipeline_id, feature_id: feature.id, task_item_id: task.id, error_type: 'complexity_split', error_code: 'threshold_exceeded', error_message: `Score ${complexityScore.total}/${complexityScore.threshold}`, file_path: task.file_path, context: { complexity_score: complexityScore } }).catch(() => {});
+
         const { count: newTotal } = await supabase
           .from('implementation_task_items')
           .select('id', { count: 'exact', head: true })
           .eq('request_id', request_id)
           .in('decision', ['accepted', 'modified']);
 
-        await supabase
-          .from('pipeline_runs')
-          .update({ total_tasks: newTotal ?? 0 })
-          .eq('id', pipeline_id);
-
-        await appendLog(supabase, pipeline_id, 'info',
-          `Intelligent split into ${splitCount} subtasks`, task.id);
+        await supabase.from('pipeline_runs').update({ total_tasks: newTotal ?? 0 }).eq('id', pipeline_id);
+        await appendLog(supabase, pipeline_id, 'info', `Intelligent split into ${splitCount} subtasks`, task.id);
         triggerNextTask(pipeline_id, request_id);
         return;
       }
@@ -151,20 +150,29 @@ export async function handleNext(params: NextParams): Promise<void> {
       .update({ implementation_status: 'generating', updated_at: new Date().toISOString() })
       .eq('id', task.id);
 
+    // FR-118: Get learned adaptations before code generation
+    const adaptations = await getAdaptations(task.file_path, task.task_type);
+    const learnedConstraints = adaptations.count > 0 ? adaptations.constraints : undefined;
+
     // Load SpecKit artifacts
     const artifacts = await loadSpecArtifacts(supabase, feature.id);
 
-    // Generate code via AI
+    // Generate code via AI (with learned constraints from FR-118)
     const result = await generateCode(
       { title: task.title, description: task.description, file_path: task.file_path, task_type: task.task_type },
       { feature_code: feature.feature_code, title: feature.title, description: feature.description, criteria: feature.acceptance_criteria || [] },
       siblingPaths,
       artifacts,
-      undefined, // No existing file content in server-side mode
+      undefined,
+      learnedConstraints,
     );
 
     // Handle reactive auto-split for oversized code (fallback when scoring underestimates)
     const isConstitutionReject = !result?.code && result?.log?.includes('REJECTED');
+    if (isConstitutionReject) {
+      // FR-118: Capture constitution reject for learning
+      captureFailure({ pipeline_id, feature_id: feature.id, task_item_id: task.id, error_type: 'constitution_reject', error_code: 'line_limit', error_message: 'Code exceeded 300-line limit', file_path: task.file_path, adaptation_applied: adaptations.count > 0 }).catch(() => {});
+    }
     if (isConstitutionReject && !isAlreadySplitChild) {
       const authCtx = { user: { id: 'pipeline' }, admin: { id: 'pipeline', email: 'pipeline@system' }, supabase };
       const splitCount = await autoSplitTask(authCtx, { ...task, request_id });
@@ -200,27 +208,13 @@ export async function handleNext(params: NextParams): Promise<void> {
       .eq('id', task.id);
 
     // Update pipeline progress
-    const { data: pipelineData } = await supabase
-      .from('pipeline_runs')
-      .select('completed_tasks, failed_tasks')
-      .eq('id', pipeline_id)
-      .single();
-
-    await supabase
-      .from('pipeline_runs')
-      .update({
-        completed_tasks: (pipelineData?.completed_tasks ?? 0) + (succeeded ? 1 : 0),
-        failed_tasks: (pipelineData?.failed_tasks ?? 0) + (succeeded ? 0 : 1),
-        last_heartbeat: new Date().toISOString(),
-      })
-      .eq('id', pipeline_id);
-
-    await appendLog(
-      supabase, pipeline_id,
-      succeeded ? 'info' : 'warn',
-      `${succeeded ? 'Completed' : 'Failed'}: ${task.title}`,
-      task.id,
-    );
+    const { data: pd } = await supabase.from('pipeline_runs').select('completed_tasks, failed_tasks').eq('id', pipeline_id).single();
+    await supabase.from('pipeline_runs').update({
+      completed_tasks: (pd?.completed_tasks ?? 0) + (succeeded ? 1 : 0),
+      failed_tasks: (pd?.failed_tasks ?? 0) + (succeeded ? 0 : 1),
+      last_heartbeat: new Date().toISOString(),
+    }).eq('id', pipeline_id);
+    await appendLog(supabase, pipeline_id, succeeded ? 'info' : 'warn', `${succeeded ? 'Completed' : 'Failed'}: ${task.title}`, task.id);
 
     // Chain to next task
     triggerNextTask(pipeline_id, request_id);
