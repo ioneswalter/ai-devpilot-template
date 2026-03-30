@@ -4,7 +4,9 @@
  */
 
 import { useState } from 'react';
+import { EvidenceViewer } from './EvidenceViewer';
 import type { TestExecutionEntry } from './test-execution-types';
+import type { GuidedTestEvidence } from './guided-testing-types';
 
 interface TestRunHistoryProps {
   history: TestExecutionEntry[];
@@ -50,8 +52,13 @@ function formatTime(isoString: string): string {
   });
 }
 
+function isGuidedEvidence(evidence: Record<string, unknown> | null): evidence is GuidedTestEvidence {
+  return evidence !== null && evidence.type === 'guided' && Array.isArray(evidence.steps);
+}
+
 export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [viewingEvidence, setViewingEvidence] = useState<GuidedTestEvidence | null>(null);
   const grouped = groupByDate(history);
   const dateKeys = Object.keys(grouped);
 
@@ -110,12 +117,32 @@ export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
                       {entry.notes && (
                         <p className="text-[10px] text-gray-500 mt-0.5 italic">{entry.notes}</p>
                       )}
+                      {isGuidedEvidence(entry.evidence) && (
+                        <button
+                          onClick={() => setViewingEvidence(entry.evidence as GuidedTestEvidence)}
+                          className="text-[10px] text-indigo-600 hover:text-indigo-700 font-medium mt-0.5"
+                        >
+                          View Evidence
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Evidence viewer overlay */}
+      {viewingEvidence && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[80vh] overflow-hidden">
+            <EvidenceViewer
+              evidence={viewingEvidence}
+              onClose={() => setViewingEvidence(null)}
+            />
+          </div>
         </div>
       )}
     </div>

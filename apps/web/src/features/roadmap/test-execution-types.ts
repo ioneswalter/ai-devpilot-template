@@ -12,6 +12,7 @@ export interface TestExecutionEntry {
   test_type: string;
   result: TestRunResult;
   notes: string | null;
+  evidence: Record<string, unknown> | null;
   executed_by: string;
   executed_at: string;
   environment: string;
@@ -30,4 +31,5 @@ export interface TestResultInput {
   test_case_id: string;
   result: TestRunResult;
   notes?: string;
+  evidence?: Record<string, unknown>;
 }

@@ -32,6 +32,7 @@ const TestResultSchema = z.object({
   test_case_id: z.string().uuid(),
   result: z.enum(['passed', 'failed', 'skipped']),
   notes: z.string().optional(),
+  evidence: z.record(z.unknown()).optional(),
 });
 
 const SubmitResultsSchema = z.object({
@@ -129,6 +130,7 @@ async function handleSubmitResults(
     environment,
     result: r.result,
     error_message: r.notes ?? null,
+    evidence: r.evidence ?? null,
     executed_by: userId,
     executed_at: now,
   }));
@@ -169,6 +171,7 @@ async function handleGetHistory(
       environment,
       result,
       error_message,
+      evidence,
       executed_at,
       executed_by,
       duration_ms,
@@ -224,6 +227,57 @@ async function handleReleaseSummary(
   return jsonResponse({ total, passed, failed, notRun, lastRunAt, isReady });
 }
 
+const CreateTestCaseSchema = z.object({
+  feature_id: z.string().uuid(),
+  title: z.string().min(1),
+  steps: z.array(z.string()).min(1),
+  expected_result: z.string().min(1),
+  test_type: z.string().default('exploratory'),
+});
+
+async function handleCreateTestCase(
+  supabase: SupabaseClient,
+  body: unknown,
+  userId: string,
+): Promise<Response> {
+  const validation = CreateTestCaseSchema.safeParse(body);
+  if (!validation.success) {
+    const msg = validation.error.errors.map((e) => e.message).join('; ');
+    return errorResponse('VALIDATION_ERROR', msg, 400);
+  }
+
+  const { feature_id, title, steps, expected_result, test_type } = validation.data;
+
+  // Generate test code
+  const { count } = await supabase
+    .from('test_cases')
+    .select('id', { count: 'exact', head: true })
+    .eq('feature_id', feature_id);
+
+  const num = ((count ?? 0) + 1).toString().padStart(3, '0');
+  const featureCode = feature_id.slice(0, 8).toUpperCase();
+  const testCode = `TC-${featureCode}-${num}`;
+
+  const { data: testCase, error } = await supabase
+    .from('test_cases')
+    .insert({
+      id: crypto.randomUUID(),
+      feature_id,
+      test_code: testCode,
+      title,
+      steps: JSON.stringify(steps),
+      expected_result: expected_result,
+      test_type,
+      automated: false,
+      created_by: userId,
+    })
+    .select('id, test_code')
+    .single();
+
+  if (error) return errorResponse('DB_ERROR', error.message, 500);
+  return jsonResponse({ data: testCase }, 201);
+}
+
 // --- Router ---
 
 Deno.serve(async (req) => {
@@ -243,6 +297,13 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
 
     if (req.method === 'POST') {
+      const action = url.searchParams.get('action');
+
+      if (action === 'create-test-case') {
+        const body = await req.json();
+        return handleCreateTestCase(supabase, body, userId);
+      }
+
       const rawBody = await req.json();
       const validation = SubmitResultsSchema.safeParse(rawBody);
       if (!validation.success) {

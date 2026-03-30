@@ -9,6 +9,8 @@ import { TestCaseExecutionCard } from './TestCaseExecutionCard';
 import { TestCaseStatusCard } from './TestCaseStatusCard';
 import { TestRunHistory } from './TestRunHistory';
 import { TestDataActions } from './TestDataActions';
+import { CriteriaCoverageBar } from './CriteriaCoverageBar';
+import { useCriteriaCoverage } from './useCriteriaCoverage';
 import type { TestCase } from './roadmap-helpers';
 import type { TestRunResult, TestResultInput } from './test-execution-types';
 
@@ -57,6 +59,7 @@ interface TestRunPanelProps {
   featureTitle: string;
   featureStatus: string;
   testCases: TestCase[];
+  acceptanceCriteria?: string[];
   onClose: () => void;
   onComplete: () => void;
   onRefresh?: () => void;
@@ -65,7 +68,7 @@ interface TestRunPanelProps {
 type PanelView = 'status' | 'execute';
 
 export function TestRunPanel({
-  featureId, featureCode, featureTitle, featureStatus, testCases, onClose, onComplete, onRefresh,
+  featureId, featureCode, featureTitle, featureStatus, testCases, acceptanceCriteria, onClose, onComplete, onRefresh,
 }: TestRunPanelProps) {
   const exec = useTestExecution(featureId);
   const draft = useRef(loadDraft(featureId)).current;
@@ -92,6 +95,23 @@ export function TestRunPanel({
       lastRunResults[entry.test_case_id] = entry.result;
     }
   }
+
+  // Criteria coverage (J5)
+  const coverage = useCriteriaCoverage({
+    criteria: acceptanceCriteria ?? [],
+    testCases: testCases.filter((tc) => tc.id).map((tc) => ({
+      id: tc.id!,
+      test_code: tc.test_code,
+      title: tc.title,
+      passed: tc.passed ?? null,
+    })),
+    testRuns: exec.history.map((h) => ({
+      test_case_id: h.test_case_id,
+      evidence: h.evidence ?? null,
+      result: h.result,
+      executed_at: h.executed_at,
+    })),
+  });
 
   const markedCount = Object.values(results).filter(Boolean).length;
 
@@ -208,6 +228,9 @@ export function TestRunPanel({
               </div>
             </div>
           )}
+          {acceptanceCriteria && acceptanceCriteria.length > 0 && (
+            <CriteriaCoverageBar coverage={coverage} />
+          )}
           <TestRunHistory history={exec.history} isLoading={exec.isLoading} />
         </div>
         <div className="border-t p-3 flex items-center justify-between bg-white">
@@ -302,6 +325,7 @@ export function TestRunPanel({
             onResultChange={(r) => setResults((prev) => ({ ...prev, [tc.id!]: r }))}
             onNotesChange={(n) => setNotes((prev) => ({ ...prev, [tc.id!]: n }))}
             lastRunResult={tc.id ? lastRunResults[tc.id] ?? null : null}
+            featureId={featureId}
           />
         ))}
       </div>

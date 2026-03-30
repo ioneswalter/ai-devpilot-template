@@ -5,7 +5,9 @@
 
 import { useState } from 'react';
 import { getTestTypeBadge } from '@/components/roadmap/badge-utils';
+import { GuidedTestingPanel } from './GuidedTestingPanel';
 import type { TestRunResult } from './test-execution-types';
+import type { GuidedTestEvidence } from './guided-testing-types';
 
 interface TestCaseForExecution {
   id: string;
@@ -23,6 +25,7 @@ interface TestCaseExecutionCardProps {
   onResultChange: (result: TestRunResult) => void;
   onNotesChange: (notes: string) => void;
   lastRunResult?: TestRunResult | null;
+  featureId?: string;
 }
 
 const RESULT_BUTTONS: { value: TestRunResult; label: string; activeClass: string; inactiveClass: string }[] = [
@@ -87,8 +90,17 @@ export function TestCaseExecutionCard({
   onResultChange,
   onNotesChange,
   lastRunResult,
+  featureId,
 }: TestCaseExecutionCardProps) {
   const [showNotes, setShowNotes] = useState(notes.length > 0);
+  const [showGuided, setShowGuided] = useState(false);
+
+  const handleGuidedComplete = (evidence: GuidedTestEvidence) => {
+    const allPassed = evidence.steps.every((s) => s.verdict === 'passed');
+    const anyFailed = evidence.steps.some((s) => s.verdict === 'failed');
+    onResultChange(anyFailed ? 'failed' : allPassed ? 'passed' : 'skipped');
+    setShowGuided(false);
+  };
 
   const borderClass = result === 'passed'
     ? 'border-green-200 bg-green-50/30'
@@ -140,16 +152,38 @@ export function TestCaseExecutionCard({
                 Add notes
               </button>
             )}
+
+            {/* AI Guide toggle */}
+            {featureId && !showGuided && (
+              <button
+                onClick={() => setShowGuided(true)}
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+              >
+                AI Guide
+              </button>
+            )}
           </div>
 
           {/* Notes textarea */}
-          {showNotes && (
+          {showNotes && !showGuided && (
             <div className="mt-2">
               <textarea
                 value={notes}
                 onChange={(e) => onNotesChange(e.target.value)}
                 placeholder="Add notes about this test result..."
                 className="w-full text-xs border rounded px-2 py-1.5 h-16 resize-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300"
+              />
+            </div>
+          )}
+
+          {/* AI Guided Testing Panel */}
+          {showGuided && featureId && (
+            <div className="mt-2 border-t pt-2">
+              <GuidedTestingPanel
+                featureId={featureId}
+                testCaseId={testCase.id}
+                onComplete={handleGuidedComplete}
+                onClose={() => setShowGuided(false)}
               />
             </div>
           )}
