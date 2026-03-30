@@ -162,9 +162,9 @@ async function deployFunction(
   supabase: ReturnType<typeof createClient>,
 ): Promise<DeployStepResult> {
   const start = Date.now();
-  const accessToken = Deno.env.get('SUPABASE_ACCESS_TOKEN');
+  const accessToken = Deno.env.get('SB_ACCESS_TOKEN');
   if (!accessToken) {
-    return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: 'SUPABASE_ACCESS_TOKEN not set', details: null };
+    return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: 'SB_ACCESS_TOKEN not set', details: null };
   }
 
   const projectRef = extractProjectRef();
