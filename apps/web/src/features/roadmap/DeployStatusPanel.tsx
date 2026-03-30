@@ -45,7 +45,9 @@ interface DeployStatusPanelProps {
 }
 
 export function DeployStatusPanel({ deployResults, onRedeploy, isRedeploying }: DeployStatusPanelProps) {
-  const allSteps = [...deployResults.migrations, ...deployResults.functions];
+  const migrations = Array.isArray(deployResults.migrations) ? deployResults.migrations : [];
+  const functions = Array.isArray(deployResults.functions) ? deployResults.functions : [];
+  const allSteps = [...migrations, ...functions];
   const successCount = allSteps.filter(s => s.status === 'success').length;
   const failedCount = allSteps.filter(s => s.status === 'failed').length;
   const allSuccess = deployResults.overall_status === 'success';
