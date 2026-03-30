@@ -24,33 +24,45 @@ function buildDbUrl(): string {
   return `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
 }
 
-/** POST ?action=cleanup — Remove test data for a feature/dataset */
+/** Verify auth — accepts user JWT or service-role key */
+function resolveAuth(req: Request): { token: string; isServiceRole: boolean } | null {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.substring(7);
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  return { token, isServiceRole: token === serviceKey };
+}
+
+/** POST ?action=cleanup — Remove test data for a feature/dataset/pipeline_run */
 export async function handleCleanup(req: Request): Promise<Response> {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
-  // Auth
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return error('UNAUTHORIZED', 'Missing authorization', 401);
+  // Auth — support both user JWT and service-role key (for pipeline cleanup)
+  const auth = resolveAuth(req);
+  if (!auth) return error('UNAUTHORIZED', 'Missing authorization', 401);
+  if (!auth.isServiceRole) {
+    const { error: authErr } = await supabase.auth.getUser(auth.token);
+    if (authErr) return error('UNAUTHORIZED', 'Invalid token', 401);
   }
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
-  if (authErr || !user) return error('UNAUTHORIZED', 'Invalid token', 401);
 
   const body = await req.json();
   const datasetId = body.dataset_id;
   const featureId = body.feature_id;
+  const pipelineRunId = body.pipeline_run_id;
 
-  if (!datasetId && !featureId) {
-    return error('VALIDATION_ERROR', 'dataset_id or feature_id required', 400);
+  if (!datasetId && !featureId && !pipelineRunId) {
+    return error('VALIDATION_ERROR', 'dataset_id, feature_id, or pipeline_run_id required', 400);
   }
 
   // Get datasets to clean up
   let query = supabase.from('test_data_sets').select('id, sql_statements, feature_id');
   if (datasetId) {
     query = query.eq('id', datasetId);
+  } else if (pipelineRunId) {
+    query = query.eq('pipeline_run_id', pipelineRunId).eq('status', 'active');
   } else {
     query = query.eq('feature_id', featureId).eq('status', 'active');
   }

@@ -35,21 +35,40 @@ function buildDbUrl(): string {
   return `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
 }
 
+type TriggerSource = 'manual' | 'copilot' | 'pipeline';
+
+/** Verify auth — accepts user JWT or service-role key */
+function resolveAuth(req: Request): { token: string; isServiceRole: boolean } | null {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.substring(7);
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  return { token, isServiceRole: token === serviceKey };
+}
+
 /** POST ?action=generate — Generate test data for a feature */
 export async function handleGenerate(req: Request): Promise<Response> {
   const supabase = getSupabase();
 
-  // Auth
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return error('UNAUTHORIZED', 'Missing authorization', 401);
+  // Auth — support both user JWT and service-role key (for pipeline/copilot)
+  const auth = resolveAuth(req);
+  if (!auth) return error('UNAUTHORIZED', 'Missing authorization', 401);
+
+  let userId = 'service-role';
+  if (!auth.isServiceRole) {
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(auth.token);
+    if (authErr || !user) return error('UNAUTHORIZED', 'Invalid token', 401);
+    userId = user.id;
   }
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
-  if (authErr || !user) return error('UNAUTHORIZED', 'Invalid token', 401);
 
   const body = await req.json();
   const featureId = body.feature_id;
+  const triggerSource: TriggerSource = body.trigger_source ?? 'manual';
+  const pipelineRunId: string | null = body.pipeline_run_id ?? null;
   if (!featureId) return error('VALIDATION_ERROR', 'feature_id required', 400);
+  if (pipelineRunId && triggerSource !== 'pipeline') {
+    return error('VALIDATION_ERROR', 'pipeline_run_id requires trigger_source=pipeline', 400);
+  }
 
   // Get feature context
   const { data: feature } = await supabase
@@ -83,7 +102,7 @@ export async function handleGenerate(req: Request): Promise<Response> {
 
   // Log AI usage (fire-and-forget)
   logAIUsage(supabase, {
-    featureId, adminId: user.id, modelId: AI_MODEL,
+    featureId, adminId: userId, modelId: AI_MODEL,
     operationType: 'test_data_gen',
     inputTokens: response.usage?.input_tokens ?? 0,
     outputTokens: response.usage?.output_tokens ?? 0,
@@ -101,10 +120,12 @@ export async function handleGenerate(req: Request): Promise<Response> {
   await supabase.from('test_data_sets').upsert({
     id: datasetId,
     feature_id: featureId,
-    generated_by: user.id,
+    generated_by: userId,
     sql_statements: sqlText,
     records_created: result.inserted,
     status: result.errors.length === 0 ? 'active' : 'partial',
+    trigger_source: triggerSource,
+    pipeline_run_id: pipelineRunId,
     created_at: new Date().toISOString(),
   });
 
@@ -116,6 +137,8 @@ export async function handleGenerate(req: Request): Promise<Response> {
       total_statements: result.total,
       errors: result.errors,
       status: result.errors.length === 0 ? 'success' : 'partial',
+      trigger_source: triggerSource,
+      pipeline_run_id: pipelineRunId,
     },
   });
 }
@@ -124,12 +147,12 @@ export async function handleGenerate(req: Request): Promise<Response> {
 export async function handleList(req: Request): Promise<Response> {
   const supabase = getSupabase();
 
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return error('UNAUTHORIZED', 'Missing authorization', 401);
+  const auth = resolveAuth(req);
+  if (!auth) return error('UNAUTHORIZED', 'Missing authorization', 401);
+  if (!auth.isServiceRole) {
+    const { error: authErr } = await supabase.auth.getUser(auth.token);
+    if (authErr) return error('UNAUTHORIZED', 'Invalid token', 401);
   }
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
-  if (authErr || !user) return error('UNAUTHORIZED', 'Invalid token', 401);
 
   const url = new URL(req.url);
   const featureId = url.searchParams.get('feature_id');

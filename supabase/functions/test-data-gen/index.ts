@@ -1,10 +1,12 @@
 /**
  * Test Data Generation Edge Function (FR-111)
  * Generates realistic test data for features using AI, with cleanup support.
+ * Supports manual (admin UI), copilot (FR-108), and pipeline (FR-109) triggers.
  *
  * POST ?action=generate  — Generate test data for a feature
  * POST ?action=cleanup   — Clean up generated test data for a feature
  * GET  ?action=list       — List generated datasets for a feature
+ * GET  ?action=check      — Check if active test data exists for a feature
  */
 
 import { corsHeaders } from '../_shared/cors.ts';
@@ -41,6 +43,10 @@ Deno.serve(async (req) => {
     if (action === 'list' && req.method === 'GET') {
       const { handleList } = await import('./generate.ts');
       return handleList(req);
+    }
+    if (action === 'check' && req.method === 'GET') {
+      const { handleCheck } = await import('./check.ts');
+      return handleCheck(req);
     }
 
     return error('INVALID_ACTION', `Unknown action: ${action}`, 400);
