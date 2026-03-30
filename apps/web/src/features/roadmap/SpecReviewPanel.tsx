@@ -197,7 +197,7 @@ export function SpecReviewPanel({
             {spec.review?.status?.replace('_', ' ')}
           </span>
           {(() => {
-            const aiModel = (spec.review as Record<string, unknown>)?.ai_enrichment;
+            const aiModel = (spec.review as unknown as Record<string, unknown>)?.ai_enrichment;
             const modelId = aiModel && typeof aiModel === 'object' && (aiModel as Record<string, unknown>).model;
             const label = typeof modelId === 'string' ? formatModelName(modelId) : null;
             return label ? (
