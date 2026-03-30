@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { generateCode, type SpecArtifacts } from '../implement-feature/ai-codegen.ts';
 import { autoSplitTask, intelligentSplit } from '../implement-feature/split-task.ts';
 import { scoreTask } from '../implement-feature/complexity-scorer.ts';
-import { appendLog, updateHeartbeat, triggerNextTask, loadSpecArtifacts } from './shared.ts';
+import { appendLog, updateHeartbeat, triggerNextTask, loadSpecArtifacts, onPipelineComplete } from './shared.ts';
 import { runCICheck } from './ci-check.ts';
 import { captureFailure, getAdaptations } from './failure-capture.ts';
 
@@ -256,21 +256,11 @@ async function finalizePipeline(
     const msg = error instanceof Error ? error.message : 'Unknown CI error';
     await appendLog(supabase, pipelineId, 'error', `CI check error: ${msg}`);
 
-    // Complete pipeline even if CI crashes — don't leave it stuck
-    await supabase
-      .from('pipeline_runs')
-      .update({
-        status: 'completed',
-        current_stage: 'build_failed',
-        current_task_id: null,
-        completed_at: new Date().toISOString(),
-      })
-      .eq('id', pipelineId);
-
-    await supabase
-      .from('implementation_requests')
-      .update({ status: 'completed', updated_at: new Date().toISOString() })
-      .eq('id', requestId);
+    await supabase.from('pipeline_runs').update({
+      status: 'completed', current_stage: 'build_failed', current_task_id: null, completed_at: new Date().toISOString(),
+    }).eq('id', pipelineId);
+    await supabase.from('implementation_requests').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', requestId);
+    await onPipelineComplete(supabase, pipelineId, 'failed');
   }
 }
 
@@ -279,14 +269,9 @@ async function markPipelineFailed(
   pipelineId: string,
   errorMessage: string,
 ): Promise<void> {
-  await supabase
-    .from('pipeline_runs')
-    .update({
-      status: 'failed',
-      current_stage: 'idle',
-      error_message: errorMessage,
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', pipelineId);
+  await supabase.from('pipeline_runs').update({
+    status: 'failed', current_stage: 'idle', error_message: errorMessage, completed_at: new Date().toISOString(),
+  }).eq('id', pipelineId);
+  await onPipelineComplete(supabase, pipelineId, 'failed');
 }
 

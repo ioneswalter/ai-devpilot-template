@@ -6,7 +6,7 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
-import { appendLog } from './shared.ts';
+import { appendLog, onPipelineComplete } from './shared.ts';
 import { runDeploy } from './deploy.ts';
 import { captureFailure } from './failure-capture.ts';
 
@@ -396,6 +396,7 @@ async function completePipeline(
 
     const msg = allPassed === null ? 'Pipeline completed (CI skipped)' : 'Pipeline completed — some CI checks failed';
     await appendLog(supabase, pipelineId, allPassed === null ? 'info' : 'warn', msg);
+    await onPipelineComplete(supabase, pipelineId, 'completed');
     return;
   }
 
@@ -422,5 +423,6 @@ async function completePipeline(
       status: 'completed',
       updated_at: new Date().toISOString(),
     }).eq('id', requestId);
+    await onPipelineComplete(supabase, pipelineId, 'failed');
   }
 }

@@ -69,10 +69,10 @@ export async function appendLog(
 
 /** Update pipeline heartbeat to signal it's still alive */
 export async function updateHeartbeat(supabase: SupabaseClient, pipelineId: string): Promise<void> {
-  await supabase
-    .from('pipeline_runs')
-    .update({ last_heartbeat: new Date().toISOString(), updated_at: new Date().toISOString() })
-    .eq('id', pipelineId);
+  const now = new Date().toISOString();
+  await supabase.from('pipeline_runs').update({ last_heartbeat: now, updated_at: now }).eq('id', pipelineId);
+  // FR-119: Also update deploy lock heartbeat if this pipeline holds one
+  await supabase.from('deploy_locks').update({ last_heartbeat: now }).eq('pipeline_id', pipelineId);
 }
 
 /** Get the Edge Function base URL for self-calling */
@@ -91,6 +91,15 @@ export function triggerNextTask(pipelineId: string, requestId: string, retryCoun
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
     body: JSON.stringify({ action: 'next', pipeline_id: pipelineId, request_id: requestId, retry_count: retryCount }),
   }).catch(err => { console.error('Failed to trigger next task:', err); });
+}
+
+/** FR-119: Promote queue and release deploy lock on pipeline completion */
+export async function onPipelineComplete(supabase: SupabaseClient, pipelineId: string, status: 'completed' | 'failed'): Promise<void> {
+  // Lazy import to avoid circular deps at module level
+  const { completeQueueEntry } = await import('./queue-manager.ts');
+  const { releaseDeployLock } = await import('./deploy-lock.ts');
+  await releaseDeployLock(supabase, pipelineId).catch(() => {});
+  await completeQueueEntry(supabase, pipelineId, status).catch(() => {});
 }
 
 /** Load SpecKit artifacts for a feature from the DB */

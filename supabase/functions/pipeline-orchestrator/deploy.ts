@@ -1,37 +1,15 @@
-/**
- * Autonomous Deployment Handler (FR-115)
- * Executes migrations via pg and deploys Edge Functions via Management API
- * Called after CI passes — no automatic rollback on failure
- */
-
+/** Autonomous Deployment Handler (FR-115 + FR-119 deploy mutex) */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import pg from 'npm:pg@8.13.1';
-import { appendLog } from './shared.ts';
+import { appendLog, onPipelineComplete } from './shared.ts';
 import { runTestReadiness } from './test-readiness.ts';
+import { waitForDeployLock, releaseDeployLock, detectFileConflicts } from './deploy-lock.ts';
 
 const MAX_RETRIES = 3;
 
-interface DeployStepResult {
-  artifact: string;
-  action: 'execute_sql' | 'deploy_function';
-  status: 'success' | 'failed' | 'skipped';
-  duration_ms: number;
-  error: string | null;
-  details: string | null;
-}
-
-interface DeployResults {
-  migrations: DeployStepResult[];
-  functions: DeployStepResult[];
-  started_at: string;
-  completed_at: string;
-  overall_status: 'success' | 'partial' | 'failed';
-}
-
-interface GeneratedFile {
-  file_path: string;
-  code: string;
-}
+interface DeployStepResult { artifact: string; action: 'execute_sql' | 'deploy_function'; status: 'success' | 'failed' | 'skipped'; duration_ms: number; error: string | null; details: string | null; }
+interface DeployResults { migrations: DeployStepResult[]; functions: DeployStepResult[]; started_at: string; completed_at: string; overall_status: 'success' | 'partial' | 'failed'; }
+interface GeneratedFile { file_path: string; code: string; }
 
 export async function runDeploy(pipelineId: string, requestId: string): Promise<void> {
   const supabase = createClient(
@@ -70,6 +48,27 @@ export async function runDeploy(pipelineId: string, requestId: string): Promise<
     }
 
     const files: GeneratedFile[] = tasks.map(t => ({ file_path: t.file_path, code: t.generated_code! }));
+
+    // FR-119: Detect file conflicts with other concurrent pipelines
+    const conflicts = await detectFileConflicts(supabase, pipelineId, requestId);
+    if (conflicts.length > 0) {
+      await supabase.from('pipeline_runs').update({
+        conflict_report: { conflicts, detected_at: new Date().toISOString(), status: 'pending' },
+      }).eq('id', pipelineId);
+      await appendLog(supabase, pipelineId, 'warn', `File conflicts detected: ${conflicts.length} file(s) overlap with other pipelines`);
+      // Continue deployment — admin can review conflict report in dashboard
+    }
+
+    // FR-119: Acquire deploy lock (wait if another pipeline is deploying)
+    const { data: pipeline } = await supabase.from('pipeline_runs').select('feature_id').eq('id', pipelineId).single();
+    const lockAcquired = await waitForDeployLock(supabase, pipelineId, pipeline?.feature_id ?? '');
+    if (!lockAcquired) {
+      results.overall_status = 'failed';
+      await appendLog(supabase, pipelineId, 'error', 'Failed to acquire deployment slot — pipeline may have been cancelled or timed out');
+      await failDeploy(supabase, pipelineId, requestId, results);
+      return;
+    }
+    await supabase.from('pipeline_runs').update({ waiting_for_deploy: false }).eq('id', pipelineId);
 
     // Classify artifacts
     const migrations = files.filter(f => f.file_path.includes('migrations/') && f.file_path.endsWith('.sql'));
@@ -221,14 +220,11 @@ function extractFunctionSlugs(files: GeneratedFile[]): string[] {
 }
 
 function extractProjectRef(): string {
-  const url = Deno.env.get('SUPABASE_URL') ?? '';
-  return new URL(url).hostname.split('.')[0];
+  return new URL(Deno.env.get('SUPABASE_URL') ?? '').hostname.split('.')[0];
 }
 
 function buildDbUrl(): string {
-  const ref = extractProjectRef();
-  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  return `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
+  return `postgresql://postgres.${extractProjectRef()}:${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
 }
 
 function isTransient(msg: string): boolean {
@@ -243,6 +239,9 @@ async function completeDeploy(
 ): Promise<void> {
   results.completed_at = new Date().toISOString();
   results.overall_status = 'success';
+
+  // FR-119: Release deploy lock
+  await releaseDeployLock(supabase, pipelineId);
 
   await supabase.from('pipeline_runs').update({
     status: 'completed',
@@ -279,6 +278,9 @@ async function failDeploy(
   results: DeployResults,
 ): Promise<void> {
   results.completed_at = new Date().toISOString();
+
+  // FR-119: Release deploy lock on failure
+  await releaseDeployLock(supabase, pipelineId);
 
   await supabase.from('pipeline_runs').update({
     status: 'completed',

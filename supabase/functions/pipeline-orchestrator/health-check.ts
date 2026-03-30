@@ -6,6 +6,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { jsonResponse, appendLog, getEdgeFunctionUrl } from './shared.ts';
+import { promoteNextInQueue } from './queue-manager.ts';
 
 export async function handleHealthCheck(): Promise<Response> {
   const supabase = createClient(
@@ -78,7 +79,17 @@ export async function handleHealthCheck(): Promise<Response> {
     }
   }
 
+  // FR-119: Fallback queue promotion — check for stuck queued entries
+  let promoted = 0;
+  try {
+    await promoteNextInQueue(supabase);
+    const { count } = await supabase.from('pipeline_queue').select('id', { count: 'exact', head: true }).eq('status', 'queued');
+    promoted = count ?? 0;
+  } catch (err) {
+    console.error('Queue promotion error:', err);
+  }
+
   return jsonResponse({
-    data: { checked: stalePipelines.length, restarted, timed_out: timedOut },
+    data: { checked: stalePipelines.length, restarted, timed_out: timedOut, queued_remaining: promoted },
   });
 }

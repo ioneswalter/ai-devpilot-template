@@ -17,6 +17,9 @@ import { handleHealthCheck } from './health-check.ts';
 import { runCICheck } from './ci-check.ts';
 import { runDeploy } from './deploy.ts';
 import { runTestReadiness } from './test-readiness.ts';
+import { getQueueStatus, cancelQueueEntry } from './queue-manager.ts';
+import { getDeployLockStatus } from './deploy-lock.ts';
+import { createAndStartPipeline } from './start.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -87,6 +90,24 @@ Deno.serve(async (req) => {
         const { data, error } = await query;
         if (error) return errorResponse('INTERNAL_ERROR', error.message, 500);
         return jsonResponse({ data: data ?? [] });
+      }
+      // FR-119: Queue status
+      if (url.searchParams.get('action') === 'queue-status') {
+        const queueData = await getQueueStatus(supabase);
+        const lockStatus = await getDeployLockStatus(supabase);
+        let lockDisplay = { held_by_pipeline: null as string | null, feature_title: null as string | null, acquired_at: null as string | null };
+        if (lockStatus.held) {
+          const { data: f } = await supabase.from('product_features').select('title').eq('id', lockStatus.feature_id).single();
+          lockDisplay = { held_by_pipeline: lockStatus.pipeline_id ?? null, feature_title: f?.title ?? null, acquired_at: lockStatus.acquired_at ?? null };
+        }
+        return jsonResponse({ data: { ...queueData, deploy_lock: lockDisplay } });
+      }
+      // FR-119: Conflict report
+      if (url.searchParams.get('action') === 'conflict-report') {
+        const pid = url.searchParams.get('pipeline_id');
+        if (!pid) return errorResponse('VALIDATION_ERROR', 'pipeline_id required', 400);
+        const { data: pr } = await supabase.from('pipeline_runs').select('conflict_report').eq('id', pid).single();
+        return jsonResponse({ data: pr?.conflict_report ?? null });
       }
       // FR-118: Learning insights
       if (url.searchParams.get('action') === 'learning-insights') {
@@ -221,6 +242,34 @@ Deno.serve(async (req) => {
           if (!dRecId) return errorResponse('VALIDATION_ERROR', 'recommendation_id required', 400);
           await supabase.from('constitution_recommendations').update({ status: 'dismissed', decided_by: ctx.admin.id, decided_at: new Date().toISOString() }).eq('id', dRecId);
           return jsonResponse({ data: { id: dRecId, status: 'dismissed' } });
+        }
+
+        case 'cancel-queue': {
+          const qid = body.queue_entry_id as string;
+          if (!qid) return errorResponse('VALIDATION_ERROR', 'queue_entry_id required', 400);
+          const cResult = await cancelQueueEntry(supabase, qid);
+          return jsonResponse({ data: { queue_entry_id: qid, ...cResult } });
+        }
+
+        case 'acknowledge-conflicts': {
+          const acPid = body.pipeline_id as string;
+          if (!acPid) return errorResponse('VALIDATION_ERROR', 'pipeline_id required', 400);
+          const { data: acPr } = await supabase.from('pipeline_runs').select('conflict_report').eq('id', acPid).single();
+          if (acPr?.conflict_report) {
+            const updated = { ...acPr.conflict_report, status: 'acknowledged', acknowledged_by: ctx.admin.id };
+            await supabase.from('pipeline_runs').update({ conflict_report: updated }).eq('id', acPid);
+          }
+          return jsonResponse({ data: { pipeline_id: acPid, conflict_status: 'acknowledged' } });
+        }
+
+        case 'start-from-queue': {
+          const sfqFid = body.feature_id as string;
+          const sfqRid = body.request_id as string;
+          const sfqQid = body.queue_entry_id as string;
+          if (!sfqFid || !sfqRid) return errorResponse('VALIDATION_ERROR', 'feature_id and request_id required', 400);
+          const { count: tc } = await supabase.from('implementation_task_items')
+            .select('id', { count: 'exact', head: true }).eq('request_id', sfqRid).in('decision', ['accepted', 'modified']).eq('implementation_status', 'pending');
+          return createAndStartPipeline(ctx, sfqFid, sfqRid, tc ?? 0, sfqQid);
         }
 
         case 'health-check':

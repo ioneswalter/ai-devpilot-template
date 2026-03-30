@@ -1,9 +1,4 @@
-/**
- * ImplementationPanel - AI implementation workflow UI for FR-105
- * Shown when transitioning approved → in_development.
- * Engineers can review, accept/reject, edit, and comment on tasks.
- */
-
+/** ImplementationPanel - AI implementation workflow UI (FR-105) */
 import { useEffect, useRef, useState } from 'react';
 import { useImplementation } from './useImplementation';
 import { ImplementationTaskCard } from './ImplementationTaskCard';
@@ -16,6 +11,7 @@ import { WriteCodeFlow } from './WriteCodeFlow';
 import { PipelineStatusSection } from './PipelineStatusSection';
 import { ComplexityScorePanel } from './ComplexityScorePanel';
 import { LearningInsightsPanel } from './LearningInsightsPanel';
+import { PipelineDashboard } from './PipelineDashboard';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -243,6 +239,7 @@ export function ImplementationPanel({
           pipeline={impl.pipeline}
         />
 
+        <PipelineDashboard />
         <LearningInsightsPanel />
 
         {showLog && (

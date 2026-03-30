@@ -4,6 +4,7 @@
  */
 
 import { jsonResponse, errorResponse, appendLog, getEdgeFunctionUrl, type AuthContext } from './shared.ts';
+import { enqueuePipeline, linkPipelineToQueue } from './queue-manager.ts';
 
 export async function handleStart(req: Request, ctx: AuthContext): Promise<Response> {
   const body = await req.json();
@@ -48,18 +49,36 @@ export async function handleStart(req: Request, ctx: AuthContext): Promise<Respo
     return errorResponse('VALIDATION_ERROR', 'No pending accepted tasks to implement', 400);
   }
 
-  // Create pipeline run
+  // FR-119: Check queue — enqueue if at capacity
+  const qResult = await enqueuePipeline(ctx.supabase, feature_id, request_id, ctx.admin?.id);
+
+  if (qResult.queued) {
+    return jsonResponse({
+      data: {
+        pipeline_id: null,
+        queue_entry_id: qResult.queue_entry_id,
+        status: 'queued',
+        queue_position: qResult.position,
+        total_tasks: taskCount,
+        message: `Queued at position ${qResult.position}`,
+      },
+    });
+  }
+
+  // Slot available — create pipeline run immediately
+  return createAndStartPipeline(ctx, feature_id, request_id, taskCount, qResult.queue_entry_id);
+}
+
+/** Create pipeline run and start processing — used by both direct start and queue promotion */
+export async function createAndStartPipeline(
+  ctx: AuthContext, featureId: string, requestId: string, taskCount: number, queueEntryId?: string,
+): Promise<Response> {
   const { data: pipeline, error: createErr } = await ctx.supabase
     .from('pipeline_runs')
     .insert({
-      feature_id,
-      request_id,
-      status: 'running',
-      current_stage: 'implementing',
-      total_tasks: taskCount,
-      completed_tasks: 0,
-      failed_tasks: 0,
-      logs: [],
+      feature_id: featureId, request_id: requestId, status: 'running', current_stage: 'implementing',
+      total_tasks: taskCount, completed_tasks: 0, failed_tasks: 0, logs: [],
+      queue_entry_id: queueEntryId ?? null,
     })
     .select('id')
     .single();
@@ -69,23 +88,17 @@ export async function handleStart(req: Request, ctx: AuthContext): Promise<Respo
     return errorResponse('INTERNAL_ERROR', 'Failed to create pipeline run', 500);
   }
 
-  // Update implementation request status
-  await ctx.supabase
-    .from('implementation_requests')
-    .update({ status: 'implementing', updated_at: new Date().toISOString() })
-    .eq('id', request_id);
+  // Link queue entry to pipeline
+  if (queueEntryId) await linkPipelineToQueue(ctx.supabase, queueEntryId, pipeline.id);
+
+  await ctx.supabase.from('implementation_requests')
+    .update({ status: 'implementing', updated_at: new Date().toISOString() }).eq('id', requestId);
 
   await appendLog(ctx.supabase, pipeline.id, 'info', `Pipeline started — ${taskCount} tasks to process`);
-
-  // Fire-and-forget: trigger the first task processing
-  triggerNextTask(pipeline.id, request_id);
+  triggerNextTask(pipeline.id, requestId);
 
   return jsonResponse({
-    data: {
-      pipeline_id: pipeline.id,
-      total_tasks: taskCount,
-      status: 'running',
-    },
+    data: { pipeline_id: pipeline.id, total_tasks: taskCount, status: 'running', queue_entry_id: queueEntryId ?? null },
   });
 }
 
