@@ -8,6 +8,7 @@ import { useTestExecution } from './useTestExecution';
 import { TestCaseExecutionCard } from './TestCaseExecutionCard';
 import { TestCaseStatusCard } from './TestCaseStatusCard';
 import { TestRunHistory } from './TestRunHistory';
+import { TestDataActions } from './TestDataActions';
 import type { TestCase } from './roadmap-helpers';
 import type { TestRunResult, TestResultInput } from './test-execution-types';
 
@@ -144,6 +145,7 @@ export function TestRunPanel({
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <TestDataActions featureId={featureId} featureCode={featureCode} />
           {testCases.map((tc) => (
             <TestCaseStatusCard
               key={tc.id}
