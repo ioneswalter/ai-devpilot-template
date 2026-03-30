@@ -80,3 +80,43 @@ export function getEdgeFunctionUrl(): string {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   return `${supabaseUrl}/functions/v1/pipeline-orchestrator`;
 }
+
+/** Fire-and-forget trigger for the next task in the chain */
+export function triggerNextTask(pipelineId: string, requestId: string, retryCount = 0): void {
+  const url = getEdgeFunctionUrl();
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+    body: JSON.stringify({ action: 'next', pipeline_id: pipelineId, request_id: requestId, retry_count: retryCount }),
+  }).catch(err => { console.error('Failed to trigger next task:', err); });
+}
+
+/** Load SpecKit artifacts for a feature from the DB */
+export async function loadSpecArtifacts(
+  supabase: SupabaseClient,
+  featureId: string,
+): Promise<Record<string, unknown>> {
+  const { data: rows } = await supabase
+    .from('feature_spec_artifacts')
+    .select('artifact_type, content')
+    .eq('feature_id', featureId);
+
+  if (!rows || rows.length === 0) return {};
+
+  const artifacts: Record<string, unknown> = {};
+  const contracts: string[] = [];
+
+  for (const row of rows) {
+    switch (row.artifact_type) {
+      case 'plan': artifacts.plan = row.content; break;
+      case 'data_model': artifacts.data_model = row.content; break;
+      case 'spec': artifacts.spec = row.content; break;
+      case 'research': artifacts.research = row.content; break;
+      case 'contract': contracts.push(row.content); break;
+    }
+  }
+  if (contracts.length > 0) artifacts.contracts = contracts;
+  return artifacts;
+}

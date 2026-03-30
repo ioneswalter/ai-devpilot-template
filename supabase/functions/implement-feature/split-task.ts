@@ -1,10 +1,12 @@
 /**
- * Auto-split oversized tasks into smaller subtasks.
- * Called when a task's generated code exceeds the 300-line constitution limit.
+ * Task splitting (FR-117 enhanced + original reactive split).
+ * intelligentSplit() uses complexity score context for pre-emptive splitting.
+ * autoSplitTask() remains as reactive fallback when generation exceeds limits.
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import type { AuthContext } from './shared.ts';
+import type { ComplexityScore } from './complexity-scorer.ts';
 
 interface SubtaskDef {
   title: string;
@@ -13,51 +15,137 @@ interface SubtaskDef {
   task_type: string;
 }
 
-const SPLIT_PROMPT = `You are a senior architect splitting an oversized implementation task into smaller subtasks.
-Each subtask must produce a file UNDER 200 lines. Return a JSON array of subtasks.
+interface TaskInput {
+  id: string;
+  request_id: string;
+  title: string;
+  description: string | null;
+  file_path: string;
+  task_type: string;
+  sort_order: number;
+}
 
-Rules:
+const SPLIT_RULES = `Rules:
 - Split by concern: types, utils/helpers, subcomponents, main file
-- React components: separate container (logic) from presentational (JSX) components
-- Edge Functions: router + handler modules (all in same directory, no subdirectories)
-- Services: split by entity or workflow step
+- React components: separate container (logic) from presentational (JSX)
+- Edge Functions: router + handler modules (same directory, no subdirectories)
 - Each subtask gets its own file_path — never duplicate the original
-- 2-4 subtasks is ideal, never more than 5
-- task_type must be one of: create, modify, test, config
-- Each subtask file MUST be self-contained — do not create cross-dependencies between subtasks
+- 2-5 subtasks, each targeting < 4 files and < 200 lines
+- task_type: create, modify, test, or config
+- Each subtask MUST be self-contained
 
-File placement rules:
-- Frontend features: apps/web/src/features/<domain>/
-- Edge Function handlers: supabase/functions/<function-name>/ (flat, no subdirectories)
-- Do NOT use: components/<feature>/, hooks/, handlers/, services/, utils/ subdirectories
+File placement:
+- Frontend: apps/web/src/features/<domain>/
+- Edge Functions: supabase/functions/<function-name>/ (flat)
+- NEVER target: admin-api.ts, RoadmapContent.tsx, schema.prisma
 
-Export naming:
-- Edge Function handlers: named exports matching filename, e.g., get-releases.ts → export function getReleases()
-- React components: named exports matching filename, e.g., ReleasePanel.tsx → export function ReleasePanel()
+Return ONLY JSON: [{"title":"...","description":"...","file_path":"...","task_type":"create"}, ...]`;
 
-Overwrite protection — NEVER target these shared files as subtasks:
-- apps/web/src/lib/api/admin-api.ts
-- apps/web/src/features/roadmap/RoadmapContent.tsx
-- prisma/schema.prisma
+// ── Intelligent Split (FR-117) ──
 
-Return ONLY a JSON array, no explanation:
-[{"title":"...","description":"...","file_path":"...","task_type":"create"}, ...]`;
-
-/**
- * Ask AI to split a task into smaller subtasks, then insert them into the DB.
- * Returns the number of subtasks created.
- */
-export async function autoSplitTask(
+export async function intelligentSplit(
   ctx: AuthContext,
-  task: { id: string; request_id: string; title: string; description: string | null; file_path: string; task_type: string; sort_order: number },
+  task: TaskInput,
+  score: ComplexityScore,
 ): Promise<number> {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) return 0;
 
-  const subtasks = await askAiToSplit(apiKey, task);
+  const layers = detectTaskLayers(task);
+  const depContext = buildDependencyContext(task);
+  const prompt = buildIntelligentPrompt(task, score, layers, depContext);
+
+  const subtasks = await callAiForSplit(apiKey, prompt);
   if (!subtasks || subtasks.length === 0) return 0;
 
-  // Insert subtasks with sort_order after the parent
+  const validated = validateSubtasks(subtasks);
+  if (validated.length === 0) return 0;
+
+  return await insertSplitResults(ctx, task, validated, score, layers);
+}
+
+function detectTaskLayers(task: TaskInput): string[] {
+  const layers = new Set<string>();
+  const path = task.file_path;
+  const text = `${task.title} ${task.description || ''}`.toLowerCase();
+
+  if (path.includes('apps/web/') || path.includes('.tsx')) layers.add('frontend');
+  if (path.includes('supabase/functions/')) layers.add('backend');
+  if (path.includes('packages/') || path.includes('lib/')) layers.add('shared');
+  if (text.includes('component') || text.includes('panel')) layers.add('frontend');
+  if (text.includes('endpoint') || text.includes('handler')) layers.add('backend');
+
+  return layers.size > 0 ? Array.from(layers) : ['unknown'];
+}
+
+function buildDependencyContext(task: TaskInput): string {
+  const dir = task.file_path.split('/').slice(0, -1).join('/');
+  const text = task.description || '';
+  const lines: string[] = [];
+
+  lines.push(`Primary directory: ${dir}`);
+  if (text.includes('import') || text.includes('depend')) {
+    lines.push('Task mentions imports/dependencies — keep related modules together');
+  }
+  return lines.join('\n');
+}
+
+function buildIntelligentPrompt(
+  task: TaskInput,
+  score: ComplexityScore,
+  layers: string[],
+  depContext: string,
+): string {
+  const factorBreakdown = Object.entries(score.factors)
+    .map(([k, v]) => `  ${k}: ${v.score}/100 — ${v.detail}`)
+    .join('\n');
+
+  const layerInstruction = layers.length > 1
+    ? `\nIMPORTANT: This task spans ${layers.join(' + ')} layers. Create separate subtasks for each layer. Backend subtasks should come first (dependency order).`
+    : '';
+
+  return `You are splitting a complex implementation task (complexity score: ${score.total}/${score.threshold}).
+
+Factor breakdown:
+${factorBreakdown}
+
+${layerInstruction}
+
+Dependencies:
+${depContext}
+
+${SPLIT_RULES}
+
+Task to split:
+Title: ${task.title}
+File: ${task.file_path}
+Type: ${task.task_type}
+Description: ${task.description || 'N/A'}`;
+}
+
+function validateSubtasks(subtasks: SubtaskDef[]): SubtaskDef[] {
+  if (subtasks.length < 2 || subtasks.length > 5) return [];
+
+  return subtasks.filter(st => {
+    if (!st.title || !st.file_path || !st.task_type) return false;
+    if (!['create', 'modify', 'test', 'config'].includes(st.task_type)) return false;
+    const blocked = ['admin-api.ts', 'RoadmapContent.tsx', 'schema.prisma'];
+    if (blocked.some(b => st.file_path.includes(b))) return false;
+    return true;
+  });
+}
+
+async function insertSplitResults(
+  ctx: AuthContext,
+  task: TaskInput,
+  subtasks: SubtaskDef[],
+  score: ComplexityScore,
+  layers: string[],
+): Promise<number> {
+  const reasoning = `Intelligent split (score ${score.total}/${score.threshold}). ` +
+    `Layers: ${layers.join(', ')}. ` +
+    `Created ${subtasks.length} subtasks: ${subtasks.map(s => s.title).join('; ')}`;
+
   const inserts = subtasks.map((st, i) => ({
     request_id: task.request_id,
     title: st.title,
@@ -70,40 +158,67 @@ export async function autoSplitTask(
     sort_order: task.sort_order + i + 1,
   }));
 
-  const { error } = await ctx.supabase
-    .from('implementation_task_items')
-    .insert(inserts);
+  const { error } = await ctx.supabase.from('implementation_task_items').insert(inserts);
+  if (error) { console.error('Failed to insert intelligent subtasks:', error); return 0; }
 
-  if (error) {
-    console.error('Failed to insert subtasks:', error);
-    return 0;
-  }
-
-  // Mark the parent task as split (distinct from failed)
   await ctx.supabase
     .from('implementation_task_items')
     .update({
       implementation_status: 'split',
-      ai_log: `Auto-split into ${subtasks.length} smaller subtasks`,
+      ai_log: reasoning,
       updated_at: new Date().toISOString(),
     })
     .eq('id', task.id);
 
-  console.log(`Auto-split "${task.title}" into ${subtasks.length} subtasks`);
+  console.log(`Intelligent split "${task.title}" into ${subtasks.length} subtasks`);
   return subtasks.length;
 }
 
-async function askAiToSplit(apiKey: string, task: { title: string; description: string | null; file_path: string }): Promise<SubtaskDef[]> {
+// ── Reactive Auto-Split (original, kept as fallback) ──
+
+export async function autoSplitTask(ctx: AuthContext, task: TaskInput): Promise<number> {
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!apiKey) return 0;
+
+  const prompt = `Split this oversized task into smaller subtasks.\n${SPLIT_RULES}\n\nTitle: ${task.title}\nFile: ${task.file_path}\nDescription: ${task.description || 'N/A'}`;
+  const subtasks = await callAiForSplit(apiKey, prompt);
+  if (!subtasks || subtasks.length === 0) return 0;
+
+  const inserts = subtasks.map((st, i) => ({
+    request_id: task.request_id,
+    title: st.title,
+    description: st.description,
+    file_path: st.file_path,
+    task_type: st.task_type,
+    source: 'auto-split',
+    decision: 'accepted',
+    implementation_status: 'pending',
+    sort_order: task.sort_order + i + 1,
+  }));
+
+  const { error } = await ctx.supabase.from('implementation_task_items').insert(inserts);
+  if (error) { console.error('Failed to insert subtasks:', error); return 0; }
+
+  await ctx.supabase
+    .from('implementation_task_items')
+    .update({ implementation_status: 'split', ai_log: `Auto-split into ${subtasks.length} subtasks`, updated_at: new Date().toISOString() })
+    .eq('id', task.id);
+
+  return subtasks.length;
+}
+
+// ── Shared AI Call ──
+
+async function callAiForSplit(apiKey: string, prompt: string): Promise<SubtaskDef[]> {
   try {
     const anthropic = new Anthropic({ apiKey });
     const res = await Promise.race([
       anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 2048,
-        system: SPLIT_PROMPT,
-        messages: [{ role: 'user', content: `Split this task:\nTitle: ${task.title}\nFile: ${task.file_path}\nDescription: ${task.description || 'N/A'}` }],
+        messages: [{ role: 'user', content: prompt }],
       }),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Split timeout')), 30000)),
+      new Promise<never>((_, rej) => setTimeout(() => rej(new Error('Split timeout')), 30000)),
     ]);
 
     const text = res.content.find((b: { type: string }) => b.type === 'text');
@@ -114,7 +229,7 @@ async function askAiToSplit(apiKey: string, task: { title: string; description: 
 
     return JSON.parse(jsonMatch[0]) as SubtaskDef[];
   } catch (err) {
-    console.error('Auto-split AI call failed:', err);
+    console.error('Split AI call failed:', err);
     return [];
   }
 }

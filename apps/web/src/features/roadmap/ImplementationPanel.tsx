@@ -14,6 +14,7 @@ import { ImplementationSummary } from './ImplementationSummary';
 import { AddTaskForm } from './AddTaskForm';
 import { WriteCodeFlow } from './WriteCodeFlow';
 import { PipelineStatusSection } from './PipelineStatusSection';
+import { ComplexityScorePanel } from './ComplexityScorePanel';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -172,15 +173,23 @@ export function ImplementationPanel({
           </h4>
           <div className="space-y-2">
             {impl.taskItems.map((item, i) => (
-              <ImplementationTaskCard
-                key={item.id}
-                item={item}
-                index={i}
-                onDecision={(itemId, data) => impl.updateTaskItem(itemId, data)}
-                onComment={(itemId, comment) => impl.updateTaskItem(itemId, { comment })}
-                isUpdating={impl.isUpdating}
-                isImplementing={impl.isImplementing}
-              />
+              <div key={item.id} className="space-y-1">
+                <ImplementationTaskCard
+                  item={item}
+                  index={i}
+                  onDecision={(itemId, data) => impl.updateTaskItem(itemId, data)}
+                  onComment={(itemId, comment) => impl.updateTaskItem(itemId, { comment })}
+                  isUpdating={impl.isUpdating}
+                  isImplementing={impl.isImplementing}
+                />
+                {item.complexity_score && (
+                  <ComplexityScorePanel
+                    score={item.complexity_score}
+                    taskItems={impl.taskItems}
+                    parentTaskId={item.id}
+                  />
+                )}
+              </div>
             ))}
           </div>
         </div>

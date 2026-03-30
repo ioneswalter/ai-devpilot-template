@@ -5,8 +5,9 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { generateCode, type SpecArtifacts } from '../implement-feature/ai-codegen.ts';
-import { autoSplitTask } from '../implement-feature/split-task.ts';
-import { appendLog, updateHeartbeat, getEdgeFunctionUrl } from './shared.ts';
+import { autoSplitTask, intelligentSplit } from '../implement-feature/split-task.ts';
+import { scoreTask } from '../implement-feature/complexity-scorer.ts';
+import { appendLog, updateHeartbeat, triggerNextTask, loadSpecArtifacts } from './shared.ts';
 import { runCICheck } from './ci-check.ts';
 
 interface NextParams {
@@ -90,19 +91,65 @@ export async function handleNext(params: NextParams): Promise<void> {
     const feature = implReq.feature;
     await appendLog(supabase, pipeline_id, 'info', `Processing: ${task.title}`, task.id);
 
-    // Mark task as generating
-    await supabase
-      .from('implementation_task_items')
-      .update({ implementation_status: 'generating', updated_at: new Date().toISOString() })
-      .eq('id', task.id);
-
-    // Fetch sibling file paths
+    // Fetch sibling file paths (needed for scoring + generation)
     const { data: allTasks } = await supabase
       .from('implementation_task_items')
       .select('file_path')
       .eq('request_id', request_id)
       .in('decision', ['accepted', 'modified']);
     const siblingPaths = (allTasks || []).map(t => t.file_path).filter(p => p !== task.file_path);
+
+    // FR-117: Pre-score complexity before code generation
+    const complexityScore = scoreTask({
+      title: task.title,
+      description: task.description,
+      file_path: task.file_path,
+      task_type: task.task_type,
+      siblingPaths,
+    });
+
+    // Save complexity score regardless of outcome
+    await supabase
+      .from('implementation_task_items')
+      .update({ complexity_score: complexityScore, updated_at: new Date().toISOString() })
+      .eq('id', task.id);
+
+    // If score exceeds threshold and task isn't already a split child, do intelligent split
+    const isAlreadySplitChild = task.source === 'auto-split';
+    if (complexityScore.split_recommended && !isAlreadySplitChild) {
+      await appendLog(supabase, pipeline_id, 'info',
+        `Complexity score ${complexityScore.total}/${complexityScore.threshold} — splitting`, task.id);
+
+      const authCtx = { user: { id: 'pipeline' }, admin: { id: 'pipeline', email: 'pipeline@system' }, supabase };
+      const splitCount = await intelligentSplit(authCtx, { ...task, request_id }, complexityScore);
+
+      if (splitCount > 0) {
+        const { count: newTotal } = await supabase
+          .from('implementation_task_items')
+          .select('id', { count: 'exact', head: true })
+          .eq('request_id', request_id)
+          .in('decision', ['accepted', 'modified']);
+
+        await supabase
+          .from('pipeline_runs')
+          .update({ total_tasks: newTotal ?? 0 })
+          .eq('id', pipeline_id);
+
+        await appendLog(supabase, pipeline_id, 'info',
+          `Intelligent split into ${splitCount} subtasks`, task.id);
+        triggerNextTask(pipeline_id, request_id);
+        return;
+      }
+      // If intelligent split fails, fall through to normal generation
+      await appendLog(supabase, pipeline_id, 'warn',
+        'Intelligent split failed — proceeding with generation', task.id);
+    }
+
+    // Mark task as generating
+    await supabase
+      .from('implementation_task_items')
+      .update({ implementation_status: 'generating', updated_at: new Date().toISOString() })
+      .eq('id', task.id);
 
     // Load SpecKit artifacts
     const artifacts = await loadSpecArtifacts(supabase, feature.id);
@@ -116,10 +163,9 @@ export async function handleNext(params: NextParams): Promise<void> {
       undefined, // No existing file content in server-side mode
     );
 
-    // Handle auto-split for oversized code
+    // Handle reactive auto-split for oversized code (fallback when scoring underestimates)
     const isConstitutionReject = !result?.code && result?.log?.includes('REJECTED');
-    const isAlreadySplit = task.source === 'auto-split';
-    if (isConstitutionReject && !isAlreadySplit) {
+    if (isConstitutionReject && !isAlreadySplitChild) {
       const authCtx = { user: { id: 'pipeline' }, admin: { id: 'pipeline', email: 'pipeline@system' }, supabase };
       const splitCount = await autoSplitTask(authCtx, { ...task, request_id });
       if (splitCount > 0) {
@@ -250,50 +296,3 @@ async function markPipelineFailed(
     .eq('id', pipelineId);
 }
 
-async function loadSpecArtifacts(
-  supabase: ReturnType<typeof createClient>,
-  featureId: string,
-): Promise<SpecArtifacts> {
-  const { data: rows } = await supabase
-    .from('feature_spec_artifacts')
-    .select('artifact_type, content')
-    .eq('feature_id', featureId);
-
-  if (!rows || rows.length === 0) return {};
-
-  const artifacts: SpecArtifacts = {};
-  const contracts: string[] = [];
-
-  for (const row of rows) {
-    switch (row.artifact_type) {
-      case 'plan': artifacts.plan = row.content; break;
-      case 'data_model': artifacts.data_model = row.content; break;
-      case 'spec': artifacts.spec = row.content; break;
-      case 'research': artifacts.research = row.content; break;
-      case 'contract': contracts.push(row.content); break;
-    }
-  }
-  if (contracts.length > 0) artifacts.contracts = contracts;
-  return artifacts;
-}
-
-function triggerNextTask(pipelineId: string, requestId: string, retryCount = 0): void {
-  const url = getEdgeFunctionUrl();
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${serviceKey}`,
-    },
-    body: JSON.stringify({
-      action: 'next',
-      pipeline_id: pipelineId,
-      request_id: requestId,
-      retry_count: retryCount,
-    }),
-  }).catch(err => {
-    console.error('Failed to trigger next task:', err);
-  });
-}
