@@ -51,9 +51,8 @@ export function PipelineDashboard() {
       )}
 
       {running.map((p) => {
-        const entry = p as Record<string, unknown>;
-        if (entry.pipeline_id && typeof entry.pipeline_id === 'string') {
-          return <ConflictReportPanel key={`cf-${entry.pipeline_id}`} pipelineId={entry.pipeline_id} />;
+        if (p.pipeline_id) {
+          return <ConflictReportPanel key={`cf-${p.pipeline_id}`} pipelineId={p.pipeline_id} />;
         }
         return null;
       })}

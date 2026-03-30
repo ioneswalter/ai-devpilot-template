@@ -48,7 +48,7 @@ export function ComplexityScorePanel({ score, taskItems, parentTaskId }: Complex
   const [expanded, setExpanded] = useState(false);
 
   const childTasks = taskItems?.filter(t =>
-    t.source === 'auto-split' && parentTaskId &&
+    (t.source as string) === 'auto-split' && parentTaskId &&
     t.sort_order > (taskItems.find(p => p.id === parentTaskId)?.sort_order ?? -1)
   ) ?? [];
 
