@@ -7,11 +7,18 @@ import { useState, useCallback, useEffect } from 'react';
 import { devpilotApi } from '@/lib/api-client';
 import type { ConversationMessage, MessageMetadata } from '../types';
 
-function formatModelLabel(modelId: string): string {
-  if (modelId.includes('opus')) return 'Opus';
-  if (modelId.includes('sonnet')) return 'Sonnet';
-  if (modelId.includes('haiku')) return 'Haiku';
-  return modelId;
+/** Approximate cost per message (1K input + 2K output tokens) by model tier */
+const MODEL_INFO: Record<string, { label: string; costPerMsg: string }> = {
+  opus:   { label: 'Opus',   costPerMsg: '~$0.17' },
+  sonnet: { label: 'Sonnet', costPerMsg: '~$0.03' },
+  haiku:  { label: 'Haiku',  costPerMsg: '~$0.005' },
+};
+
+function getModelInfo(modelId: string): { label: string; costPerMsg: string } {
+  for (const [key, info] of Object.entries(MODEL_INFO)) {
+    if (modelId.includes(key)) return info;
+  }
+  return { label: modelId, costPerMsg: '' };
 }
 
 interface UseIdeationChatOptions {
@@ -27,11 +34,16 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modelLabel, setModelLabel] = useState<string | null>(null);
+  const [modelCostPerMsg, setModelCostPerMsg] = useState<string | null>(null);
 
   // Fetch current model on mount so the label shows immediately
   useEffect(() => {
     devpilotApi.getChatModel()
-      .then((res) => setModelLabel(formatModelLabel(res.data.model)))
+      .then((res) => {
+        const info = getModelInfo(res.data.model);
+        setModelLabel(info.label);
+        setModelCostPerMsg(info.costPerMsg);
+      })
       .catch(() => { /* silent — label just won't show */ });
   }, []);
 
@@ -78,7 +90,11 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
       try {
         const response = await devpilotApi.sendMessage(convId, message);
         const { user_message, assistant_message, model } = response.data;
-        if (model) setModelLabel(formatModelLabel(model));
+        if (model) {
+          const info = getModelInfo(model);
+          setModelLabel(info.label);
+          setModelCostPerMsg(info.costPerMsg);
+        }
 
         setMessages((prev) => {
           // Replace temp user message with real one, add assistant message
@@ -148,5 +164,6 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
     latestProposal,
     latestProposals,
     modelLabel,
+    modelCostPerMsg,
   };
 }
