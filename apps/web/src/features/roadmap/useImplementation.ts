@@ -9,6 +9,7 @@ import type {
   ImplementationRequestWithItems,
   ImplementationTaskItem,
   CIResults,
+  DeployResults,
   PipelineRun,
   PipelineRunStatus,
 } from '@/lib/api/admin-api';
@@ -113,6 +114,19 @@ export function useImplementation(featureId: string | null) {
     },
   });
 
+  // ── Redeploy (FR-115) ──
+  const redeployMutation = useMutation({
+    mutationFn: async () => {
+      const pipelineId = pipelineQuery.data?.active?.id ?? pipelineQuery.data?.history?.[0]?.id;
+      if (!pipelineId) throw new Error('No pipeline to redeploy');
+      return adminApi.redeploy(pipelineId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...PIPELINE_KEY, featureId] });
+      queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
+    },
+  });
+
   const updateItemMutation = useMutation({
     mutationFn: (data: { item_id: string; decision?: string; title?: string; description?: string; comment?: string }) =>
       adminApi.updateTaskItem(data),
@@ -157,6 +171,8 @@ export function useImplementation(featureId: string | null) {
   const pipelineCurrentTask = pipelineQuery.data?.current_task ?? null;
   const ciResults: CIResults | null = activePipeline?.ci_results ?? pipelineQuery.data?.history?.[0]?.ci_results ?? null;
   const isCIRunning = activePipeline?.current_stage === 'build_check';
+  const deployResults: DeployResults | null = activePipeline?.deploy_results ?? pipelineQuery.data?.history?.[0]?.deploy_results ?? null;
+  const isDeploying = activePipeline?.current_stage === 'deploying';
 
   return {
     request: implQuery.data ?? null,
@@ -204,6 +220,12 @@ export function useImplementation(featureId: string | null) {
     isCIRunning,
     isRerunningCI: rerunCIMutation.isPending,
     rerunCI: () => rerunCIMutation.mutateAsync(),
+
+    // FR-115: Deploy results and redeploy
+    deployResults,
+    isDeploying,
+    isRedeploying: redeployMutation.isPending,
+    redeploy: () => redeployMutation.mutateAsync(),
 
     // Legacy: kept for compatibility but now triggers server-side pipeline
     implementError: startPipelineMutation.error,

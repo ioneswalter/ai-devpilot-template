@@ -15,6 +15,7 @@ import { handleCancel } from './cancel.ts';
 import { handleStatus } from './status.ts';
 import { handleHealthCheck } from './health-check.ts';
 import { runCICheck } from './ci-check.ts';
+import { runDeploy } from './deploy.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -132,6 +133,27 @@ Deno.serve(async (req) => {
           // Fire and forget CI check
           runCICheck(pid, pRun.request_id).catch(err => console.error('rerun-ci error:', err));
           return jsonResponse({ data: { pipeline_id: pid, status: 'running', stage: 'build_check' } });
+        }
+
+        case 'redeploy': {
+          const dpid = body.pipeline_id as string;
+          if (!dpid) return errorResponse('VALIDATION_ERROR', 'pipeline_id is required', 400);
+          const { data: dRun } = await supabase
+            .from('pipeline_runs')
+            .select('request_id, status')
+            .eq('id', dpid)
+            .single();
+          if (!dRun) return errorResponse('NOT_FOUND', 'Pipeline not found', 404);
+          if (dRun.status === 'running') return errorResponse('CONFLICT', 'Pipeline is still running', 409);
+          await supabase.from('pipeline_runs').update({
+            status: 'running',
+            current_stage: 'deploying',
+            deploy_results: null,
+            completed_at: null,
+            last_heartbeat: new Date().toISOString(),
+          }).eq('id', dpid);
+          runDeploy(dpid, dRun.request_id).catch(err => console.error('redeploy error:', err));
+          return jsonResponse({ data: { pipeline_id: dpid, status: 'running', stage: 'deploying' } });
         }
 
         case 'health-check':

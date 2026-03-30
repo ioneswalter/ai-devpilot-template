@@ -7,6 +7,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { appendLog } from './shared.ts';
+import { runDeploy } from './deploy.ts';
 
 const MAX_FIX_ATTEMPTS = 3;
 const AI_MODEL = 'claude-sonnet-4-20250514';
@@ -373,32 +374,48 @@ async function completePipeline(
   requestId: string,
   allPassed: boolean | null,
 ): Promise<void> {
-  const finalStage = allPassed === null ? 'idle' : allPassed ? 'build_passed' : 'build_failed';
-  const status = allPassed === false ? 'completed' : 'completed'; // Pipeline completes either way
-
-  await supabase
-    .from('pipeline_runs')
-    .update({
-      status,
+  // CI failed or skipped — complete without deployment
+  if (allPassed !== true) {
+    const finalStage = allPassed === null ? 'idle' : 'build_failed';
+    await supabase.from('pipeline_runs').update({
+      status: 'completed',
       current_stage: finalStage,
       current_task_id: null,
       completed_at: new Date().toISOString(),
-    })
-    .eq('id', pipelineId);
+    }).eq('id', pipelineId);
 
-  await supabase
-    .from('implementation_requests')
-    .update({
-      status: allPassed !== false ? 'implemented' : 'completed',
+    await supabase.from('implementation_requests').update({
+      status: 'completed',
       updated_at: new Date().toISOString(),
-    })
-    .eq('id', requestId);
+    }).eq('id', requestId);
 
-  const msg = allPassed === null
-    ? 'Pipeline completed (CI skipped)'
-    : allPassed
-      ? 'Pipeline completed — all CI checks passed'
-      : 'Pipeline completed — some CI checks failed';
+    const msg = allPassed === null ? 'Pipeline completed (CI skipped)' : 'Pipeline completed — some CI checks failed';
+    await appendLog(supabase, pipelineId, allPassed === null ? 'info' : 'warn', msg);
+    return;
+  }
 
-  await appendLog(supabase, pipelineId, allPassed === false ? 'warn' : 'info', msg);
+  // CI passed — transition to autonomous deployment (FR-115)
+  await supabase.from('pipeline_runs').update({
+    current_stage: 'build_passed',
+    last_heartbeat: new Date().toISOString(),
+  }).eq('id', pipelineId);
+
+  await appendLog(supabase, pipelineId, 'info', 'CI passed — starting autonomous deployment');
+
+  try {
+    await runDeploy(pipelineId, requestId);
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown deploy error';
+    await appendLog(supabase, pipelineId, 'error', `Deployment crashed: ${msg}`);
+    await supabase.from('pipeline_runs').update({
+      status: 'completed',
+      current_stage: 'deploy_failed',
+      current_task_id: null,
+      completed_at: new Date().toISOString(),
+    }).eq('id', pipelineId);
+    await supabase.from('implementation_requests').update({
+      status: 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('id', requestId);
+  }
 }

@@ -13,7 +13,7 @@ import { ImplementationFooter } from './ImplementationFooter';
 import { ImplementationSummary } from './ImplementationSummary';
 import { AddTaskForm } from './AddTaskForm';
 import { WriteCodeFlow } from './WriteCodeFlow';
-import { CIResultsPanel } from './CIResultsPanel';
+import { PipelineStatusSection } from './PipelineStatusSection';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -213,67 +213,23 @@ export function ImplementationPanel({
           </div>
         )}
 
-        {/* Pipeline progress (FR-113) */}
-        {impl.isPipelineRunning && impl.pipelineProgress && (
-          <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-indigo-800 uppercase tracking-wider">
-                Server Pipeline Running
-              </h4>
-              <button
-                onClick={() => impl.cancelPipeline().catch(() => {})}
-                disabled={impl.isCancellingPipeline}
-                className="px-2 py-1 text-xs text-red-600 border border-red-200 rounded hover:bg-red-50 disabled:opacity-50"
-              >
-                {impl.isCancellingPipeline ? 'Cancelling...' : 'Cancel'}
-              </button>
-            </div>
-            <div className="w-full bg-indigo-200 rounded-full h-2">
-              <div
-                className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(5, (impl.pipelineProgress.completed / impl.pipelineProgress.total) * 100)}%` }}
-              />
-            </div>
-            <div className="flex items-center gap-3 text-xs text-indigo-700">
-              <span>{impl.pipelineProgress.completed}/{impl.pipelineProgress.total} tasks</span>
-              {impl.pipelineProgress.failed > 0 && (
-                <span className="text-red-600">{impl.pipelineProgress.failed} failed</span>
-              )}
-              {impl.pipelineCurrentTask && (
-                <span className="text-indigo-500 truncate">Current: {impl.pipelineCurrentTask.title}</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* CI validation in progress (FR-114) */}
-        {impl.isCIRunning && (
-          <div className="bg-violet-50 border border-violet-100 rounded-lg p-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
-              <h4 className="text-xs font-semibold text-violet-800 uppercase tracking-wider">
-                CI Validation Running
-              </h4>
-            </div>
-            <p className="text-xs text-violet-600">TypeScript, ESLint, and test validation in progress...</p>
-          </div>
-        )}
-
-        {/* CI results display (FR-114) */}
-        {impl.ciResults && !impl.isCIRunning && (
-          <CIResultsPanel ciResults={impl.ciResults} onRerun={impl.rerunCI} isRerunning={impl.isRerunningCI} />
-        )}
-
-        {/* Pipeline completed/failed status */}
-        {impl.pipeline && impl.pipeline.status !== 'running' && impl.pipeline.status !== 'completed' && (
-          <div className={`border rounded-lg p-3 text-xs ${
-            impl.pipeline.status === 'cancelled' ? 'bg-amber-50 border-amber-200 text-amber-800' :
-            impl.pipeline.status === 'failed' ? 'bg-red-50 border-red-200 text-red-800' :
-            'bg-gray-50 border-gray-200 text-gray-700'
-          }`}>
-            Pipeline {impl.pipeline.status}{impl.pipeline.error_message ? `: ${impl.pipeline.error_message}` : ''}
-          </div>
-        )}
+        {/* Pipeline progress, CI, and deploy status (FR-113/114/115) */}
+        <PipelineStatusSection
+          isPipelineRunning={impl.isPipelineRunning}
+          pipelineProgress={impl.pipelineProgress}
+          pipelineCurrentTask={impl.pipelineCurrentTask}
+          isCancellingPipeline={impl.isCancellingPipeline}
+          onCancelPipeline={() => impl.cancelPipeline().catch(() => {})}
+          isCIRunning={impl.isCIRunning}
+          ciResults={impl.ciResults}
+          onRerunCI={impl.rerunCI}
+          isRerunningCI={impl.isRerunningCI}
+          isDeploying={impl.isDeploying}
+          deployResults={impl.deployResults}
+          onRedeploy={impl.redeploy}
+          isRedeploying={impl.isRedeploying}
+          pipeline={impl.pipeline}
+        />
 
         {showLog && (
           <ImplementationLog
