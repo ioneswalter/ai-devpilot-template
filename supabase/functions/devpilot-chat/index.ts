@@ -15,7 +15,12 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const AI_MODEL = 'claude-opus-4-1-20250805';
+const DEFAULT_MODEL = 'claude-opus-4-1-20250805';
+const ALLOWED_MODELS: Record<string, string> = {
+  'claude-opus-4-1-20250805': 'Opus',
+  'claude-sonnet-4-5-20250514': 'Sonnet',
+  'claude-haiku-4-5-20251001': 'Haiku',
+};
 
 function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -31,6 +36,7 @@ function errorResponse(code: string, message: string, status: number) {
 const requestSchema = z.object({
   conversation_id: z.string().min(1, 'Conversation ID required'),
   message: z.string().min(1, 'Message is required').max(10000, 'Message too long'),
+  model: z.string().optional(),
 });
 
 import { buildSystemPrompt } from '../_shared/devpilot-prompt.ts';
@@ -68,9 +74,10 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // GET returns the current model — used by frontend to show label on load
+  // GET returns the default model and available models list
   if (req.method === 'GET') {
-    return jsonResponse({ data: { model: AI_MODEL } });
+    const models = Object.entries(ALLOWED_MODELS).map(([id, label]) => ({ id, label }));
+    return jsonResponse({ data: { model: DEFAULT_MODEL, available_models: models } });
   }
 
   if (req.method !== 'POST') {
@@ -105,6 +112,8 @@ Deno.serve(async (req) => {
       return errorResponse('VALIDATION_ERROR', validation.error.errors[0].message, 400);
     }
     const { conversation_id, message } = validation.data;
+    const selectedModel = (validation.data.model && validation.data.model in ALLOWED_MODELS)
+      ? validation.data.model : DEFAULT_MODEL;
 
     // Verify conversation access
     const { data: conv, error: convErr } = await supabase
@@ -183,7 +192,7 @@ Deno.serve(async (req) => {
     let aiContent: string;
     try {
       const response = await anthropic.messages.create({
-        model: AI_MODEL,
+        model: selectedModel,
         max_tokens: 16384,
         system: systemPrompt,
         messages,
@@ -197,7 +206,7 @@ Deno.serve(async (req) => {
       const convFeature = conv as Record<string, unknown>;
       logAIUsage(supabase, {
         featureId: (convFeature.submitted_feature_id as string) ?? conversation_id,
-        adminId: user.id, modelId: AI_MODEL, operationType: 'ideation',
+        adminId: user.id, modelId: selectedModel, operationType: 'ideation',
         inputTokens: response.usage?.input_tokens ?? 0, outputTokens: response.usage?.output_tokens ?? 0,
       }).catch(() => {});
     } catch (aiError) {
@@ -249,7 +258,7 @@ Deno.serve(async (req) => {
       data: {
         user_message: userMsg,
         assistant_message: assistantMsg,
-        model: AI_MODEL,
+        model: selectedModel,
       },
     });
   } catch (error) {

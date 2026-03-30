@@ -33,18 +33,26 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [modelLabel, setModelLabel] = useState<string | null>(null);
   const [modelCostPerMsg, setModelCostPerMsg] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<Array<{ id: string; label: string; costPerMsg: string }>>([]);
 
-  // Fetch current model on mount so the label shows immediately
+  // Fetch available models on mount
   useEffect(() => {
     devpilotApi.getChatModel()
       .then((res) => {
-        const info = getModelInfo(res.data.model);
-        setModelLabel(info.label);
-        setModelCostPerMsg(info.costPerMsg);
+        const defaultInfo = getModelInfo(res.data.model);
+        setSelectedModelId(res.data.model);
+        setModelLabel(defaultInfo.label);
+        setModelCostPerMsg(defaultInfo.costPerMsg);
+        if (res.data.available_models) {
+          setAvailableModels(res.data.available_models.map(m => ({
+            ...m, costPerMsg: getModelInfo(m.id).costPerMsg,
+          })));
+        }
       })
-      .catch(() => { /* silent — label just won't show */ });
+      .catch(() => { /* silent */ });
   }, []);
 
   const loadMessages = useCallback(async (convId: string) => {
@@ -88,7 +96,7 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
       setMessages((prev) => [...prev, tempUserMsg]);
 
       try {
-        const response = await devpilotApi.sendMessage(convId, message);
+        const response = await devpilotApi.sendMessage(convId, message, selectedModelId ?? undefined);
         const { user_message, assistant_message, model } = response.data;
         if (model) {
           const info = getModelInfo(model);
@@ -125,7 +133,7 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
         setIsLoading(false);
       }
     },
-    [effectiveConvId, conversationId, isLoading]
+    [effectiveConvId, conversationId, isLoading, selectedModelId]
   );
 
   // Extract latest proposals from messages (supports both single and multi-proposal format)
@@ -149,6 +157,13 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
   // Backwards-compatible: latestProposal returns first proposal
   const latestProposal = latestProposals?.[0] ?? null;
 
+  const selectModel = useCallback((modelId: string) => {
+    setSelectedModelId(modelId);
+    const info = getModelInfo(modelId);
+    setModelLabel(info.label);
+    setModelCostPerMsg(info.costPerMsg);
+  }, []);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setOverrideConvId(null);
@@ -165,5 +180,8 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
     latestProposals,
     modelLabel,
     modelCostPerMsg,
+    availableModels,
+    selectedModelId,
+    selectModel,
   };
 }
