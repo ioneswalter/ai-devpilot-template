@@ -29,8 +29,6 @@ export function ReviewApprovalBar({
 }: ReviewApprovalBarProps) {
   const [showSendBack, setShowSendBack] = useState(false);
   const [feedback, setFeedback] = useState('');
-  const [showConfirm, setShowConfirm] = useState(false);
-
   const canApprove = isReviewActive && acceptedCount > 0 && pendingCount === 0;
   const totalDecided = acceptedCount + rejectedCount;
 
@@ -72,32 +70,6 @@ export function ReviewApprovalBar({
     );
   }
 
-  if (showConfirm) {
-    return (
-      <div className="border-t bg-white p-4">
-        <h4 className="text-sm font-medium text-gray-900 mb-1">Confirm Approval</h4>
-        <p className="text-xs text-gray-500 mb-3">
-          This will add {acceptedCount} item{acceptedCount !== 1 ? 's' : ''} to the feature spec and change its status to <strong>approved</strong>.
-        </p>
-        <div className="flex gap-2">
-          <button
-            onClick={() => { onApprove(); setShowConfirm(false); }}
-            disabled={isApproving}
-            className="px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-          >
-            {isApproving ? 'Approving...' : 'Confirm Approve'}
-          </button>
-          <button
-            onClick={() => setShowConfirm(false)}
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="border-t bg-white p-3 flex items-center gap-3">
       {/* Stats */}
@@ -124,12 +96,12 @@ export function ReviewApprovalBar({
             Send Back
           </button>
           <button
-            onClick={() => setShowConfirm(true)}
-            disabled={!canApprove}
+            onClick={onApprove}
+            disabled={!canApprove || isApproving}
             className="px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title={pendingCount > 0 ? `${pendingCount} items still pending` : undefined}
           >
-            Approve
+            {isApproving ? 'Approving...' : 'Approve'}
           </button>
         </div>
       )}

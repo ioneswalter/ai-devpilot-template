@@ -15,6 +15,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const AI_MODEL = 'claude-opus-4-1-20250805';
+
 function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -64,8 +66,13 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
+  // GET returns the current model — used by frontend to show label on load
+  if (req.method === 'GET') {
+    return jsonResponse({ data: { model: AI_MODEL } });
+  }
+
   if (req.method !== 'POST') {
-    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST requests allowed', 405);
+    return errorResponse('METHOD_NOT_ALLOWED', 'Only POST and GET requests allowed', 405);
   }
 
   try {
@@ -176,8 +183,8 @@ Deno.serve(async (req) => {
     let aiContent: string;
     try {
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2048,
+        model: AI_MODEL,
+        max_tokens: 16384,
         system: systemPrompt,
         messages,
       });
@@ -234,6 +241,7 @@ Deno.serve(async (req) => {
       data: {
         user_message: userMsg,
         assistant_message: assistantMsg,
+        model: AI_MODEL,
       },
     });
   } catch (error) {

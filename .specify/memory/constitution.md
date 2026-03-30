@@ -1,23 +1,26 @@
 <!--
   SYNC IMPACT REPORT
   ==================
-  Version Change: 2.1.0 → 2.2.0
-  Rationale: MINOR version bump - Added Deployment & Hosting subsection to
-             Technology Stack. Prevents context loss about infrastructure decisions
-             (DigitalOcean App Platform, not Vercel/Netlify).
+  Version Change: 2.2.0 → 2.3.0
+  Rationale: MINOR version bump - Added Principle X: AI-Driven Implementation
+             Pipeline (FR-105). Establishes autonomous feature delivery as a
+             foundational pillar of AI DevPilot, integrating with SpecKit
+             (constitution, spec, roadmap) for seamless end-to-end implementation.
 
   Key Additions:
-  - New "Deployment & Hosting" subsection under Technology Stack
-  - Explicitly documents: DigitalOcean App Platform, Static Site deployment,
-    SYD1 region, Supabase-hosted backend
-  - Prevents AI assistants from suggesting alternative hosting platforms
+  - New Principle X: AI-Driven Implementation Pipeline
+  - Covers: SpecKit integration, CI pipeline stages, auto-migration,
+    auto-deploy, context-aware codegen, task splitting
+  - Establishes FR-105 as foundational to AI DevPilot's SDLC vision
 
   Templates Requiring Updates:
-  - CLAUDE.md - Add Deployment & Hosting info to Technology Stack section
+  - CLAUDE.md - Add AI-Driven Implementation Pipeline principle summary
 
-  Date: 2026-03-04
+  Date: 2026-03-30
 
   Previous Version History:
+  - 2.1.0 → 2.2.0 (2026-03-04): Added Deployment & Hosting subsection to
+    Technology Stack.
   - 2.0.0 → 2.1.0 (2026-03-02): Split Security from Performance, elevate Security
     to NON-NEGOTIABLE. Driven by FR-062 RLS audit.
   - 1.0.0 → 2.0.0 (2025-11-04): Complete architecture redesign from Rails to TypeScript/React
@@ -306,6 +309,44 @@ migrations being written — verification must be automated and continuous.
 
 **Rationale**: Performance directly impacts user experience and business metrics.
 
+### X. AI-Driven Implementation Pipeline (FR-105 — Foundational Pillar)
+
+**MUST** deliver autonomous, end-to-end feature implementation from specification to production:
+
+The AI-Driven Implementation Pipeline is the engine that powers AI DevPilot. It bridges Business, Analysis, and Engineering by consuming SpecKit artifacts (constitution, spec, plan, tasks, roadmap) and autonomously producing production-ready code — verified, deployed, and validated.
+
+- **SpecKit Integration** (the pipeline's brain):
+  - **Constitution-aware**: Generated code MUST comply with all constitution principles; the pipeline reads and enforces them automatically
+  - **Spec-aware**: Implementation reads `spec.md` to understand user journeys, acceptance criteria, and business intent — not just task descriptions
+  - **Plan-aware**: Generated code follows the technical approach, data models, and API contracts defined in `plan.md` and `contracts/`
+  - **Roadmap-aware**: Pipeline checks existing features on the roadmap to avoid duplication, leverage existing components, and maintain consistency
+  - **Context-aware codegen**: AI MUST read existing file contents before generating code — modify, never blindly replace
+- **CI Pipeline Stages** (quality gates within Write Code):
+  - Stage 1: **TypeScript** compilation (`tsc --noEmit`) — zero type errors
+  - Stage 2: **ESLint** — zero lint errors on written files
+  - Stage 3: **Vitest** — all tests pass on affected files
+  - Each stage supports **AI auto-fix**: on failure, errors are sent back to AI with stage-specific fix prompts
+  - Pipeline MUST complete all 3 stages before code is accepted
+- **Autonomous Deployment** (post-CI):
+  - Database migrations auto-applied after CI passes (not left as manual steps)
+  - Edge Functions auto-deployed after CI passes
+  - Rollback capability: if deployment fails, revert to pre-implementation state
+- **Intelligent Task Management**:
+  - Tasks auto-split when they exceed complexity thresholds (lines of code, number of files)
+  - Dependency ordering respected — parallel tasks executed concurrently where safe
+  - File-level context provided to each task (existing content, imports, exports)
+- **Dev Release on Build Complete**:
+  - When a feature reaches Build — Completed, it MUST be released in Dev (localhost) automatically
+  - The Product Team must be able to test functionality and technical aspects immediately — no manual setup steps
+  - Dev release includes: migrations applied locally, Edge Functions running, feature accessible in the UI
+  - Feature status on the roadmap updated to reflect "Available for Testing in Dev"
+- **Observability & Feedback Loop**:
+  - Every implementation attempt logged (task ID, files written, CI results, fix attempts)
+  - Failed implementations inform future codegen (learning from errors)
+  - Pipeline progress visible in real-time via the DevPilot UI
+
+**Rationale**: AI DevPilot's value proposition is simplifying the SDLC so that Business, Analysis, and Engineering collaborate seamlessly. The implementation pipeline is the mechanism that delivers this promise. Without autonomous, SpecKit-integrated implementation, every feature requires manual developer intervention — defeating the purpose of AI-driven development. FR-105 is foundational because every other feature (FR-108 testing, FR-109 validation, FR-111 review, FR-112 usage tracking) depends on a reliable implementation pipeline to deliver their code.
+
 ## Technology Stack
 
 **MUST** use these technologies unless specific feature requirements demand
@@ -590,4 +631,4 @@ Tracking** section of `plan.md`:
   choices
 - Component storybook (if implemented) for UI component documentation
 
-**Version**: 2.2.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-03-04
+**Version**: 2.3.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-03-30

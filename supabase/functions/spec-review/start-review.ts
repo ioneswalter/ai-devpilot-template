@@ -114,7 +114,7 @@ export async function handleStartReview(
   );
 
   if (enrichment) {
-    aiEnrichment = { raw_response: enrichment.raw_response };
+    aiEnrichment = { raw_response: enrichment.raw_response, model: enrichment.model };
     const startOrder = originalItems.length;
     aiItems = enrichment.items.map((item, index) => ({
       id: crypto.randomUUID(),
@@ -172,6 +172,7 @@ export async function handleStartReview(
         status: 'in_review',
         version: 1,
         created_at: now,
+        ai_model: enrichment?.model ?? null,
       },
       items: allItems,
     },

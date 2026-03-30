@@ -12,14 +12,23 @@ interface TaskLogItem {
   ai_log?: string | null;
 }
 
+interface PipelineLogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  task_id?: string;
+}
+
 interface ImplementationLogProps {
   taskItems: TaskLogItem[];
   isImplementing: boolean;
+  pipelineLogs?: PipelineLogEntry[];
 }
 
 export const ImplementationLog = forwardRef<HTMLDivElement, ImplementationLogProps>(
-  function ImplementationLog({ taskItems, isImplementing }, ref) {
+  function ImplementationLog({ taskItems, isImplementing, pipelineLogs }, ref) {
     const visibleTasks = taskItems.filter(t => t.implementation_status !== 'pending');
+    const hasPipelineLogs = pipelineLogs && pipelineLogs.length > 0;
 
     return (
       <div ref={ref} className="bg-gray-900 rounded-lg p-3 font-mono text-xs overflow-hidden">
@@ -27,9 +36,24 @@ export const ImplementationLog = forwardRef<HTMLDivElement, ImplementationLogPro
           <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
-          <span className="uppercase tracking-wider font-semibold">Implementation Log</span>
+          <span className="uppercase tracking-wider font-semibold">
+            {hasPipelineLogs ? 'Pipeline Log' : 'Implementation Log'}
+          </span>
         </div>
-        {visibleTasks.map((t) => (
+
+        {/* Pipeline logs from server (FR-113) */}
+        {hasPipelineLogs && pipelineLogs.map((log, i) => (
+          <div key={i} className="flex items-start gap-2 py-0.5 min-w-0">
+            <LogLevelIcon level={log.level} />
+            <div className={`min-w-0 ${logLevelClass(log.level)}`}>
+              <span className="text-gray-500">{formatTime(log.timestamp)}</span>
+              <span className="ml-2">{log.message}</span>
+            </div>
+          </div>
+        ))}
+
+        {/* Task-level status (fallback for non-pipeline mode) */}
+        {!hasPipelineLogs && visibleTasks.map((t) => (
           <div key={t.id} className="flex items-start gap-2 py-0.5 min-w-0">
             <TaskStatusIcon status={t.implementation_status} />
             <div className={`${statusTextClass(t.implementation_status)} min-w-0`}>
@@ -72,4 +96,24 @@ function statusTextClass(status: string): string {
   if (status === 'completed') return 'text-green-300';
   if (status === 'split') return 'text-blue-300';
   return 'text-red-300';
+}
+
+function LogLevelIcon({ level }: { level: string }) {
+  if (level === 'error') return <span className="text-red-400 flex-shrink-0">!</span>;
+  if (level === 'warn') return <span className="text-yellow-400 flex-shrink-0">~</span>;
+  return <span className="text-green-400 flex-shrink-0">&gt;</span>;
+}
+
+function logLevelClass(level: string): string {
+  if (level === 'error') return 'text-red-300';
+  if (level === 'warn') return 'text-yellow-300';
+  return 'text-green-300';
+}
+
+function formatTime(timestamp: string): string {
+  try {
+    return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch {
+    return '';
+  }
 }

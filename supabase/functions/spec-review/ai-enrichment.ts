@@ -13,7 +13,10 @@ export interface EnrichmentItem {
 export interface EnrichmentResult {
   items: EnrichmentItem[];
   raw_response: string;
+  model: string;
 }
+
+const AI_MODEL = 'claude-opus-4-1-20250805';
 
 const ENRICHMENT_PROMPT = `You are a senior product analyst reviewing a proposed feature specification.
 Analyze the feature and generate structured enrichment suggestions.
@@ -66,7 +69,7 @@ Generate enrichment suggestions for this feature.`;
 
     const response = await Promise.race([
       anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: AI_MODEL,
         max_tokens: 4096,
         system: ENRICHMENT_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
@@ -119,7 +122,7 @@ function parseEnrichmentResponse(rawText: string): EnrichmentResult | null {
       .filter(s => validTypes.includes(s.item_type) && s.content?.trim())
       .map(s => ({ item_type: s.item_type, content: s.content.trim() }));
 
-    return { items, raw_response: rawText };
+    return { items, raw_response: rawText, model: AI_MODEL };
   } catch (error) {
     console.error('Failed to parse AI enrichment response:', error);
     return null;

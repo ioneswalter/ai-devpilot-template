@@ -1,20 +1,24 @@
 /**
  * useImplementation - TanStack Query hook for FR-105 implementation workflow.
- * Drives task-by-task code generation: each call processes ONE task, then
- * the frontend triggers the next until all are done.
+ * FR-113: Now uses server-side pipeline orchestration instead of browser loop.
  */
 
-import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
-import type { ImplementationRequestWithItems, ImplementationTaskItem } from '@/lib/api/admin-api';
+import type {
+  ImplementationRequestWithItems,
+  ImplementationTaskItem,
+  PipelineRun,
+  PipelineRunStatus,
+} from '@/lib/api/admin-api';
 
 const IMPL_KEY = ['implementation-request'];
+const PIPELINE_KEY = ['pipeline-run'];
 
 export function useImplementation(featureId: string | null) {
   const queryClient = useQueryClient();
-  const abortRef = useRef(false);
 
+  // ── Implementation request + tasks ──
   const implQuery = useQuery({
     queryKey: [...IMPL_KEY, featureId],
     queryFn: async (): Promise<ImplementationRequestWithItems | null> => {
@@ -30,10 +34,31 @@ export function useImplementation(featureId: string | null) {
       }
     },
     staleTime: 5_000,
-    // Poll every 3s while implementation is running
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data && data.status === 'implementing') return 3000;
+      return false;
+    },
+    retry: false,
+    enabled: !!featureId,
+  });
+
+  // ── Pipeline status polling (FR-113) ──
+  const pipelineQuery = useQuery({
+    queryKey: [...PIPELINE_KEY, featureId],
+    queryFn: async (): Promise<PipelineRunStatus | null> => {
+      if (!featureId) return null;
+      try {
+        const res = await adminApi.getPipelineRunStatus(featureId);
+        return res.data;
+      } catch {
+        return null;
+      }
+    },
+    staleTime: 2_000,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.active?.status === 'running') return 3000;
       return false;
     },
     retry: false,
@@ -49,75 +74,35 @@ export function useImplementation(featureId: string | null) {
     },
   });
 
-  /**
-   * Implementation loop: calls implement-next repeatedly, one task at a time.
-   * Reads existing file contents first so AI can modify rather than replace.
-   */
-  const implementMutation = useMutation({
+  // ── Server-side pipeline start (FR-113) ──
+  const startPipelineMutation = useMutation({
     mutationFn: async () => {
       const requestId = implQuery.data!.id;
-      abortRef.current = false;
-
-      // Read existing files for accepted tasks so AI generates compatible code
-      const fileContexts = await readExistingFileContexts(implQuery.data!.task_items);
-
-      // Loop: process one task per iteration
-      let consecutiveErrors = 0;
-      while (!abortRef.current) {
-        try {
-          const res = await adminApi.implementNextTask(requestId, fileContexts);
-          consecutiveErrors = 0;
-
-          // Refetch to update UI with latest task statuses
-          await queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
-
-          if (res.data.done) {
-            break;
-          }
-        } catch (err) {
-          consecutiveErrors++;
-          console.error('Implementation task error:', err);
-          // Refetch so UI shows current state
-          await queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
-          // Stop after 3 consecutive errors to avoid infinite loop
-          if (consecutiveErrors >= 3) {
-            throw err;
-          }
-        }
-      }
+      return adminApi.startPipeline(featureId!, requestId);
     },
-    onMutate: () => {
-      // Optimistically set status to 'implementing' so polling starts
-      queryClient.setQueryData([...IMPL_KEY, featureId], (old: ImplementationRequestWithItems | null) => {
-        if (!old) return old;
-        return { ...old, status: 'implementing' };
-      });
-    },
-    onSettled: () => {
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...PIPELINE_KEY, featureId] });
       queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
     },
   });
 
-  // Auto-resume: if the backend says 'implementing' but our loop isn't running
-  // (e.g. panel was closed and reopened), restart the loop automatically.
-  const hasAutoResumed = useRef(false);
-  useEffect(() => {
-    const data = implQuery.data;
-    if (
-      data?.status === 'implementing' &&
-      !implementMutation.isPending &&
-      !hasAutoResumed.current
-    ) {
-      hasAutoResumed.current = true;
-      implementMutation.mutate();
-    }
-  }, [implQuery.data?.status]);
+  // ── Cancel pipeline (FR-113) ──
+  const cancelPipelineMutation = useMutation({
+    mutationFn: async () => {
+      const pipelineId = pipelineQuery.data?.active?.id;
+      if (!pipelineId) throw new Error('No active pipeline to cancel');
+      return adminApi.cancelPipeline(pipelineId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...PIPELINE_KEY, featureId] });
+      queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
+    },
+  });
 
   const updateItemMutation = useMutation({
     mutationFn: (data: { item_id: string; decision?: string; title?: string; description?: string; comment?: string }) =>
       adminApi.updateTaskItem(data),
     onMutate: async (data) => {
-      // Cancel in-flight refetches so they don't overwrite optimistic update
       await queryClient.cancelQueries({ queryKey: [...IMPL_KEY, featureId] });
       const previous = queryClient.getQueryData<ImplementationRequestWithItems>([...IMPL_KEY, featureId]);
       if (previous) {
@@ -131,7 +116,6 @@ export function useImplementation(featureId: string | null) {
       return { previous };
     },
     onError: (_err, _data, context) => {
-      // Rollback on error
       if (context?.previous) {
         queryClient.setQueryData([...IMPL_KEY, featureId], context.previous);
       }
@@ -150,11 +134,13 @@ export function useImplementation(featureId: string | null) {
   });
 
   const taskItems: ImplementationTaskItem[] = implQuery.data?.task_items ?? [];
-  // Exclude split parent tasks — their subtasks replace them
   const activeItems = taskItems.filter(t => (t.implementation_status as string) !== 'split');
   const acceptedItems = activeItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
-  // Only show as "implementing" if the frontend loop is actually running.
-  const isImplementing = implementMutation.isPending;
+
+  // Pipeline state (FR-113)
+  const activePipeline: PipelineRun | null = pipelineQuery.data?.active ?? null;
+  const isPipelineRunning = activePipeline?.status === 'running';
+  const pipelineCurrentTask = pipelineQuery.data?.current_task ?? null;
 
   return {
     request: implQuery.data ?? null,
@@ -168,19 +154,38 @@ export function useImplementation(featureId: string | null) {
     rejectedCount: activeItems.filter(t => t.decision === 'rejected').length,
 
     // Implementation progress (exclude split parent tasks)
-    isImplementing,
+    isImplementing: isPipelineRunning,
     implementedCount: activeItems.filter(t => t.implementation_status === 'completed').length,
     generatingCount: activeItems.filter(t => t.implementation_status === 'generating').length,
     failedImplCount: activeItems.filter(t => t.implementation_status === 'failed').length,
     canImplement: acceptedItems.length > 0 && acceptedItems.some(t => t.implementation_status === 'pending'),
+
+    // Pipeline state (FR-113)
+    pipeline: activePipeline,
+    pipelineCurrentTask,
+    pipelineLogs: activePipeline?.logs ?? [],
+    isPipelineRunning,
+    pipelineProgress: activePipeline
+      ? { completed: activePipeline.completed_tasks, total: activePipeline.total_tasks, failed: activePipeline.failed_tasks }
+      : null,
 
     // Actions
     isRequesting: requestMutation.isPending,
     requestError: requestMutation.error,
     requestImplementation: (notes?: string) => requestMutation.mutateAsync({ notes }),
 
-    implementError: implementMutation.error,
-    startImplementation: () => implementMutation.mutateAsync(),
+    // FR-113: Server-side pipeline actions
+    startPipelineError: startPipelineMutation.error,
+    isStartingPipeline: startPipelineMutation.isPending,
+    startPipeline: () => startPipelineMutation.mutateAsync(),
+
+    cancelPipelineError: cancelPipelineMutation.error,
+    isCancellingPipeline: cancelPipelineMutation.isPending,
+    cancelPipeline: () => cancelPipelineMutation.mutateAsync(),
+
+    // Legacy: kept for compatibility but now triggers server-side pipeline
+    implementError: startPipelineMutation.error,
+    startImplementation: () => startPipelineMutation.mutateAsync(),
 
     isUpdating: updateItemMutation.isPending,
     updateError: updateItemMutation.error,
@@ -199,30 +204,3 @@ export function useImplementation(featureId: string | null) {
     },
   };
 }
-
-/** Read existing file contents for accepted tasks so AI can modify rather than replace */
-async function readExistingFileContexts(
-  taskItems: ImplementationTaskItem[],
-): Promise<Record<string, string>> {
-  const accepted = taskItems.filter(
-    t => (t.decision === 'accepted' || t.decision === 'modified') && t.implementation_status === 'pending',
-  );
-  const uniquePaths = [...new Set(accepted.map(t => t.file_path))];
-  const contexts: Record<string, string> = {};
-
-  await Promise.all(
-    uniquePaths.map(async (filePath) => {
-      try {
-        const res = await fetch(`/__api/read-file?path=${encodeURIComponent(filePath)}`);
-        if (res.ok) {
-          contexts[filePath] = await res.text();
-        }
-      } catch {
-        // File doesn't exist or dev server unavailable — skip
-      }
-    }),
-  );
-
-  return contexts;
-}
-

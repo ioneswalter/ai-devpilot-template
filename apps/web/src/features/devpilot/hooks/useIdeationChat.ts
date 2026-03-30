@@ -3,9 +3,16 @@
  * Handles messages, loading, sending, and proposal extraction
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { devpilotApi } from '@/lib/api-client';
 import type { ConversationMessage, MessageMetadata } from '../types';
+
+function formatModelLabel(modelId: string): string {
+  if (modelId.includes('opus')) return 'Opus';
+  if (modelId.includes('sonnet')) return 'Sonnet';
+  if (modelId.includes('haiku')) return 'Haiku';
+  return modelId;
+}
 
 interface UseIdeationChatOptions {
   conversationId: string | null;
@@ -19,6 +26,14 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modelLabel, setModelLabel] = useState<string | null>(null);
+
+  // Fetch current model on mount so the label shows immediately
+  useEffect(() => {
+    devpilotApi.getChatModel()
+      .then((res) => setModelLabel(formatModelLabel(res.data.model)))
+      .catch(() => { /* silent — label just won't show */ });
+  }, []);
 
   const loadMessages = useCallback(async (convId: string) => {
     try {
@@ -62,7 +77,8 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
 
       try {
         const response = await devpilotApi.sendMessage(convId, message);
-        const { user_message, assistant_message } = response.data;
+        const { user_message, assistant_message, model } = response.data;
+        if (model) setModelLabel(formatModelLabel(model));
 
         setMessages((prev) => {
           // Replace temp user message with real one, add assistant message
@@ -131,5 +147,6 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
     clearMessages,
     latestProposal,
     latestProposals,
+    modelLabel,
   };
 }

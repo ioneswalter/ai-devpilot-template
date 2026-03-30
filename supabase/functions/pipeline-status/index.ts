@@ -35,6 +35,13 @@ interface ImplRequestRow {
   code_applied: boolean | null;
 }
 
+interface PipelineRunRow {
+  feature_id: string;
+  status: string;
+  completed_tasks: number;
+  total_tasks: number;
+}
+
 interface TestCaseRow {
   feature_id: string;
   passed: boolean | null;
@@ -87,29 +94,51 @@ function computeSpecStage(
   return { status: 'not_started', label: 'Not Started' };
 }
 
-function computeBuildStage(impls: ImplRequestRow[], featureId: string, featureStatus: string): StageStatus {
-  // Check ALL implementation requests for this feature (not just latest)
+function computeBuildStage(
+  impls: ImplRequestRow[],
+  pipelineRuns: PipelineRunRow[],
+  featureId: string,
+  featureStatus: string,
+): StageStatus {
   const featureImpls = impls.filter((r) => r.feature_id === featureId);
+  const featurePipelines = pipelineRuns.filter((r) => r.feature_id === featureId);
+
+  // FR-113: Check server-side pipeline status first
+  const runningPipeline = featurePipelines.find((p) => p.status === 'running');
+  if (runningPipeline) {
+    const pct = runningPipeline.total_tasks > 0
+      ? Math.round((runningPipeline.completed_tasks / runningPipeline.total_tasks) * 100)
+      : 0;
+    return { status: 'in_progress', label: `Pipeline ${pct}%` };
+  }
 
   // If any request is completed/implemented with code applied → completed
   if (featureImpls.some((r) => (r.status === 'completed' || r.status === 'implemented') && r.code_applied)) {
     return { status: 'completed', label: 'Completed' };
   }
+
+  // Pipeline completed but code not yet applied
+  if (featurePipelines.some((p) => p.status === 'completed')) {
+    return { status: 'in_progress', label: 'Pipeline Done' };
+  }
+
   // If completed but code not applied → plan ready (in_progress)
   if (featureImpls.some((r) => r.status === 'completed' || r.status === 'implemented')) {
     return { status: 'in_progress', label: 'Plan Ready' };
   }
   // If any is in progress → building
-  if (featureImpls.some((r) => r.status === 'pending' || r.status === 'in_progress')) {
+  if (featureImpls.some((r) => r.status === 'pending' || r.status === 'in_progress' || r.status === 'implementing')) {
     return { status: 'in_progress', label: 'Building' };
   }
-  // If all failed → warning
+
+  // Pipeline failed/cancelled
+  if (featurePipelines.some((p) => p.status === 'failed' || p.status === 'timed_out')) {
+    return { status: 'warning', label: 'Pipeline Failed' };
+  }
   if (featureImpls.some((r) => r.status === 'failed')) {
     return { status: 'warning', label: 'Failed' };
   }
 
-  // Infer build status from feature lifecycle — covers features built via SpecKit
-  // or with implementation_requests in unhandled statuses (e.g. cancelled)
   if (featureStatus === 'released') return { status: 'completed', label: 'Completed' };
   if (featureStatus === 'in_development') return { status: 'in_progress', label: 'In Progress' };
 
@@ -186,8 +215,8 @@ Deno.serve(async (req) => {
 
     const featureIds = (features as FeatureRow[]).map((f) => f.id);
 
-    // Batch fetch all stage data in parallel (includes SpecKit artifacts)
-    const [specResult, implResult, testResult, artifactResult] = await Promise.all([
+    // Batch fetch all stage data in parallel (includes SpecKit artifacts + pipeline runs)
+    const [specResult, implResult, testResult, artifactResult, pipelineResult] = await Promise.all([
       supabase
         .from('spec_reviews')
         .select('feature_id, status')
@@ -206,6 +235,11 @@ Deno.serve(async (req) => {
         .from('feature_spec_artifacts')
         .select('feature_id, artifact_type')
         .in('feature_id', featureIds),
+      supabase
+        .from('pipeline_runs')
+        .select('feature_id, status, completed_tasks, total_tasks')
+        .in('feature_id', featureIds)
+        .order('created_at', { ascending: false }),
     ]);
 
     if (specResult.error) return errorResponse('DB_ERROR', specResult.error.message, 500);
@@ -216,11 +250,12 @@ Deno.serve(async (req) => {
 
     const allSpecs = (specResult.data ?? []) as SpecReviewRow[];
     const allImpls = (implResult.data ?? []) as ImplRequestRow[];
+    const allPipelineRuns = (pipelineResult.data ?? []) as PipelineRunRow[];
 
     const pipelines = (features as FeatureRow[]).map((f) => ({
       feature_id: f.id,
       spec: computeSpecStage(allSpecs, allArtifacts, f.id),
-      build: computeBuildStage(allImpls, f.id, f.status),
+      build: computeBuildStage(allImpls, allPipelineRuns, f.id, f.status),
       test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
       deploy: computeDeployStage(f.status),
     }));

@@ -27,6 +27,14 @@ function groupItemsByType(items: ReviewItem[]): Record<string, ReviewItem[]> {
   return groups;
 }
 
+function formatModelName(modelId: string): string | null {
+  const lower = modelId.toLowerCase();
+  if (lower.includes('opus')) return 'Opus';
+  if (lower.includes('sonnet')) return 'Sonnet';
+  if (lower.includes('haiku')) return 'Haiku';
+  return null;
+}
+
 const sectionOrder: ReviewItemType[] = ['criterion', 'test_case', 'edge_case', 'description'];
 const sectionLabels: Record<string, string> = {
   criterion: 'Acceptance Criteria',
@@ -52,6 +60,7 @@ export function SpecReviewPanel({
   const spec = useSpecReview(featureId);
   const [newItemType, setNewItemType] = useState<ReviewItemType>('criterion');
   const [newItemContent, setNewItemContent] = useState('');
+  const [showSuccess, setShowSuccess] = useState<string | null>(null);
 
   // Show loading while data is being fetched or component just mounted
   if (!ready || spec.isLoading) {
@@ -64,8 +73,6 @@ export function SpecReviewPanel({
   }
 
   const grouped = groupItemsByType(spec.items);
-
-  const [showSuccess, setShowSuccess] = useState<string | null>(null);
 
   function handleApprove() {
     spec.approveReview().then(() => {
@@ -189,6 +196,16 @@ export function SpecReviewPanel({
           }`}>
             {spec.review?.status?.replace('_', ' ')}
           </span>
+          {(() => {
+            const aiModel = (spec.review as Record<string, unknown>)?.ai_enrichment;
+            const modelId = aiModel && typeof aiModel === 'object' && (aiModel as Record<string, unknown>).model;
+            const label = typeof modelId === 'string' ? formatModelName(modelId) : null;
+            return label ? (
+              <span className="ml-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                {label}
+              </span>
+            ) : null;
+          })()}
           {!spec.items.some(i => i.source === 'ai_generated') && spec.isReviewActive && (
             <span className="bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded">
               Manual review mode

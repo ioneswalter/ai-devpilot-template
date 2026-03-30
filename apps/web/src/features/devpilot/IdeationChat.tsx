@@ -166,7 +166,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           <SparklesIcon className="h-4 w-4 text-emerald-600" />
         )}
       </div>
-      <div className={`max-w-[75%] space-y-2 ${isUser ? 'text-right' : ''}`}>
+      <div className="max-w-[75%] space-y-2">
         <div
           className={`rounded-xl px-4 py-3 text-sm ${
             isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'
@@ -198,7 +198,10 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   );
 }
 
-/** Strip JSON metadata blocks from display text */
+/** Strip JSON metadata blocks from display text (handles truncated blocks without closing ```) */
 function stripMetadataBlocks(content: string): string {
-  return content.replace(/```json\s*\{[\s\S]*?"type"\s*:\s*"(?:dedup_warning|proposal)"[\s\S]*?\}[\s\S]*?```/g, '').trim();
+  return content
+    .replace(/```json\s*\{[\s\S]*?"type"\s*:\s*"(?:dedup_warning|proposal)"[\s\S]*?```/g, '')
+    .replace(/```json\s*\{[\s\S]*?"type"\s*:\s*"(?:dedup_warning|proposal)"[\s\S]*$/g, '')
+    .trim();
 }
