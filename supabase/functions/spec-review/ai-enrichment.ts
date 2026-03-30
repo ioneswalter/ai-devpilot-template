@@ -14,6 +14,8 @@ export interface EnrichmentResult {
   items: EnrichmentItem[];
   raw_response: string;
   model: string;
+  input_tokens: number;
+  output_tokens: number;
 }
 
 const AI_MODEL = 'claude-opus-4-1-20250805';
@@ -103,7 +105,9 @@ Generate enrichment suggestions. Validate criteria against constitution principl
     }
 
     const rawText = textBlock.text;
-    return parseEnrichmentResponse(rawText);
+    const inputTokens = response.usage?.input_tokens ?? 0;
+    const outputTokens = response.usage?.output_tokens ?? 0;
+    return parseEnrichmentResponse(rawText, inputTokens, outputTokens);
   } catch (error) {
     console.error('AI enrichment failed:', error);
     return null;
@@ -113,7 +117,7 @@ Generate enrichment suggestions. Validate criteria against constitution principl
 /**
  * Parse the AI JSON response into structured items
  */
-function parseEnrichmentResponse(rawText: string): EnrichmentResult | null {
+function parseEnrichmentResponse(rawText: string, inputTokens = 0, outputTokens = 0): EnrichmentResult | null {
   try {
     // Try direct JSON parse first
     let parsed: { suggestions?: EnrichmentItem[] };
@@ -139,7 +143,7 @@ function parseEnrichmentResponse(rawText: string): EnrichmentResult | null {
       .filter(s => validTypes.includes(s.item_type) && s.content?.trim())
       .map(s => ({ item_type: s.item_type, content: s.content.trim() }));
 
-    return { items, raw_response: rawText, model: AI_MODEL };
+    return { items, raw_response: rawText, model: AI_MODEL, input_tokens: inputTokens, output_tokens: outputTokens };
   } catch (error) {
     console.error('Failed to parse AI enrichment response:', error);
     return null;

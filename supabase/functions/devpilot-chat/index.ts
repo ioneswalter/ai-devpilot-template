@@ -36,6 +36,7 @@ const requestSchema = z.object({
 import { buildSystemPrompt } from '../_shared/devpilot-prompt.ts';
 import type { FeatureContext } from '../_shared/devpilot-prompt.ts';
 import { buildKnowledgeContext, formatFeatureContext } from '../_shared/knowledge-context.ts';
+import { logAIUsage } from '../_shared/usage-logger.ts';
 
 function parseMetadata(content: string): Record<string, unknown> | null {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
@@ -191,6 +192,14 @@ Deno.serve(async (req) => {
 
       const textBlock = response.content.find((b) => b.type === 'text');
       aiContent = textBlock && textBlock.type === 'text' ? textBlock.text : 'I was unable to generate a response.';
+
+      // FR-112: Log usage (fire-and-forget)
+      const convFeature = conv as Record<string, unknown>;
+      logAIUsage(supabase, {
+        featureId: (convFeature.submitted_feature_id as string) ?? conversation_id,
+        adminId: user.id, modelId: AI_MODEL, operationType: 'ideation',
+        inputTokens: response.usage?.input_tokens ?? 0, outputTokens: response.usage?.output_tokens ?? 0,
+      }).catch(() => {});
     } catch (aiError) {
       clearTimeout(timeoutId);
       console.error('Claude API error:', aiError);

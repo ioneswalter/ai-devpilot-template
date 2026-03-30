@@ -6,6 +6,7 @@
 import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { enrichFeature } from './ai-enrichment.ts';
 import { buildReviewContext, formatRelatedFeatures } from './review-context.ts';
+import { logAIUsage } from '../_shared/usage-logger.ts';
 
 interface StartReviewParams {
   featureId: string;
@@ -121,6 +122,11 @@ export async function handleStartReview(
 
   if (enrichment) {
     aiEnrichment = { raw_response: enrichment.raw_response, model: enrichment.model };
+    // FR-112: Log AI usage (fire-and-forget)
+    logAIUsage(supabase, {
+      featureId, adminId: userId, modelId: enrichment.model, operationType: 'spec_review',
+      inputTokens: enrichment.input_tokens, outputTokens: enrichment.output_tokens,
+    }).catch(() => {});
     const startOrder = originalItems.length;
     aiItems = enrichment.items.map((item, index) => ({
       id: crypto.randomUUID(),
