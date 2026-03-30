@@ -136,7 +136,7 @@ export function TestRunPanel({
 
   if (view === 'status') {
     return (
-      <div className="flex flex-col min-h-[400px]">
+      <div className="flex flex-col h-full">
         <div className="p-4 border-b bg-white">
           <div className="flex items-center gap-2">
             <code className="text-xs font-mono text-blue-600">{featureCode}</code>
@@ -245,7 +245,7 @@ export function TestRunPanel({
   }
 
   return (
-    <div className="flex flex-col min-h-[400px]">
+    <div className="flex flex-col h-full">
       <div className="p-4 border-b bg-white">
         <div className="flex items-center gap-2 mb-1">
           <code className="text-xs font-mono text-blue-600">{featureCode}</code>

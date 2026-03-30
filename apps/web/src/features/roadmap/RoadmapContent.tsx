@@ -242,6 +242,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onClose={() => setTestingFeature(null)}
         size="xl"
         showCloseButton={false}
+        flush
         className="h-[92vh]"
       >
         {testingFeature && (
