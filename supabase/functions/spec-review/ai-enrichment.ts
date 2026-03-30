@@ -18,8 +18,8 @@ export interface EnrichmentResult {
 
 const AI_MODEL = 'claude-opus-4-1-20250805';
 
-const ENRICHMENT_PROMPT = `You are a senior product analyst reviewing a proposed feature specification.
-Analyze the feature and generate structured enrichment suggestions.
+const ENRICHMENT_PROMPT = `You are a senior product analyst reviewing a proposed feature specification for the OwnYourGig platform.
+Analyze the feature against the constitution principles and generate structured enrichment suggestions.
 
 Return ONLY valid JSON (no markdown, no code fences) in this exact format:
 {
@@ -32,27 +32,42 @@ Return ONLY valid JSON (no markdown, no code fences) in this exact format:
 }
 
 Guidelines:
-- "criterion": Refined or additional acceptance criteria that strengthen the spec
-- "test_case": Specific, testable scenarios with expected outcomes
-- "edge_case": Boundary conditions, error states, or unusual scenarios to handle
-- "description": Improvements to the feature description for clarity
+- "criterion": Refined or additional acceptance criteria. MUST be testable, specific, and constitution-compliant (e.g., RLS policies, input validation, type safety)
+- "test_case": Specific, testable scenarios with expected outcomes. Check for security, accessibility, and performance requirements from the constitution
+- "edge_case": Boundary conditions, error states, security edge cases (unauthorized access, invalid input, concurrent operations)
+- "description": Improvements to the feature description for clarity and completeness
 
-Generate 3-5 items per type. Be specific and actionable. Focus on what's missing or could be improved.`;
+Generate 3-5 items per type. Be specific and actionable. Focus on:
+1. Constitution compliance gaps (missing RLS, security, accessibility, performance criteria)
+2. Cross-feature consistency (avoid duplicating what related features already cover)
+3. Testability (vague criteria → specific measurable criteria)
+4. Security & edge cases (OWASP Top 10, auth boundaries, data validation)`;
 
-/**
- * Call Claude AI to enrich a feature proposal with suggestions
- * Returns null if AI is unavailable (manual-only mode)
- */
+/** Additional context for constitution-aware enrichment (FR-121) */
+export interface EnrichmentContext {
+  constitution?: string;
+  related_features?: string;
+  existing_test_count?: number;
+}
+
+/** Call Claude AI to enrich a feature proposal with suggestions. Returns null if AI unavailable. */
 export async function enrichFeature(
   title: string,
   description: string,
   criteria: string[],
+  context?: EnrichmentContext,
 ): Promise<EnrichmentResult | null> {
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
     console.warn('ANTHROPIC_API_KEY not set — skipping AI enrichment');
     return null;
   }
+
+  const constitutionBlock = context?.constitution ? `\n${context.constitution}\n` : '';
+  const relatedBlock = context?.related_features || '';
+  const testNote = context?.existing_test_count
+    ? `\n**Existing Test Cases:** ${context.existing_test_count} (avoid duplicating these)`
+    : '';
 
   const userMessage = `## Feature to Review
 
@@ -61,8 +76,10 @@ export async function enrichFeature(
 
 **Current Acceptance Criteria:**
 ${criteria.length > 0 ? criteria.map((c, i) => `${i + 1}. ${c}`).join('\n') : 'None defined yet.'}
+${testNote}
+${constitutionBlock}${relatedBlock}
 
-Generate enrichment suggestions for this feature.`;
+Generate enrichment suggestions. Validate criteria against constitution principles. Flag any compliance gaps.`;
 
   try {
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });

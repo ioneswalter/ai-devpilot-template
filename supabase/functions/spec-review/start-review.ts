@@ -5,6 +5,7 @@
 
 import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { enrichFeature } from './ai-enrichment.ts';
+import { buildReviewContext, formatRelatedFeatures } from './review-context.ts';
 
 interface StartReviewParams {
   featureId: string;
@@ -18,7 +19,7 @@ export async function handleStartReview(
   // 1. Verify feature exists and is "proposed"
   const { data: feature, error: featureErr } = await supabase
     .from('product_features')
-    .select('id, title, description, acceptance_criteria, status, feature_code')
+    .select('id, title, description, acceptance_criteria, status, feature_code, spec_section, category')
     .eq('id', featureId)
     .single();
 
@@ -103,7 +104,11 @@ export async function handleStartReview(
     }
   }
 
-  // 6. Call AI enrichment
+  // 6. FR-121: Fetch deep review context (constitution, related features, test coverage)
+  const reviewCtx = await buildReviewContext(supabase, featureId, feature.spec_section ?? null, feature.category ?? null);
+  const relatedText = formatRelatedFeatures(reviewCtx.related_features);
+
+  // Call AI enrichment with deep context
   let aiItems: typeof originalItems = [];
   let aiEnrichment: unknown = null;
 
@@ -111,6 +116,7 @@ export async function handleStartReview(
     feature.title,
     feature.description ?? '',
     criteria,
+    { constitution: reviewCtx.constitution, related_features: relatedText, existing_test_count: reviewCtx.existing_test_count },
   );
 
   if (enrichment) {

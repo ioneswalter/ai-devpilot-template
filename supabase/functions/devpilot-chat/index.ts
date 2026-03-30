@@ -35,6 +35,7 @@ const requestSchema = z.object({
 
 import { buildSystemPrompt } from '../_shared/devpilot-prompt.ts';
 import type { FeatureContext } from '../_shared/devpilot-prompt.ts';
+import { buildKnowledgeContext, formatFeatureContext } from '../_shared/knowledge-context.ts';
 
 function parseMetadata(content: string): Record<string, unknown> | null {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
@@ -131,17 +132,12 @@ Deno.serve(async (req) => {
       return errorResponse('INTERNAL_ERROR', 'Failed to save message', 500);
     }
 
-    // Fetch product features for context
-    const { data: features } = await supabase
-      .from('product_features')
-      .select('feature_code, title, description, status, category, spec_section')
-      .order('feature_code');
-
-    // Extract distinct roadmap sections from existing features
+    // FR-120: Fetch deep knowledge context (constitution, criteria, tests)
+    const knowledge = await buildKnowledgeContext(supabase);
+    const features = knowledge.feature_details as unknown as FeatureContext[];
+    const enrichedFeatureList = formatFeatureContext(knowledge.feature_details);
     const existingSections = [...new Set(
-      (features ?? [])
-        .map((f: { spec_section?: string | null }) => f.spec_section)
-        .filter((s): s is string => !!s)
+      knowledge.feature_details.map(f => f.spec_section).filter((s): s is string => !!s)
     )].sort();
 
     // Fetch conversation history
@@ -151,8 +147,11 @@ Deno.serve(async (req) => {
       .eq('conversation_id', conversation_id)
       .order('created_at', { ascending: true });
 
-    // Build messages for Claude (truncate long conversations to fit context window)
-    const systemPrompt = buildSystemPrompt((features ?? []) as FeatureContext[], isAdmin, existingSections);
+    // Build messages for Claude with enriched knowledge context
+    const systemPrompt = buildSystemPrompt(
+      features, isAdmin, existingSections,
+      { constitution_summary: knowledge.constitution_summary, enrichedFeatureList },
+    );
     const allMessages = (history ?? []).map((m) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
