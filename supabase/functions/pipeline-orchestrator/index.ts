@@ -16,6 +16,7 @@ import { handleStatus } from './status.ts';
 import { handleHealthCheck } from './health-check.ts';
 import { runCICheck } from './ci-check.ts';
 import { runDeploy } from './deploy.ts';
+import { runTestReadiness } from './test-readiness.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -73,8 +74,20 @@ Deno.serve(async (req) => {
       };
     }
 
-    // GET → status
+    // GET → status or notifications
     if (req.method === 'GET') {
+      const url = new URL(req.url);
+      if (url.searchParams.get('action') === 'notifications') {
+        const unreadOnly = url.searchParams.get('unread') !== 'false';
+        let query = supabase.from('pipeline_notifications')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+        if (unreadOnly) query = query.eq('read', false);
+        const { data, error } = await query;
+        if (error) return errorResponse('INTERNAL_ERROR', error.message, 500);
+        return jsonResponse({ data: data ?? [] });
+      }
       return handleStatus(req, ctx);
     }
 
@@ -154,6 +167,34 @@ Deno.serve(async (req) => {
           }).eq('id', dpid);
           runDeploy(dpid, dRun.request_id).catch(err => console.error('redeploy error:', err));
           return jsonResponse({ data: { pipeline_id: dpid, status: 'running', stage: 'deploying' } });
+        }
+
+        case 'rerun-readiness': {
+          const rpid = body.pipeline_id as string;
+          if (!rpid) return errorResponse('VALIDATION_ERROR', 'pipeline_id is required', 400);
+          const { data: rRun } = await supabase
+            .from('pipeline_runs')
+            .select('request_id, status')
+            .eq('id', rpid)
+            .single();
+          if (!rRun) return errorResponse('NOT_FOUND', 'Pipeline not found', 404);
+          if (rRun.status === 'running') return errorResponse('CONFLICT', 'Pipeline is still running', 409);
+          await supabase.from('pipeline_runs').update({
+            status: 'running',
+            current_stage: 'readying',
+            readiness_results: null,
+            completed_at: null,
+            last_heartbeat: new Date().toISOString(),
+          }).eq('id', rpid);
+          runTestReadiness(rpid, rRun.request_id).catch(err => console.error('rerun-readiness error:', err));
+          return jsonResponse({ data: { pipeline_id: rpid, status: 'running', stage: 'readying' } });
+        }
+
+        case 'mark-notification-read': {
+          const nid = body.notification_id as string;
+          if (!nid) return errorResponse('VALIDATION_ERROR', 'notification_id is required', 400);
+          await supabase.from('pipeline_notifications').update({ read: true }).eq('id', nid);
+          return jsonResponse({ data: { id: nid, read: true } });
         }
 
         case 'health-check':

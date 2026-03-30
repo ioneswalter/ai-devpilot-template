@@ -5,7 +5,8 @@
 
 import { CIResultsPanel } from './CIResultsPanel';
 import { DeployStatusPanel } from './DeployStatusPanel';
-import type { PipelineRun, CIResults, DeployResults } from '@/lib/api/admin-api';
+import { ReadinessStatusPanel } from './ReadinessStatusPanel';
+import type { PipelineRun, CIResults, DeployResults, ReadinessResults } from '@/lib/api/admin-api';
 
 interface PipelineStatusSectionProps {
   isPipelineRunning: boolean;
@@ -21,6 +22,10 @@ interface PipelineStatusSectionProps {
   deployResults: DeployResults | null;
   onRedeploy: () => void;
   isRedeploying: boolean;
+  isReadying: boolean;
+  readinessResults: ReadinessResults | null;
+  onRerunReadiness: () => void;
+  isRerunningReadiness: boolean;
   pipeline: PipelineRun | null;
 }
 
@@ -38,6 +43,10 @@ export function PipelineStatusSection({
   deployResults,
   onRedeploy,
   isRedeploying,
+  isReadying,
+  readinessResults,
+  onRerunReadiness,
+  isRerunningReadiness,
   pipeline,
 }: PipelineStatusSectionProps) {
   return (
@@ -107,6 +116,26 @@ export function PipelineStatusSection({
       {/* Deploy results (FR-115) */}
       {deployResults && !isDeploying && (
         <DeployStatusPanel deployResults={deployResults} onRedeploy={onRedeploy} isRedeploying={isRedeploying} />
+      )}
+
+      {/* Readying in progress (FR-116) */}
+      {isReadying && (
+        <div className="bg-teal-50 border border-teal-100 rounded-lg p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin" />
+            <h4 className="text-xs font-semibold text-teal-800 uppercase tracking-wider">Preparing for Testing</h4>
+          </div>
+          <p className="text-xs text-teal-600">Seeding test data, generating test cases, updating status...</p>
+        </div>
+      )}
+
+      {/* Readiness results (FR-116) */}
+      {readinessResults && !isReadying && (
+        <ReadinessStatusPanel
+          readinessResults={readinessResults}
+          onRerunReadiness={onRerunReadiness}
+          isRerunning={isRerunningReadiness}
+        />
       )}
 
       {/* Pipeline completed/failed status */}

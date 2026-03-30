@@ -7,6 +7,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import pg from 'npm:pg@8.13.1';
 import { appendLog } from './shared.ts';
+import { runTestReadiness } from './test-readiness.ts';
 
 const MAX_RETRIES = 3;
 
@@ -261,6 +262,14 @@ async function completeDeploy(
   const summary = [migCount > 0 ? `${migCount} migration(s)` : '', fnCount > 0 ? `${fnCount} function(s)` : ''].filter(Boolean).join(', ') || 'no server-side artifacts';
 
   await appendLog(supabase, pipelineId, 'info', `Deployment complete: ${summary}`);
+
+  // FR-116: Chain to test readiness after successful deploy
+  try {
+    await runTestReadiness(pipelineId, requestId);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    await appendLog(supabase, pipelineId, 'warn', `Test readiness error: ${errMsg}`);
+  }
 }
 
 async function failDeploy(

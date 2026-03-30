@@ -228,6 +228,10 @@ export function ImplementationPanel({
           deployResults={impl.deployResults}
           onRedeploy={impl.redeploy}
           isRedeploying={impl.isRedeploying}
+          isReadying={impl.isReadying}
+          readinessResults={impl.readinessResults}
+          onRerunReadiness={impl.rerunReadiness}
+          isRerunningReadiness={impl.isRerunningReadiness}
           pipeline={impl.pipeline}
         />
 

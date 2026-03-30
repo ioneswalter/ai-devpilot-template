@@ -10,6 +10,7 @@ import type {
   ImplementationTaskItem,
   CIResults,
   DeployResults,
+  ReadinessResults,
   PipelineRun,
   PipelineRunStatus,
 } from '@/lib/api/admin-api';
@@ -61,6 +62,8 @@ export function useImplementation(featureId: string | null) {
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data?.active?.status === 'running') return 3000;
+      // FR-116: Keep polling during readiness stage
+      if (data?.active?.current_stage === 'readying') return 3000;
       return false;
     },
     retry: false,
@@ -174,6 +177,22 @@ export function useImplementation(featureId: string | null) {
   const deployResults: DeployResults | null = activePipeline?.deploy_results ?? pipelineQuery.data?.history?.[0]?.deploy_results ?? null;
   const isDeploying = activePipeline?.current_stage === 'deploying';
 
+  // FR-116: Readiness state
+  const readinessResults: ReadinessResults | null = activePipeline?.readiness_results ?? pipelineQuery.data?.history?.[0]?.readiness_results ?? null;
+  const isReadying = activePipeline?.current_stage === 'readying';
+
+  // FR-116: Rerun readiness mutation
+  const rerunReadinessMutation = useMutation({
+    mutationFn: async () => {
+      const pipelineId = activePipeline?.id ?? pipelineQuery.data?.history?.[0]?.id;
+      if (!pipelineId) throw new Error('No pipeline to rerun readiness on');
+      return adminApi.rerunReadiness(pipelineId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...PIPELINE_KEY, featureId] });
+    },
+  });
+
   return {
     request: implQuery.data ?? null,
     taskItems,
@@ -226,6 +245,12 @@ export function useImplementation(featureId: string | null) {
     isDeploying,
     isRedeploying: redeployMutation.isPending,
     redeploy: () => redeployMutation.mutateAsync(),
+
+    // FR-116: Readiness results and rerun
+    readinessResults,
+    isReadying,
+    isRerunningReadiness: rerunReadinessMutation.isPending,
+    rerunReadiness: () => rerunReadinessMutation.mutateAsync(),
 
     // Legacy: kept for compatibility but now triggers server-side pipeline
     implementError: startPipelineMutation.error,

@@ -17,6 +17,7 @@ import { ImplementationPanel } from './ImplementationPanel';
 import { TestRunPanel } from './TestRunPanel';
 import { ReleasePanel } from './ReleasePanel';
 import { usePipelineStatus } from './usePipelineStatus';
+import { NotificationBanner } from './NotificationBanner';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
 import { apiClient } from '../../lib/supabase-client';
@@ -28,8 +29,6 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
   const [showReleases, setShowReleases] = useState(false);
-
-  /** Handle pipeline stage click — open the corresponding panel */
   const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
     if (!roadmap.isAdmin) return;
 
@@ -91,7 +90,6 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onOpenReleases={() => setShowReleases(true)}
       />
 
-      {/* Loading / Error State */}
       {roadmap.isLoading && (
         <div className="bg-blue-50 border-b border-blue-100 py-1.5">
           <div className="container mx-auto px-4 text-center text-xs text-blue-600">
@@ -105,7 +103,6 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           </div>
         </div>
       )}
-
       {roadmap.loadError && !roadmap.isLoading && (
         <div className="bg-red-50 border-b border-red-100 py-2">
           <div className="container mx-auto px-4 text-center">
@@ -143,6 +140,16 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onClearFilters={roadmap.clearFilters}
       />
 
+      {/* FR-116: Test-ready notification banner */}
+      {roadmap.isAdmin && (
+        <div className="container mx-auto px-4 mt-2">
+          <NotificationBanner onNavigateToFeature={(fId) => {
+            const f = roadmap.features.find((feat) => feat.id === fId);
+            if (f) setTestingFeature(f);
+          }} />
+        </div>
+      )}
+
       {/* Kanban Board View */}
       {roadmap.viewMode === 'kanban' && (
         <KanbanBoard
@@ -176,14 +183,10 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         />
       )}
 
-      {/* AI Copilot (Admin Only) — panel only, no floating toggle */}
+      {/* AI Copilot (Admin Only) */}
       {roadmap.isAdmin && roadmap.copilotOpen && (
-        <CopilotPanel
-          isOpen={roadmap.copilotOpen}
-          onClose={() => roadmap.setCopilotOpen(false)}
-          selectedFeature={roadmap.selectedFeatureForCopilot}
-          onFeatureUpdated={roadmap.handleFeatureUpdated}
-        />
+        <CopilotPanel isOpen={roadmap.copilotOpen} onClose={() => roadmap.setCopilotOpen(false)}
+          selectedFeature={roadmap.selectedFeatureForCopilot} onFeatureUpdated={roadmap.handleFeatureUpdated} />
       )}
 
       {/* Spec Review Modal */}
@@ -268,10 +271,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         )}
       </Modal>
 
-      {/* Release Manager */}
       <ReleasePanel isOpen={showReleases} onClose={() => setShowReleases(false)} />
-
-      {/* Admin Modals */}
       <AdminModals
         features={roadmap.features}
         editingFeature={roadmap.editingFeature}
