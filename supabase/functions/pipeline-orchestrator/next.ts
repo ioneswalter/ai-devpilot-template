@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { generateCode, type SpecArtifacts } from '../implement-feature/ai-codegen.ts';
 import { autoSplitTask } from '../implement-feature/split-task.ts';
 import { appendLog, updateHeartbeat, getEdgeFunctionUrl } from './shared.ts';
+import { runCICheck } from './ci-check.ts';
 
 interface NextParams {
   pipeline_id: string;
@@ -205,34 +206,32 @@ async function finalizePipeline(
   pipelineId: string,
   requestId: string,
 ): Promise<void> {
-  // Check if all tasks are done
-  const { data: allItems } = await supabase
-    .from('implementation_task_items')
-    .select('implementation_status, decision')
-    .eq('request_id', requestId)
-    .in('decision', ['accepted', 'modified']);
+  await appendLog(supabase, pipelineId, 'info', 'All tasks processed — starting CI validation');
 
-  const allCompleted = allItems?.every(t => t.implementation_status === 'completed');
+  // Transition to CI check stage (FR-114)
+  try {
+    await runCICheck(pipelineId, requestId);
+  } catch (error) {
+    console.error('CI check failed:', error);
+    const msg = error instanceof Error ? error.message : 'Unknown CI error';
+    await appendLog(supabase, pipelineId, 'error', `CI check error: ${msg}`);
 
-  await supabase
-    .from('pipeline_runs')
-    .update({
-      status: 'completed',
-      current_stage: 'idle',
-      current_task_id: null,
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', pipelineId);
+    // Complete pipeline even if CI crashes — don't leave it stuck
+    await supabase
+      .from('pipeline_runs')
+      .update({
+        status: 'completed',
+        current_stage: 'build_failed',
+        current_task_id: null,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', pipelineId);
 
-  await supabase
-    .from('implementation_requests')
-    .update({
-      status: allCompleted ? 'implemented' : 'completed',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', requestId);
-
-  await appendLog(supabase, pipelineId, 'info', `Pipeline completed — all tasks processed`);
+    await supabase
+      .from('implementation_requests')
+      .update({ status: 'completed', updated_at: new Date().toISOString() })
+      .eq('id', requestId);
+  }
 }
 
 async function markPipelineFailed(

@@ -8,6 +8,7 @@ import { adminApi } from '@/lib/api/admin-api';
 import type {
   ImplementationRequestWithItems,
   ImplementationTaskItem,
+  CIResults,
   PipelineRun,
   PipelineRunStatus,
 } from '@/lib/api/admin-api';
@@ -99,6 +100,19 @@ export function useImplementation(featureId: string | null) {
     },
   });
 
+  // ── Rerun CI (FR-114) ──
+  const rerunCIMutation = useMutation({
+    mutationFn: async () => {
+      const pipelineId = pipelineQuery.data?.active?.id ?? pipelineQuery.data?.history?.[0]?.id;
+      if (!pipelineId) throw new Error('No pipeline to rerun CI on');
+      return adminApi.rerunCI(pipelineId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...PIPELINE_KEY, featureId] });
+      queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
+    },
+  });
+
   const updateItemMutation = useMutation({
     mutationFn: (data: { item_id: string; decision?: string; title?: string; description?: string; comment?: string }) =>
       adminApi.updateTaskItem(data),
@@ -141,6 +155,8 @@ export function useImplementation(featureId: string | null) {
   const activePipeline: PipelineRun | null = pipelineQuery.data?.active ?? null;
   const isPipelineRunning = activePipeline?.status === 'running';
   const pipelineCurrentTask = pipelineQuery.data?.current_task ?? null;
+  const ciResults: CIResults | null = activePipeline?.ci_results ?? pipelineQuery.data?.history?.[0]?.ci_results ?? null;
+  const isCIRunning = activePipeline?.current_stage === 'build_check';
 
   return {
     request: implQuery.data ?? null,
@@ -182,6 +198,12 @@ export function useImplementation(featureId: string | null) {
     cancelPipelineError: cancelPipelineMutation.error,
     isCancellingPipeline: cancelPipelineMutation.isPending,
     cancelPipeline: () => cancelPipelineMutation.mutateAsync(),
+
+    // FR-114: CI results and rerun
+    ciResults,
+    isCIRunning,
+    isRerunningCI: rerunCIMutation.isPending,
+    rerunCI: () => rerunCIMutation.mutateAsync(),
 
     // Legacy: kept for compatibility but now triggers server-side pipeline
     implementError: startPipelineMutation.error,

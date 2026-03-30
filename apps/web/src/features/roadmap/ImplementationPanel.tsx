@@ -13,6 +13,7 @@ import { ImplementationFooter } from './ImplementationFooter';
 import { ImplementationSummary } from './ImplementationSummary';
 import { AddTaskForm } from './AddTaskForm';
 import { WriteCodeFlow } from './WriteCodeFlow';
+import { CIResultsPanel } from './CIResultsPanel';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -243,6 +244,24 @@ export function ImplementationPanel({
               )}
             </div>
           </div>
+        )}
+
+        {/* CI validation in progress (FR-114) */}
+        {impl.isCIRunning && (
+          <div className="bg-violet-50 border border-violet-100 rounded-lg p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
+              <h4 className="text-xs font-semibold text-violet-800 uppercase tracking-wider">
+                CI Validation Running
+              </h4>
+            </div>
+            <p className="text-xs text-violet-600">TypeScript, ESLint, and test validation in progress...</p>
+          </div>
+        )}
+
+        {/* CI results display (FR-114) */}
+        {impl.ciResults && !impl.isCIRunning && (
+          <CIResultsPanel ciResults={impl.ciResults} onRerun={impl.rerunCI} isRerunning={impl.isRerunningCI} />
         )}
 
         {/* Pipeline completed/failed status */}

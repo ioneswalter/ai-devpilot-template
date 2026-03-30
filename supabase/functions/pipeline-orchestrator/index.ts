@@ -14,6 +14,7 @@ import { handleNext } from './next.ts';
 import { handleCancel } from './cancel.ts';
 import { handleStatus } from './status.ts';
 import { handleHealthCheck } from './health-check.ts';
+import { runCICheck } from './ci-check.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -108,6 +109,30 @@ Deno.serve(async (req) => {
 
         case 'cancel':
           return handleCancel(newReq, ctx);
+
+        case 'rerun-ci': {
+          // Re-run CI validation on existing generated code
+          const pid = body.pipeline_id as string;
+          if (!pid) return errorResponse('VALIDATION_ERROR', 'pipeline_id is required', 400);
+          const { data: pRun } = await supabase
+            .from('pipeline_runs')
+            .select('request_id, status')
+            .eq('id', pid)
+            .single();
+          if (!pRun) return errorResponse('NOT_FOUND', 'Pipeline not found', 404);
+          if (pRun.status === 'running') return errorResponse('CONFLICT', 'Pipeline is still running', 409);
+          // Reset to running for CI re-run
+          await supabase.from('pipeline_runs').update({
+            status: 'running',
+            current_stage: 'build_check',
+            ci_results: null,
+            completed_at: null,
+            last_heartbeat: new Date().toISOString(),
+          }).eq('id', pid);
+          // Fire and forget CI check
+          runCICheck(pid, pRun.request_id).catch(err => console.error('rerun-ci error:', err));
+          return jsonResponse({ data: { pipeline_id: pid, status: 'running', stage: 'build_check' } });
+        }
 
         case 'health-check':
           return handleHealthCheck();
