@@ -28,7 +28,7 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
     </button>
   ) : isMember ? (
     <button
-      onClick={() => navigate({ to: '/ideation' })}
+      onClick={() => alert('Coming soon!')}
       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
     >
       Ideation
@@ -67,7 +67,7 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
                   </button>
                 ) : isMember ? (
                   <button
-                    onClick={() => navigate({ to: '/ideation' })}
+                    onClick={() => alert('Coming soon!')}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
                   >
                     Ideation
