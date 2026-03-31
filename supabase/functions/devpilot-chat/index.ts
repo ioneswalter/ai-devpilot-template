@@ -15,7 +15,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const DEFAULT_MODEL = 'claude-opus-4-1-20250805';
+const DEFAULT_MODEL = 'claude-sonnet-4-5-20250514';
 const ALLOWED_MODELS: Record<string, string> = {
   'claude-opus-4-1-20250805': 'Opus',
   'claude-sonnet-4-5-20250514': 'Sonnet',

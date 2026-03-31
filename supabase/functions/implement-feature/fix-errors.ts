@@ -1,6 +1,11 @@
 /**
  * POST ?action=fix-errors handler: AI-powered CI error fixer.
  * Handles TypeScript, ESLint, and test errors — asks AI to fix them, returns corrected code.
+ *
+ * @deprecated Phase 2 Strategy Decision: Error fixing during implementation should
+ * happen through Claude Code (SpecKit workflow) which has full codebase context.
+ * This handler is retained for the server-side pipeline but new features should
+ * use Claude Code for implementation. See: Strategic Plan I2-05.
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';

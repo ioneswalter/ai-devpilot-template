@@ -7,6 +7,7 @@ import { type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3
 import { enrichFeature } from './ai-enrichment.ts';
 import { buildReviewContext, formatRelatedFeatures } from './review-context.ts';
 import { logAIUsage } from '../_shared/usage-logger.ts';
+import { fetchLearnings } from '../_shared/learning-logger.ts';
 
 interface StartReviewParams {
   featureId: string;
@@ -109,6 +110,9 @@ export async function handleStartReview(
   const reviewCtx = await buildReviewContext(supabase, featureId, feature.spec_section ?? null, feature.category ?? null);
   const relatedText = formatRelatedFeatures(reviewCtx.related_features);
 
+  // Fetch learnings from prompt library (Phase 3)
+  const learnings = await fetchLearnings(supabase, 'spec_review', 5);
+
   // Call AI enrichment with deep context
   let aiItems: typeof originalItems = [];
   let aiEnrichment: unknown = null;
@@ -117,7 +121,7 @@ export async function handleStartReview(
     feature.title,
     feature.description ?? '',
     criteria,
-    { constitution: reviewCtx.constitution, related_features: relatedText, existing_test_count: reviewCtx.existing_test_count },
+    { constitution: reviewCtx.constitution, related_features: relatedText, existing_test_count: reviewCtx.existing_test_count, learnings },
   );
 
   if (enrichment) {

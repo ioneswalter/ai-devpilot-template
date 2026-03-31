@@ -3,6 +3,8 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logAIUsage } from '../_shared/usage-logger.ts';
+import { CONSTITUTION_PRINCIPLES } from '../_shared/knowledge-context.ts';
+import { fetchLearnings } from '../_shared/learning-logger.ts';
 import { resolveAuth, isAuth } from './auth.ts';
 
 const AI_MODEL = 'claude-sonnet-4-20250514';
@@ -71,11 +73,15 @@ export async function handleGenerateGuidance(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
 
+  // Fetch learnings from prompt library (Phase 3)
+  const learnings = await fetchLearnings(auth.supabase, 'test_guidance', 5);
+  const enrichedPrompt = GUIDANCE_SYSTEM_PROMPT + learnings;
+
   const anthropic = new Anthropic({ apiKey });
   const response = await anthropic.messages.create({
     model: AI_MODEL,
     max_tokens: 4096,
-    system: GUIDANCE_SYSTEM_PROMPT,
+    system: enrichedPrompt,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -198,6 +204,8 @@ function parseGuidanceSteps(rawText: string, criteria: string[]): ParsedStep[] {
 const GUIDANCE_SYSTEM_PROMPT = `You are an AI testing co-pilot. Generate step-by-step test instructions for manual QA testing.
 
 Given a feature's acceptance criteria, test case definition, and the current page state (visible UI elements), generate specific, actionable test steps.
+
+${CONSTITUTION_PRINCIPLES}
 
 CRITICAL RULES:
 1. Reference ACTUAL UI elements from the page state (buttons by text, inputs by label, etc.)

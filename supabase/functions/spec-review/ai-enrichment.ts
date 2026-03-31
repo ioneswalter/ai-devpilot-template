@@ -45,11 +45,12 @@ Generate 3-5 items per type. Be specific and actionable. Focus on:
 3. Testability (vague criteria → specific measurable criteria)
 4. Security & edge cases (OWASP Top 10, auth boundaries, data validation)`;
 
-/** Additional context for constitution-aware enrichment (FR-121) */
+/** Additional context for constitution-aware enrichment (FR-121, Phase 3) */
 export interface EnrichmentContext {
   constitution?: string;
   related_features?: string;
   existing_test_count?: number;
+  learnings?: string;
 }
 
 /** Call Claude AI to enrich a feature proposal with suggestions. Returns null if AI unavailable. */
@@ -70,6 +71,7 @@ export async function enrichFeature(
   const testNote = context?.existing_test_count
     ? `\n**Existing Test Cases:** ${context.existing_test_count} (avoid duplicating these)`
     : '';
+  const learningsBlock = context?.learnings || '';
 
   const userMessage = `## Feature to Review
 
@@ -79,39 +81,61 @@ export async function enrichFeature(
 **Current Acceptance Criteria:**
 ${criteria.length > 0 ? criteria.map((c, i) => `${i + 1}. ${c}`).join('\n') : 'None defined yet.'}
 ${testNote}
-${constitutionBlock}${relatedBlock}
+${constitutionBlock}${relatedBlock}${learningsBlock}
 
 Generate enrichment suggestions. Validate criteria against constitution principles. Flag any compliance gaps.`;
 
-  try {
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+  const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+  const MAX_ATTEMPTS = 2;
 
-    const response = await Promise.race([
-      anthropic.messages.create({
-        model: AI_MODEL,
-        max_tokens: 4096,
-        system: ENRICHMENT_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('AI enrichment timeout')), 30000)
-      ),
-    ]);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const messages: { role: 'user' | 'assistant'; content: string }[] = [
+        { role: 'user', content: userMessage },
+      ];
 
-    const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-      console.error('No text block in AI response');
-      return null;
+      if (attempt > 1) {
+        messages.push(
+          { role: 'assistant', content: '(previous attempt returned invalid JSON)' },
+          { role: 'user', content: 'Your previous response was not valid JSON. Return ONLY valid JSON with a "suggestions" array. No markdown, no code fences.' },
+        );
+      }
+
+      const response = await Promise.race([
+        anthropic.messages.create({
+          model: AI_MODEL,
+          max_tokens: 4096,
+          system: ENRICHMENT_PROMPT,
+          messages,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('AI enrichment timeout')), 30000)
+        ),
+      ]);
+
+      const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
+      if (!textBlock || textBlock.type !== 'text') {
+        console.error(`[Attempt ${attempt}/${MAX_ATTEMPTS}] No text block in AI response`);
+        continue;
+      }
+
+      const rawText = textBlock.text;
+      const inputTokens = response.usage?.input_tokens ?? 0;
+      const outputTokens = response.usage?.output_tokens ?? 0;
+      const result = parseEnrichmentResponse(rawText, inputTokens, outputTokens);
+
+      if (result && result.items.length > 0) {
+        if (attempt > 1) console.log(`[AI Enrichment] Succeeded on attempt ${attempt}`);
+        return result;
+      }
+
+      console.warn(`[Attempt ${attempt}/${MAX_ATTEMPTS}] Enrichment parse failed or empty`);
+    } catch (error) {
+      console.error(`[Attempt ${attempt}/${MAX_ATTEMPTS}] AI enrichment failed:`, error);
     }
-
-    const rawText = textBlock.text;
-    const inputTokens = response.usage?.input_tokens ?? 0;
-    const outputTokens = response.usage?.output_tokens ?? 0;
-    return parseEnrichmentResponse(rawText, inputTokens, outputTokens);
-  } catch (error) {
-    console.error('AI enrichment failed:', error);
-    return null;
   }
+
+  return null;
 }
 
 /**

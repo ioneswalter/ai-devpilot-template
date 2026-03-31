@@ -2,6 +2,12 @@
  * AI Code Generation for FR-105
  * Generates implementation code for individual tasks using SpecKit artifacts
  * for full context (plan.md, data-model.md, contracts/).
+ *
+ * @deprecated Phase 2 Strategy Decision: Code generation should happen through
+ * Claude Code (SpecKit workflow) for higher quality artifacts. This Edge Function
+ * codegen is retained for backward compatibility with the server-side pipeline
+ * but new features should use `/speckit.implement` via Claude Code instead.
+ * See: Strategic Plan I2-05.
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
@@ -121,6 +127,7 @@ When generating an Edge Function handler, the request/response shape MUST match 
  * Generate code for a single implementation task.
  * Now includes SpecKit artifacts for full architectural context.
  */
+/** @deprecated Use Claude Code SpecKit workflow instead. See Strategic Plan I2-05. */
 export async function generateCode(
   task: { title: string; description: string | null; file_path: string; task_type: string },
   featureContext: { feature_code: string; title: string; description: string; criteria: string[] },
@@ -129,6 +136,7 @@ export async function generateCode(
   existingContent?: string,
   learnedConstraints?: string[],
 ): Promise<CodeGenResult | null> {
+  console.warn('[DEPRECATED] ai-codegen.generateCode called — prefer Claude Code /speckit.implement for higher quality output');
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
     return null;

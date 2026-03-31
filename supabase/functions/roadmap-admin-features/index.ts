@@ -619,6 +619,44 @@ Update the roadmap when complete.
       const now = new Date().toISOString();
       filteredUpdates.updated_at = now;
 
+      // Feature Versioning (I2-04): Snapshot current state before applying edits
+      try {
+        const { data: current } = await supabase
+          .from('product_features')
+          .select('id, title, description, acceptance_criteria, status, category')
+          .eq('id', feature_id)
+          .single();
+
+        if (current) {
+          const { data: lastVersion } = await supabase
+            .from('feature_versions')
+            .select('version_number')
+            .eq('feature_id', feature_id)
+            .order('version_number', { ascending: false })
+            .limit(1)
+            .single();
+
+          const nextVersion = (lastVersion?.version_number ?? 0) + 1;
+          const changedFields = Object.keys(filteredUpdates).filter(k => k !== 'updated_at');
+
+          await supabase.from('feature_versions').insert({
+            id: crypto.randomUUID(),
+            feature_id,
+            version_number: nextVersion,
+            title: current.title,
+            description: current.description,
+            acceptance_criteria: current.acceptance_criteria,
+            status: current.status,
+            category: current.category,
+            change_summary: `Fields updated: ${changedFields.join(', ')}`,
+            changed_by: user.id,
+          });
+        }
+      } catch (versionError) {
+        // Non-blocking — don't fail the edit if versioning fails
+        console.warn('Feature versioning snapshot failed:', versionError);
+      }
+
       const { data: feature, error: updateError } = await supabase
         .from('product_features')
         .update(filteredUpdates)

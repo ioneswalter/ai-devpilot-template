@@ -4,6 +4,7 @@
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { CONSTITUTION_PRINCIPLES } from '../_shared/knowledge-context.ts';
 
 export interface ImplementationTask {
   title: string;
@@ -87,6 +88,9 @@ ensure the field names MATCH exactly:
 - All tables use TEXT ids (not UUID) with NO auto-generation — handlers must generate \`crypto.randomUUID()\`
 - Always include \`created_at\` and \`updated_at\` timestamps on inserts
 
+## Project Constitution (MUST comply):
+${CONSTITUTION_PRINCIPLES}
+
 Guidelines:
 - Generate 5-15 specific, actionable implementation tasks
 - Each task should target a single file
@@ -133,32 +137,55 @@ ${notes || 'No additional notes.'}
 
 Generate a detailed implementation plan for this feature.`;
 
-  try {
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+  const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+  const MAX_ATTEMPTS = 3;
 
-    const response = await Promise.race([
-      anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 8192,
-        system: IMPLEMENTATION_PROMPT,
-        messages: [{ role: 'user', content: userMessage }],
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('AI implementation timeout')), 60000)
-      ),
-    ]);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const messages: { role: 'user' | 'assistant'; content: string }[] = [
+        { role: 'user', content: userMessage },
+      ];
 
-    const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-      console.error('No text block in AI response');
-      return null;
+      // On retry, include the validation error as feedback
+      if (attempt > 1) {
+        messages.push(
+          { role: 'assistant', content: '(previous attempt had validation errors)' },
+          { role: 'user', content: 'Your previous response was invalid JSON or had missing required fields (title, file_path, task_type). Please return ONLY valid JSON with 5-15 tasks, each having title, description, file_path, and task_type.' },
+        );
+      }
+
+      const response = await Promise.race([
+        anthropic.messages.create({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 8192,
+          system: IMPLEMENTATION_PROMPT,
+          messages,
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('AI implementation timeout')), 60000)
+        ),
+      ]);
+
+      const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
+      if (!textBlock || textBlock.type !== 'text') {
+        console.error(`[Attempt ${attempt}/${MAX_ATTEMPTS}] No text block in AI response`);
+        continue;
+      }
+
+      const plan = parseImplementationResponse(textBlock.text);
+      if (plan && plan.tasks.length >= 3) {
+        if (attempt > 1) console.log(`[AI Implementation] Succeeded on attempt ${attempt}`);
+        return plan;
+      }
+
+      console.warn(`[Attempt ${attempt}/${MAX_ATTEMPTS}] Parse failed or too few tasks (${plan?.tasks.length ?? 0})`);
+    } catch (error) {
+      console.error(`[Attempt ${attempt}/${MAX_ATTEMPTS}] AI implementation failed:`, error);
     }
-
-    return parseImplementationResponse(textBlock.text);
-  } catch (error) {
-    console.error('AI implementation generation failed:', error);
-    return null;
   }
+
+  console.error('AI implementation generation failed after all attempts');
+  return null;
 }
 
 function parseImplementationResponse(rawText: string): ImplementationPlan | null {
