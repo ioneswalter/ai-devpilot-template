@@ -8,7 +8,6 @@ import type {
   CriterionCoverage,
   CoverageSummary,
   CriterionStatus,
-  GuidedTestEvidence,
 } from './guided-testing-types';
 
 interface TestCaseInput {
@@ -31,7 +30,7 @@ interface CriteriaCoverageInput {
   testRuns: TestRunInput[];
 }
 
-function isGuidedEvidence(ev: Record<string, unknown> | null): ev is GuidedTestEvidence {
+function isGuidedEvidence(ev: Record<string, unknown> | null): boolean {
   return ev !== null && ev.type === 'guided' && Array.isArray(ev.steps);
 }
 
@@ -62,7 +61,8 @@ export function useCriteriaCoverage({ criteria, testCases, testRuns }: CriteriaC
       if (!isGuidedEvidence(run.evidence)) continue;
 
       const tc = testCases.find((t) => t.id === run.test_case_id);
-      for (const step of run.evidence.steps) {
+      const ev = run.evidence as { steps?: Array<{ criterion_text: string; verdict: string }> };
+      for (const step of ev.steps ?? []) {
         // Match by criterion text (fuzzy — find the closest criterion)
         const matchIdx = findCriterionIndex(criteria, step.criterion_text);
         if (matchIdx < 0) continue;

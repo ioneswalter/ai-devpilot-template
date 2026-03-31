@@ -21,6 +21,7 @@ interface RawTestRun {
   environment: string;
   result: string;
   error_message: string | null;
+  evidence: Record<string, unknown> | null;
   executed_at: string;
   executed_by: string;
   duration_ms: number | null;
@@ -36,6 +37,7 @@ function mapTestRun(raw: RawTestRun): TestExecutionEntry {
     test_type: '',
     result: raw.result as TestExecutionEntry['result'],
     notes: raw.error_message,
+    evidence: raw.evidence ?? null,
     executed_by: raw.executed_by,
     executed_at: raw.executed_at,
     environment: raw.environment,

@@ -12,7 +12,6 @@ import type {
   GenerateGuidanceResponse,
   StepEvidence,
   GuidedTestEvidence,
-  ValidationResult,
   CaptureEvidenceResult,
 } from './guided-testing-types';
 

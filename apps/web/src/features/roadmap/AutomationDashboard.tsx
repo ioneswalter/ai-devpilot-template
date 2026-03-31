@@ -89,7 +89,7 @@ export function AutomationDashboard({ featureId }: AutomationDashboardProps) {
 }
 
 function CoverageBar({ coverage }: { coverage: AutomationCoverage }) {
-  const { automated_count, stale_count, manual_count, total_test_cases, coverage_percentage } = coverage;
+  const { automated_count, stale_count, total_test_cases, coverage_percentage } = coverage;
   const automatedPct = total_test_cases > 0 ? (automated_count / total_test_cases) * 100 : 0;
   const stalePct = total_test_cases > 0 ? (stale_count / total_test_cases) * 100 : 0;
 

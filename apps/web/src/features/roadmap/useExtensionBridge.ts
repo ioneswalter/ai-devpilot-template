@@ -29,17 +29,19 @@ interface ExtensionResponse {
 function sendToExtension(message: ExtensionMessage): Promise<ExtensionResponse> {
   return new Promise((resolve) => {
     try {
-      if (!window.chrome?.runtime?.sendMessage) {
+      const chromeRuntime = (window as unknown as Record<string, unknown>).chrome as
+        { runtime?: { sendMessage?: Function; lastError?: { message?: string } } } | undefined;
+      if (!chromeRuntime?.runtime?.sendMessage) {
         resolve({ success: false, error: 'Chrome runtime not available' });
         return;
       }
       // Use externally_connectable pattern — message any extension listening
-      window.chrome.runtime.sendMessage(
+      chromeRuntime.runtime.sendMessage(
         EXTENSION_ID,
         message,
         (response: ExtensionResponse | undefined) => {
-          if (window.chrome.runtime.lastError) {
-            resolve({ success: false, error: window.chrome.runtime.lastError.message });
+          if (chromeRuntime.runtime?.lastError) {
+            resolve({ success: false, error: chromeRuntime.runtime.lastError.message });
             return;
           }
           resolve(response ?? { success: false, error: 'No response' });

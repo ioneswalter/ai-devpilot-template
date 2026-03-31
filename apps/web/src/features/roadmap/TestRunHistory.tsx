@@ -52,7 +52,7 @@ function formatTime(isoString: string): string {
   });
 }
 
-function isGuidedEvidence(evidence: Record<string, unknown> | null): evidence is GuidedTestEvidence {
+function isGuidedEvidence(evidence: Record<string, unknown> | null): boolean {
   return evidence !== null && evidence.type === 'guided' && Array.isArray(evidence.steps);
 }
 
@@ -133,7 +133,7 @@ export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
                       )}
                       {isGuidedEvidence(entry.evidence) && (
                         <button
-                          onClick={() => setViewingEvidence(entry.evidence as GuidedTestEvidence)}
+                          onClick={() => setViewingEvidence(entry.evidence as unknown as GuidedTestEvidence)}
                           className="text-[10px] text-indigo-600 hover:text-indigo-700 font-medium mt-0.5"
                         >
                           View Evidence
