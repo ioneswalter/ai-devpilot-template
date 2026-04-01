@@ -118,6 +118,7 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
     const decoder = new TextDecoder();
     let buffer = '';
     let accumulated = '';
+    let messageSaved = false;
 
     try {
       while (true) {
@@ -136,6 +137,7 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
             const data = line.slice(6).trim();
             try {
               const parsed = JSON.parse(data);
+              if (currentEvent === 'message_saved') messageSaved = true;
               handleSSEEvent(currentEvent, parsed, tempUserId, accumulated);
               if (currentEvent === 'text_delta' && parsed.text) {
                 accumulated += parsed.text;
@@ -147,6 +149,16 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
       }
     } finally {
       setStreamingText(null);
+      // If stream ended without message_saved (e.g. edge function crashed after Claude
+      // finished but before DB save), reload messages from DB as fallback
+      if (!messageSaved && accumulated.length > 0) {
+        const convId = overrideConvId ?? conversationId;
+        if (convId) {
+          // Small delay to let any in-flight DB writes complete
+          await new Promise((r) => setTimeout(r, 1500));
+          await loadMessages(convId);
+        }
+      }
     }
   }
 
