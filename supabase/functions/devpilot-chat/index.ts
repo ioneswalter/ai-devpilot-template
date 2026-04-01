@@ -1,17 +1,23 @@
 /**
- * DevPilot Chat Edge Function
- * POST: Send a message in an ideation conversation and receive AI response
+ * DevPilot Chat Edge Function — Streaming
+ * POST: Send a message and stream the AI response via SSE
+ * GET: Returns available models
  *
  * FR-090 Feature Ideation Chat
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
+import { buildSystemPrompt } from '../_shared/devpilot-prompt.ts';
+import type { FeatureContext } from '../_shared/devpilot-prompt.ts';
+import { buildKnowledgeContext, formatFeatureContext } from '../_shared/knowledge-context.ts';
+import { logAIUsage, calculateCost } from '../_shared/usage-logger.ts';
+import { streamClaude } from '../_shared/claude-stream.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS, GET',
 };
 
 const DEFAULT_MODEL = 'claude-sonnet-4-6';
@@ -38,69 +44,31 @@ const requestSchema = z.object({
   model: z.string().optional(),
 });
 
-import { buildSystemPrompt } from '../_shared/devpilot-prompt.ts';
-import type { FeatureContext } from '../_shared/devpilot-prompt.ts';
-import { buildKnowledgeContext, formatFeatureContext } from '../_shared/knowledge-context.ts';
-import { logAIUsage, calculateCost } from '../_shared/usage-logger.ts';
-
-/** Call Claude API via fetch instead of the heavy SDK to save memory */
-async function callClaude(
-  apiKey: string,
-  model: string,
-  systemPrompt: string,
-  messages: { role: string; content: string }[],
-): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages,
-    }),
-  });
-
-  if (!resp.ok) {
-    const errBody = await resp.text();
-    throw new Error(`Claude API ${resp.status}: ${errBody}`);
-  }
-
-  const data = await resp.json();
-  const textBlock = data.content?.find((b: { type: string }) => b.type === 'text');
-  return {
-    text: textBlock?.text ?? 'I was unable to generate a response.',
-    inputTokens: data.usage?.input_tokens ?? 0,
-    outputTokens: data.usage?.output_tokens ?? 0,
-  };
-}
-
 function parseMetadata(content: string): Record<string, unknown> | null {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
   if (!jsonMatch) return null;
-
   try {
     const parsed = JSON.parse(jsonMatch[1].trim());
-    if (parsed.type === 'dedup_warning') {
-      return parsed;
-    }
+    if (parsed.type === 'dedup_warning') return parsed;
     if (parsed.type === 'proposal') {
-      if (parsed.proposals && Array.isArray(parsed.proposals)) {
-        return parsed;
-      }
-      if (parsed.proposal) {
-        return { type: 'proposal', proposals: [parsed.proposal] };
-      }
+      if (parsed.proposals && Array.isArray(parsed.proposals)) return parsed;
+      if (parsed.proposal) return { type: 'proposal', proposals: [parsed.proposal] };
       return parsed;
     }
-  } catch {
-    // Not valid JSON metadata — that's fine
-  }
+  } catch { /* not metadata */ }
   return null;
+}
+
+/** Trim conversation history to stay within context limits */
+function trimHistory(allMessages: { role: string; content: string }[]) {
+  if (allMessages.length <= 10) return allMessages;
+  const first = allMessages.slice(0, 2);
+  const recent = allMessages.slice(-6);
+  const note = {
+    role: 'assistant' as const,
+    content: `[Note: ${allMessages.length - 8} earlier messages omitted for context limits.]`,
+  };
+  return [...first, note, ...recent];
 }
 
 Deno.serve(async (req) => {
@@ -108,7 +76,6 @@ Deno.serve(async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // GET returns the default model and available models list
   if (req.method === 'GET') {
     const models = Object.entries(ALLOWED_MODELS).map(([id, label]) => ({ id, label }));
     return jsonResponse({ data: { model: DEFAULT_MODEL, available_models: models } });
@@ -121,7 +88,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
     // Auth
@@ -133,10 +100,7 @@ Deno.serve(async (req) => {
     if (authErr || !user) return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
 
     const { data: adminRow } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+      .from('admin_users').select('id').eq('user_id', user.id).maybeSingle();
     const isAdmin = !!adminRow;
 
     // Validate request
@@ -152,13 +116,11 @@ Deno.serve(async (req) => {
     // Verify conversation access
     const { data: conv, error: convErr } = await supabase
       .from('ideation_conversations')
-      .select('id, status, created_by')
-      .eq('id', conversation_id)
-      .single();
+      .select('id, status, created_by').eq('id', conversation_id).single();
 
     if (convErr || !conv) return errorResponse('NOT_FOUND', 'Conversation not found', 404);
     if (conv.created_by !== user.id && !isAdmin) {
-      return errorResponse('FORBIDDEN', 'You do not have access to this conversation', 403);
+      return errorResponse('FORBIDDEN', 'No access to this conversation', 403);
     }
     if (conv.status !== 'draft') {
       return errorResponse('VALIDATION_ERROR', 'Conversation is not in draft status', 400);
@@ -168,122 +130,119 @@ Deno.serve(async (req) => {
     const { data: userMsg, error: userMsgErr } = await supabase
       .from('conversation_messages')
       .insert({ conversation_id, role: 'user', content: message })
-      .select('id, role, content, metadata, created_at')
-      .single();
+      .select('id, role, content, metadata, created_at').single();
 
     if (userMsgErr) {
       console.error('Save user message error:', userMsgErr);
       return errorResponse('INTERNAL_ERROR', 'Failed to save message', 500);
     }
 
-    // FR-120: Fetch deep knowledge context (constitution, criteria, tests)
+    // Build context
     const knowledge = await buildKnowledgeContext(supabase);
     const features = knowledge.feature_details as unknown as FeatureContext[];
     const enrichedFeatureList = formatFeatureContext(knowledge.feature_details);
     const existingSections = [...new Set(
-      knowledge.feature_details.map(f => f.spec_section).filter((s): s is string => !!s)
+      knowledge.feature_details.map(f => f.spec_section).filter((s): s is string => !!s),
     )].sort();
 
-    // Fetch conversation history
     const { data: history } = await supabase
-      .from('conversation_messages')
-      .select('role, content')
-      .eq('conversation_id', conversation_id)
-      .order('created_at', { ascending: true });
+      .from('conversation_messages').select('role, content')
+      .eq('conversation_id', conversation_id).order('created_at', { ascending: true });
 
-    // Build messages for Claude with enriched knowledge context
     const systemPrompt = buildSystemPrompt(
       features, isAdmin, existingSections,
       { constitution_summary: knowledge.constitution_summary, enrichedFeatureList },
     );
-    const allMessages = (history ?? []).map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
+    const messages = trimHistory(
+      (history ?? []).map((m) => ({ role: m.role as string, content: m.content })),
+    );
 
-    let messages = allMessages;
-    if (allMessages.length > 10) {
-      const first = allMessages.slice(0, 2);
-      const recent = allMessages.slice(-6);
-      const summaryNote = {
-        role: 'assistant' as const,
-        content: `[Note: ${allMessages.length - 8} earlier messages were omitted to stay within context limits.]`,
-      };
-      messages = [...first, summaryNote, ...recent];
-    }
-
-    // Check API key
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!anthropicApiKey) {
-      return errorResponse('AI_ERROR', 'AI service not configured', 500);
-    }
+    if (!anthropicApiKey) return errorResponse('AI_ERROR', 'AI service not configured', 500);
 
-    // Call Claude via lightweight fetch (no SDK)
-    let aiContent: string;
-    let messageCost = 0;
-    try {
-      const result = await callClaude(anthropicApiKey, selectedModel, systemPrompt, messages);
-      aiContent = result.text;
-      messageCost = calculateCost(selectedModel, result.inputTokens, result.outputTokens);
+    // Stream response — wraps Claude SSE stream, saves message on completion
+    const claudeStream = streamClaude(anthropicApiKey, selectedModel, systemPrompt, messages);
+    const fullText: string[] = [];
+    let inputTokens = 0;
+    let outputTokens = 0;
 
-      // FR-112: Log usage (fire-and-forget)
-      const convFeature = conv as Record<string, unknown>;
-      logAIUsage(supabase, {
-        featureId: (convFeature.submitted_feature_id as string) ?? conversation_id,
-        adminId: user.id, modelId: selectedModel, operationType: 'ideation',
-        inputTokens: result.inputTokens, outputTokens: result.outputTokens,
-      }).catch(() => {});
-    } catch (aiError) {
-      console.error('Claude API error:', aiError);
-      return errorResponse('AI_ERROR', 'Failed to generate AI response', 500);
-    }
+    const encoder = new TextEncoder();
+    const outputStream = new ReadableStream({
+      async start(controller) {
+        // Send user_message event first so frontend can replace optimistic message
+        const userEvent = `event: user_message\ndata: ${JSON.stringify(userMsg)}\n\n`;
+        controller.enqueue(encoder.encode(userEvent));
 
-    // Parse metadata from AI response and include cost
-    const parsedMeta = parseMetadata(aiContent);
-    const metadata = { ...(parsedMeta ?? {}), cost: messageCost, model: selectedModel };
+        const reader = claudeStream.getReader();
+        const decoder = new TextDecoder();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-    // Save assistant message
-    const { data: assistantMsg, error: assistantMsgErr } = await supabase
-      .from('conversation_messages')
-      .insert({
-        conversation_id,
-        role: 'assistant',
-        content: aiContent,
-        metadata: metadata ?? null,
-      })
-      .select('id, role, content, metadata, created_at')
-      .single();
+            // Parse to accumulate text, then forward the raw SSE chunk
+            const chunk = decoder.decode(value, { stream: true });
+            controller.enqueue(value);
 
-    if (assistantMsgErr) {
-      console.error('Save assistant message error:', assistantMsgErr);
-      return errorResponse('INTERNAL_ERROR', 'Failed to save AI response', 500);
-    }
+            // Accumulate text for DB save
+            for (const line of chunk.split('\n')) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const d = JSON.parse(line.slice(6));
+                  if (d.text) fullText.push(d.text);
+                  if (d.input_tokens) inputTokens = d.input_tokens;
+                  if (d.output_tokens) outputTokens = d.output_tokens;
+                } catch { /* skip */ }
+              }
+            }
+          }
 
-    // Update conversation timestamp + auto-title
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+          // Save assistant message to DB
+          const aiContent = fullText.join('');
+          const cost = calculateCost(selectedModel, inputTokens, outputTokens);
+          const parsedMeta = parseMetadata(aiContent);
+          const metadata = { ...(parsedMeta ?? {}), cost, model: selectedModel };
 
-    // Auto-generate title from first user message
-    const { count: msgCount } = await supabase
-      .from('conversation_messages')
-      .select('id', { count: 'exact', head: true })
-      .eq('conversation_id', conversation_id)
-      .eq('role', 'user');
+          const { data: assistantMsg } = await supabase
+            .from('conversation_messages')
+            .insert({ conversation_id, role: 'assistant', content: aiContent, metadata })
+            .select('id, role, content, metadata, created_at').single();
 
-    if (msgCount === 1) {
-      updates.title = message.substring(0, 200);
-    }
+          // Send saved message event
+          const saveEvent = `event: message_saved\ndata: ${JSON.stringify({
+            assistant_message: assistantMsg, model: selectedModel, cost,
+          })}\n\n`;
+          controller.enqueue(encoder.encode(saveEvent));
 
-    await supabase
-      .from('ideation_conversations')
-      .update(updates)
-      .eq('id', conversation_id);
+          // Update conversation + auto-title
+          const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+          const { count } = await supabase.from('conversation_messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('conversation_id', conversation_id).eq('role', 'user');
+          if (count === 1) updates.title = message.substring(0, 200);
+          await supabase.from('ideation_conversations').update(updates).eq('id', conversation_id);
 
-    return jsonResponse({
-      data: {
-        user_message: userMsg,
-        assistant_message: assistantMsg,
-        model: selectedModel,
-        cost: messageCost,
+          // FR-112: Log usage
+          logAIUsage(supabase, {
+            featureId: (conv as Record<string, unknown>).submitted_feature_id as string ?? conversation_id,
+            adminId: user.id, modelId: selectedModel, operationType: 'ideation',
+            inputTokens, outputTokens,
+          }).catch(() => {});
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Stream processing failed';
+          const errEvent = `event: error\ndata: ${JSON.stringify({ message: msg })}\n\n`;
+          controller.enqueue(encoder.encode(errEvent));
+        }
+        controller.close();
+      },
+    });
+
+    return new Response(outputStream, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
     });
   } catch (error) {

@@ -10,25 +10,27 @@ import type { ConversationMessage, DedupMatch } from './types';
 interface IdeationChatProps {
   messages: ConversationMessage[];
   isLoading: boolean;
+  /** Live streaming text from SSE — shown as a temporary bubble while AI is generating */
+  streamingText?: string | null;
   error: string | null;
   onSendMessage: (message: string) => void;
   /** When true, force-collapse the "Your idea" panel (e.g. when proposal panel is visible) */
   forceCollapsed?: boolean;
 }
 
-export function IdeationChat({ messages, isLoading, error, onSendMessage, forceCollapsed }: IdeationChatProps) {
+export function IdeationChat({ messages, isLoading, streamingText, error, onSendMessage, forceCollapsed }: IdeationChatProps) {
   const [input, setInput] = useState('');
   const [inputExpanded, setInputExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom when messages change or AI is loading
+  // Auto-scroll to bottom when messages change, streaming updates, or AI is loading
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, streamingText]);
 
   // Auto-collapse when proposal panel opens
   useEffect(() => {
@@ -50,9 +52,9 @@ export function IdeationChat({ messages, isLoading, error, onSendMessage, forceC
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Block all Enter-based form submission — only the Send button submits
     if (e.key === 'Enter' && (e.shiftKey || e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      handleSubmit(e);
     }
   };
 
@@ -81,8 +83,12 @@ export function IdeationChat({ messages, isLoading, error, onSendMessage, forceC
               <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                 <SparklesIcon className="h-4 w-4 text-emerald-600" />
               </div>
-              <div className="bg-gray-100 rounded-xl px-4 py-3">
-                <LoaderIcon className="h-4 w-4 animate-spin text-gray-500" />
+              <div className="max-w-[75%] bg-gray-100 rounded-xl px-4 py-3 text-sm text-gray-900">
+                {streamingText ? (
+                  <div className="whitespace-pre-wrap">{streamingText}<span className="animate-pulse">|</span></div>
+                ) : (
+                  <LoaderIcon className="h-4 w-4 animate-spin text-gray-500" />
+                )}
               </div>
             </div>
           )}
@@ -116,7 +122,7 @@ export function IdeationChat({ messages, isLoading, error, onSendMessage, forceC
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Describe your idea or request changes to the proposal...&#10;&#10;Enter for new line, Shift+Enter to send"
+              placeholder="Describe your idea or request changes to the proposal...&#10;&#10;Click Send when ready"
               className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               disabled={isLoading}
             />
