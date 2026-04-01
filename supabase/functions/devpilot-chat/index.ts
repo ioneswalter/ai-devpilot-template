@@ -168,12 +168,12 @@ Deno.serve(async (req) => {
     }));
 
     let messages = allMessages;
-    if (allMessages.length > 20) {
+    if (allMessages.length > 10) {
       const first = allMessages.slice(0, 2);
-      const recent = allMessages.slice(-10);
+      const recent = allMessages.slice(-6);
       const summaryNote = {
         role: 'assistant' as const,
-        content: `[Note: ${allMessages.length - 12} earlier messages were omitted to stay within context limits. The conversation started with the messages above and continued with the messages below.]`,
+        content: `[Note: ${allMessages.length - 8} earlier messages were omitted to stay within context limits. The conversation started with the messages above and continued with the messages below.]`,
       };
       messages = [...first, summaryNote, ...recent];
     }
@@ -187,13 +187,13 @@ Deno.serve(async (req) => {
     // Call Claude
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 55000);
 
     let aiContent: string;
     try {
       const response = await anthropic.messages.create({
         model: selectedModel,
-        max_tokens: 16384,
+        max_tokens: 8192,
         system: systemPrompt,
         messages,
       });
