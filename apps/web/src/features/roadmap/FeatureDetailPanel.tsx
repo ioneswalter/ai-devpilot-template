@@ -8,6 +8,8 @@ import { FeatureRating } from '../../components/FeatureRating';
 import { getTestTypeBadge } from '../../components/roadmap/badge-utils';
 import { parseCriteria, type ProductFeature } from './roadmap-helpers';
 import type { MutableRefObject } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { aiUsageApi } from '@/lib/api/ai-usage-api';
 
 interface FeatureDetailPanelProps {
   feature: ProductFeature;
@@ -22,6 +24,7 @@ export function FeatureDetailPanel({
   feature,
   features,
   isMember,
+  isAdmin,
   toggleExpanded,
   featureRowRefs,
 }: FeatureDetailPanelProps) {
@@ -210,6 +213,9 @@ export function FeatureDetailPanel({
         </div>
       )}
 
+      {/* AI Cost Breakdown (admin-only, loads on expand) */}
+      {isAdmin && <AICostBreakdown featureId={feature.id} />}
+
       {/* Rating Section */}
       <div className="mt-4 pt-4 border-t">
         <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
@@ -223,6 +229,41 @@ export function FeatureDetailPanel({
 
       {/* Comments Section */}
       <FeatureComments featureId={feature.id} featureCode={feature.feature_code} isMember={isMember} />
+    </div>
+  );
+}
+
+/** AI Cost Breakdown — shown inside expanded feature detail (FR-112 J3) */
+function AICostBreakdown({ featureId }: { featureId: string }) {
+  const { data } = useQuery({
+    queryKey: ['ai-cost-breakdown', featureId],
+    queryFn: () => aiUsageApi.getCostBreakdown(featureId),
+    staleTime: 60_000,
+  });
+
+  const breakdown = data?.data?.breakdown;
+  if (!breakdown || Object.keys(breakdown).length === 0) return null;
+
+  const totalCost = Object.values(breakdown).reduce((s, b) => s + b.cost, 0);
+
+  return (
+    <div className="mt-4 pt-4 border-t">
+      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+        <svg className="w-5 h-5 mr-2 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        AI Cost: ${totalCost.toFixed(2)}
+      </h4>
+      <div className="space-y-1">
+        {Object.entries(breakdown)
+          .sort((a, b) => b[1].cost - a[1].cost)
+          .map(([op, info]) => (
+            <div key={op} className="flex items-center justify-between text-xs">
+              <span className="text-gray-600 capitalize">{op.replace(/_/g, ' ')}</span>
+              <span className="text-gray-500">{info.calls} calls / ${info.cost.toFixed(4)}</span>
+            </div>
+          ))}
+      </div>
     </div>
   );
 }
