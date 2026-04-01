@@ -11,6 +11,7 @@
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 
 export interface CodeGenResult {
   code: string;
@@ -149,7 +150,7 @@ export async function generateCode(
 
     const response = await Promise.race([
       anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 8192,
         system: CODEGEN_PROMPT,
         messages: [{ role: 'user', content: userMessage }],
@@ -158,6 +159,12 @@ export async function generateCode(
         setTimeout(() => reject(new Error('Code generation timeout')), 90000)
       ),
     ]);
+
+    logAIUsageFromEnv({
+      featureId: ctx.feature_code, adminId: 'system', modelId: 'claude-sonnet-4-6',
+      operationType: 'code_generation', inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    });
 
     const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {

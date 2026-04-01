@@ -56,7 +56,7 @@ export async function fetchPromptContext(
     return {
       systemPrompt: template.system_prompt as string,
       learnings,
-      modelRecommendation: (template.model_recommendation as string) ?? 'claude-sonnet-4-5-20250514',
+      modelRecommendation: (template.model_recommendation as string) ?? 'claude-sonnet-4-6',
       maxTokens: (template.max_tokens as number) ?? 4096,
     };
   } catch {

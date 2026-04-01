@@ -38,7 +38,7 @@ async function createSession(req: Request): Promise<Response> {
       test_case_id,
       admin_id: auth.userId,
       status: 'active',
-      ai_model: 'claude-sonnet-4-20250514',
+      ai_model: 'claude-sonnet-4-6',
     })
     .select('id, status, started_at')
     .single();

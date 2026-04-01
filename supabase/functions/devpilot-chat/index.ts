@@ -5,7 +5,6 @@
  * FR-090 Feature Ideation Chat
  */
 
-import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
 
@@ -15,10 +14,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const DEFAULT_MODEL = 'claude-sonnet-4-5-20250514';
+const DEFAULT_MODEL = 'claude-sonnet-4-6';
 const ALLOWED_MODELS: Record<string, string> = {
-  'claude-opus-4-1-20250805': 'Opus',
-  'claude-sonnet-4-5-20250514': 'Sonnet',
+  'claude-opus-4-6': 'Opus',
+  'claude-sonnet-4-6': 'Sonnet',
   'claude-haiku-4-5-20251001': 'Haiku',
 };
 
@@ -42,7 +41,43 @@ const requestSchema = z.object({
 import { buildSystemPrompt } from '../_shared/devpilot-prompt.ts';
 import type { FeatureContext } from '../_shared/devpilot-prompt.ts';
 import { buildKnowledgeContext, formatFeatureContext } from '../_shared/knowledge-context.ts';
-import { logAIUsage } from '../_shared/usage-logger.ts';
+import { logAIUsage, calculateCost } from '../_shared/usage-logger.ts';
+
+/** Call Claude API via fetch instead of the heavy SDK to save memory */
+async function callClaude(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  messages: { role: string; content: string }[],
+): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages,
+    }),
+  });
+
+  if (!resp.ok) {
+    const errBody = await resp.text();
+    throw new Error(`Claude API ${resp.status}: ${errBody}`);
+  }
+
+  const data = await resp.json();
+  const textBlock = data.content?.find((b: { type: string }) => b.type === 'text');
+  return {
+    text: textBlock?.text ?? 'I was unable to generate a response.',
+    inputTokens: data.usage?.input_tokens ?? 0,
+    outputTokens: data.usage?.output_tokens ?? 0,
+  };
+}
 
 function parseMetadata(content: string): Record<string, unknown> | null {
   const jsonMatch = content.match(/```json\s*([\s\S]*?)```/);
@@ -54,7 +89,6 @@ function parseMetadata(content: string): Record<string, unknown> | null {
       return parsed;
     }
     if (parsed.type === 'proposal') {
-      // Normalize: support both old single "proposal" and new "proposals" array format
       if (parsed.proposals && Array.isArray(parsed.proposals)) {
         return parsed;
       }
@@ -173,7 +207,7 @@ Deno.serve(async (req) => {
       const recent = allMessages.slice(-6);
       const summaryNote = {
         role: 'assistant' as const,
-        content: `[Note: ${allMessages.length - 8} earlier messages were omitted to stay within context limits. The conversation started with the messages above and continued with the messages below.]`,
+        content: `[Note: ${allMessages.length - 8} earlier messages were omitted to stay within context limits.]`,
       };
       messages = [...first, summaryNote, ...recent];
     }
@@ -184,39 +218,29 @@ Deno.serve(async (req) => {
       return errorResponse('AI_ERROR', 'AI service not configured', 500);
     }
 
-    // Call Claude
-    const anthropic = new Anthropic({ apiKey: anthropicApiKey });
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 55000);
-
+    // Call Claude via lightweight fetch (no SDK)
     let aiContent: string;
+    let messageCost = 0;
     try {
-      const response = await anthropic.messages.create({
-        model: selectedModel,
-        max_tokens: 8192,
-        system: systemPrompt,
-        messages,
-      });
-      clearTimeout(timeoutId);
-
-      const textBlock = response.content.find((b) => b.type === 'text');
-      aiContent = textBlock && textBlock.type === 'text' ? textBlock.text : 'I was unable to generate a response.';
+      const result = await callClaude(anthropicApiKey, selectedModel, systemPrompt, messages);
+      aiContent = result.text;
+      messageCost = calculateCost(selectedModel, result.inputTokens, result.outputTokens);
 
       // FR-112: Log usage (fire-and-forget)
       const convFeature = conv as Record<string, unknown>;
       logAIUsage(supabase, {
         featureId: (convFeature.submitted_feature_id as string) ?? conversation_id,
         adminId: user.id, modelId: selectedModel, operationType: 'ideation',
-        inputTokens: response.usage?.input_tokens ?? 0, outputTokens: response.usage?.output_tokens ?? 0,
+        inputTokens: result.inputTokens, outputTokens: result.outputTokens,
       }).catch(() => {});
     } catch (aiError) {
-      clearTimeout(timeoutId);
       console.error('Claude API error:', aiError);
       return errorResponse('AI_ERROR', 'Failed to generate AI response', 500);
     }
 
-    // Parse metadata from AI response
-    const metadata = parseMetadata(aiContent);
+    // Parse metadata from AI response and include cost
+    const parsedMeta = parseMetadata(aiContent);
+    const metadata = { ...(parsedMeta ?? {}), cost: messageCost, model: selectedModel };
 
     // Save assistant message
     const { data: assistantMsg, error: assistantMsgErr } = await supabase
@@ -259,6 +283,7 @@ Deno.serve(async (req) => {
         user_message: userMsg,
         assistant_message: assistantMsg,
         model: selectedModel,
+        cost: messageCost,
       },
     });
   } catch (error) {

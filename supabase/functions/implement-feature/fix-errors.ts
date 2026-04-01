@@ -10,6 +10,7 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import { jsonResponse, errorResponse, type AuthContext } from './shared.ts';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 
 interface BuildError {
   file: string;
@@ -105,7 +106,7 @@ export async function handleFixErrors(req: Request, _ctx: AuthContext): Promise<
     const anthropic = new Anthropic({ apiKey });
     const response = await Promise.race([
       anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 16384,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
@@ -114,6 +115,12 @@ export async function handleFixErrors(req: Request, _ctx: AuthContext): Promise<
         setTimeout(() => reject(new Error('Fix errors timeout')), 120000)
       ),
     ]);
+
+    logAIUsageFromEnv({
+      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
+      operationType: 'error_fixing', inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    });
 
     const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {

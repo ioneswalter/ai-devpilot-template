@@ -7,6 +7,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 import pg from 'npm:pg@8.13.1';
 import { appendLog } from './shared.ts';
 
@@ -189,7 +190,7 @@ async function seedTestData(
 
     const anthropic = new Anthropic({ apiKey });
     const msg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [{
         role: 'user',
@@ -207,6 +208,11 @@ Requirements:
       }],
     });
 
+    logAIUsageFromEnv({
+      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
+      operationType: 'test_readiness', inputTokens: msg.usage?.input_tokens ?? 0,
+      outputTokens: msg.usage?.output_tokens ?? 0,
+    });
     const sqlText = (msg.content[0] as { text: string }).text.trim();
     if (!sqlText || sqlText.length < 10) {
       return { status: 'skipped', duration_ms: Date.now() - start, errors: ['AI returned empty SQL'], records: 0 };
@@ -278,7 +284,7 @@ async function generateTestCases(
     const featureCode = (feature?.feature_code ?? 'FR-XXX') as string;
 
     const msg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2048,
       messages: [{
         role: 'user',
@@ -298,6 +304,11 @@ Generate 4-10 test cases covering the main user journeys and edge cases.`
       }],
     });
 
+    logAIUsageFromEnv({
+      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
+      operationType: 'test_readiness', inputTokens: msg.usage?.input_tokens ?? 0,
+      outputTokens: msg.usage?.output_tokens ?? 0,
+    });
     const rawJson = (msg.content[0] as { text: string }).text.trim();
     let testCases: Array<{ title: string; description: string; test_type: string; priority: string; expected_result: string }>;
 

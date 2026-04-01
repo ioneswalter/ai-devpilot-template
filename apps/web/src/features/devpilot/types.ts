@@ -30,7 +30,12 @@ export interface ConversationMessage {
   created_at: string;
 }
 
-export type MessageMetadata = DedupWarningMetadata | ProposalMetadata;
+export type MessageMetadata = (DedupWarningMetadata | ProposalMetadata) & {
+  /** Real AI cost in USD (FR-112) */
+  cost?: number;
+  /** Model used for this response */
+  model?: string;
+};
 
 export interface DedupWarningMetadata {
   type: 'dedup_warning';

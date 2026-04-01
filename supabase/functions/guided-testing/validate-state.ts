@@ -5,7 +5,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { logAIUsage } from '../_shared/usage-logger.ts';
 import { resolveAuth, isAuth } from './auth.ts';
 
-const AI_MODEL = 'claude-sonnet-4-20250514';
+const AI_MODEL = 'claude-sonnet-4-6';
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {

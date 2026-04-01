@@ -7,7 +7,7 @@ import { CONSTITUTION_PRINCIPLES } from '../_shared/knowledge-context.ts';
 import { fetchLearnings } from '../_shared/learning-logger.ts';
 import { resolveAuth, isAuth } from './auth.ts';
 
-const AI_MODEL = 'claude-sonnet-4-20250514';
+const AI_MODEL = 'claude-sonnet-4-6';
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {

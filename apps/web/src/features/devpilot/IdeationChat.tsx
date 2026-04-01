@@ -175,6 +175,13 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
           <div className="whitespace-pre-wrap">{stripMetadataBlocks(message.content)}</div>
         </div>
 
+        {!isUser && message.metadata?.cost != null && (
+          <span className="text-[10px] text-gray-400 ml-1">
+            ${message.metadata.cost.toFixed(4)}
+            {message.metadata.model ? ` · ${message.metadata.model.replace(/^claude-/, '').split('-')[0]}` : ''}
+          </span>
+        )}
+
         {dedupMatches.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-left">
             <div className="flex items-center gap-1.5 mb-2">

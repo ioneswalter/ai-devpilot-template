@@ -6,13 +6,14 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 
 const GenerateSchema = z.object({
   feature_id: z.string().uuid(),
   test_case_ids: z.array(z.string().uuid()).optional(),
 });
 
-const AI_MODEL = 'claude-sonnet-4-20250514';
+const AI_MODEL = 'claude-sonnet-4-6';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,6 +53,12 @@ async function generateScriptForTestCase(
       model: AI_MODEL,
       max_tokens: 2000,
       messages: [{ role: 'user', content: prompt }],
+    });
+
+    logAIUsageFromEnv({
+      featureId: 'test-automation', adminId: 'system', modelId: AI_MODEL,
+      operationType: 'test_automation', inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
     });
 
     const text = response.content

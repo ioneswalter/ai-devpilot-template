@@ -5,13 +5,14 @@
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { appendLog, onPipelineComplete } from './shared.ts';
 import { runDeploy } from './deploy.ts';
 import { captureFailure } from './failure-capture.ts';
 
 const MAX_FIX_ATTEMPTS = 3;
-const AI_MODEL = 'claude-sonnet-4-20250514';
+const AI_MODEL = 'claude-sonnet-4-6';
 
 type CIStage = 'typecheck' | 'lint' | 'test';
 
@@ -297,6 +298,12 @@ async function validateStage(
       ),
     ]);
 
+    logAIUsageFromEnv({
+      featureId: 'pipeline', adminId: 'system', modelId: AI_MODEL,
+      operationType: 'ci_check', inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    });
+
     const text = response.content.find((b: { type: string }) => b.type === 'text');
     if (!text || text.type !== 'text') return [];
 
@@ -336,6 +343,12 @@ async function fixErrors(
         setTimeout(() => reject(new Error('CI fix timeout')), 120000)
       ),
     ]);
+
+    logAIUsageFromEnv({
+      featureId: 'pipeline', adminId: 'system', modelId: AI_MODEL,
+      operationType: 'ci_check', inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    });
 
     const text = response.content.find((b: { type: string }) => b.type === 'text');
     if (!text || text.type !== 'text') return null;

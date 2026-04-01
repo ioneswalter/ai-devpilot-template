@@ -4,6 +4,7 @@
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 
 export interface EnrichmentItem {
   item_type: 'criterion' | 'test_case' | 'edge_case' | 'description';
@@ -18,7 +19,7 @@ export interface EnrichmentResult {
   output_tokens: number;
 }
 
-const AI_MODEL = 'claude-opus-4-1-20250805';
+const AI_MODEL = 'claude-opus-4-6';
 
 const ENRICHMENT_PROMPT = `You are a senior product analyst reviewing a proposed feature specification for the OwnYourGig platform.
 Analyze the feature against the constitution principles and generate structured enrichment suggestions.
@@ -112,6 +113,12 @@ Generate enrichment suggestions. Validate criteria against constitution principl
           setTimeout(() => reject(new Error('AI enrichment timeout')), 30000)
         ),
       ]);
+
+    logAIUsageFromEnv({
+      featureId: 'spec-review', adminId: 'system', modelId: AI_MODEL,
+      operationType: 'spec_review', inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    });
 
       const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
       if (!textBlock || textBlock.type !== 'text') {

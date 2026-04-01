@@ -7,6 +7,7 @@
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
 import type { AuthContext } from './shared.ts';
 import type { ComplexityScore } from './complexity-scorer.ts';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 
 interface SubtaskDef {
   title: string;
@@ -220,6 +221,12 @@ async function callAiForSplit(apiKey: string, prompt: string): Promise<SubtaskDe
       }),
       new Promise<never>((_, rej) => setTimeout(() => rej(new Error('Split timeout')), 30000)),
     ]);
+
+    logAIUsageFromEnv({
+      featureId: 'pipeline', adminId: 'system', modelId: 'claude-haiku-4-5-20251001',
+      operationType: 'task_splitting', inputTokens: res.usage?.input_tokens ?? 0,
+      outputTokens: res.usage?.output_tokens ?? 0,
+    });
 
     const text = res.content.find((b: { type: string }) => b.type === 'text');
     if (!text || text.type !== 'text') return [];

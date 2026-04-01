@@ -6,6 +6,7 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 
 const VisualAssertSchema = z.object({
   script_id: z.string().uuid(),
@@ -16,7 +17,7 @@ const VisualAssertSchema = z.object({
   test_run_id: z.string().uuid().optional(),
 });
 
-const AI_MODEL = 'claude-sonnet-4-20250514';
+const AI_MODEL = 'claude-sonnet-4-6';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -95,6 +96,12 @@ async function callVisionApi(
         { type: 'text', text: prompt },
       ],
     }],
+  });
+
+  logAIUsageFromEnv({
+    featureId: 'test-automation', adminId: 'system', modelId: AI_MODEL,
+    operationType: 'visual_assertion', inputTokens: response.usage?.input_tokens ?? 0,
+    outputTokens: response.usage?.output_tokens ?? 0,
   });
 
   const text = response.content

@@ -4,6 +4,7 @@
  */
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
+import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 import { CONSTITUTION_PRINCIPLES } from '../_shared/knowledge-context.ts';
 
 export interface ImplementationTask {
@@ -156,7 +157,7 @@ Generate a detailed implementation plan for this feature.`;
 
       const response = await Promise.race([
         anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4-6',
           max_tokens: 8192,
           system: IMPLEMENTATION_PROMPT,
           messages,
@@ -165,6 +166,12 @@ Generate a detailed implementation plan for this feature.`;
           setTimeout(() => reject(new Error('AI implementation timeout')), 60000)
         ),
       ]);
+
+    logAIUsageFromEnv({
+      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
+      operationType: 'code_generation', inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    });
 
       const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
       if (!textBlock || textBlock.type !== 'text') {

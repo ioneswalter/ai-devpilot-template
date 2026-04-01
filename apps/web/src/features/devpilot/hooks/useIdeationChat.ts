@@ -97,7 +97,7 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
 
       try {
         const response = await devpilotApi.sendMessage(convId, message, selectedModelId ?? undefined);
-        const { user_message, assistant_message, model } = response.data;
+        const { user_message, assistant_message, model, cost } = response.data;
         if (model) {
           const info = getModelInfo(model);
           setModelLabel(info.label);
@@ -120,7 +120,11 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
               id: assistant_message.id,
               role: assistant_message.role as 'assistant',
               content: assistant_message.content,
-              metadata: (assistant_message.metadata as unknown as MessageMetadata) ?? null,
+              metadata: {
+                ...((assistant_message.metadata as unknown as MessageMetadata) ?? {} as MessageMetadata),
+                ...(cost != null ? { cost } : {}),
+                ...(model ? { model } : {}),
+              } as MessageMetadata,
               created_at: assistant_message.created_at,
             },
           ];
