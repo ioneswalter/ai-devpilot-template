@@ -21,6 +21,7 @@ interface FeatureListViewProps {
   onLinkCriteria: (feature: ProductFeature) => void;
   getPipeline?: (featureId: string) => FeaturePipelineState | undefined;
   onPipelineStageClick?: (feature: ProductFeature, stage: PipelineStageName) => void;
+  getFeatureCost?: (featureId: string) => number | null;
 }
 
 export function FeatureListView({
@@ -38,6 +39,7 @@ export function FeatureListView({
   onLinkCriteria,
   getPipeline,
   onPipelineStageClick,
+  getFeatureCost,
 }: FeatureListViewProps) {
   return (
     <section className="py-8">
@@ -90,6 +92,7 @@ export function FeatureListView({
                       onLinkCriteria={onLinkCriteria}
                       pipeline={getPipeline?.(feature.id)}
                       onPipelineStageClick={onPipelineStageClick ? (stage) => onPipelineStageClick(feature, stage) : undefined}
+                      aiCost={getFeatureCost?.(feature.id) ?? null}
                     />
 
                     {/* Expanded Detail */}
@@ -130,6 +133,7 @@ interface FeatureRowProps {
   onLinkCriteria: (feature: ProductFeature) => void;
   pipeline?: FeaturePipelineState;
   onPipelineStageClick?: (stage: PipelineStageName) => void;
+  aiCost?: number | null;
 }
 
 function FeatureRow({
@@ -142,6 +146,7 @@ function FeatureRow({
   onLinkCriteria,
   pipeline,
   onPipelineStageClick,
+  aiCost,
 }: FeatureRowProps) {
   const chevronClass = `transition-transform ${isExpanded ? 'rotate-180' : ''}`;
 
@@ -205,6 +210,11 @@ function FeatureRow({
             {feature.test_cases && feature.test_cases.length > 0 && (
               <span className="text-xs text-green-600">
                 {feature.test_cases.length} test{feature.test_cases.length > 1 ? 's' : ''}
+              </span>
+            )}
+            {aiCost != null && aiCost > 0 && (
+              <span className="text-xs text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded" title="AI usage cost">
+                ${aiCost < 0.01 ? aiCost.toFixed(4) : aiCost.toFixed(2)}
               </span>
             )}
           </div>

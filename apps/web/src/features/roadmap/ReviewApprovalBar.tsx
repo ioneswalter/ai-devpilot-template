@@ -90,12 +90,6 @@ export function ReviewApprovalBar({
       {isReviewActive && (
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowSendBack(true)}
-            className="px-3 py-1.5 text-sm text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors"
-          >
-            Send Back
-          </button>
-          <button
             onClick={onApprove}
             disabled={!canApprove || isApproving}
             className="px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

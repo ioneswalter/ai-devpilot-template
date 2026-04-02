@@ -45,7 +45,7 @@ function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
     description: p.description,
     criteria: (p.acceptance_criteria ?? []).join('\n'),
     priority: 'priority' in p ? p.priority : 'P3',
-    category: 'category' in p ? (p.category ?? '') : '',
+    category: 'category' in p ? (p.category && p.category !== 'null' ? p.category : '') : '',
     specSection: 'spec_section' in p ? p.spec_section : 'Community Proposals',
     submitted: false,
     submittedCode: null,
@@ -156,7 +156,7 @@ export function ProposalPanel({
 
       if (isAdmin) {
         proposalData.priority = f.priority;
-        proposalData.category = f.category || null;
+        proposalData.category = (f.category && f.category !== 'null') ? f.category : null;
         proposalData.spec_section = f.specSection;
       }
 

@@ -24,6 +24,7 @@ const sourceLabels: Record<string, { label: string; color: string }> = {
   ai_generated: { label: 'AI', color: 'bg-indigo-100 text-indigo-600' },
   original: { label: 'Original', color: 'bg-gray-100 text-gray-600' },
   manual: { label: 'Manual', color: 'bg-teal-100 text-teal-600' },
+  speckit: { label: 'SpecKit', color: 'bg-orange-100 text-orange-600' },
 };
 
 const decisionStyles: Record<string, string> = {

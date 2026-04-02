@@ -101,6 +101,19 @@ export function useSpecReview(featureId: string, options?: { enabled?: boolean }
     return updateMutation.mutateAsync(data);
   }
 
+  // Helper: accept all pending items in one request
+  function acceptAll() {
+    if (!review) return;
+    const pendingItems = items.filter(i => i.decision === 'pending');
+    if (pendingItems.length === 0) return;
+    const data: UpdateReviewRequest = {
+      review_id: review.id,
+      version: review.version,
+      updates: pendingItems.map(i => ({ item_id: i.id, decision: 'accepted' as const })),
+    };
+    return updateMutation.mutateAsync(data);
+  }
+
   // Helper: add a new manual item
   function addItem(itemType: ReviewItemType, content: string) {
     if (!review) return;
@@ -146,6 +159,7 @@ export function useSpecReview(featureId: string, options?: { enabled?: boolean }
     updateItemDecision,
     addComment,
     addItem,
+    acceptAll,
     approveReview: approveMutation.mutateAsync,
     sendBack: sendBackMutation.mutateAsync,
     refetch: reviewQuery.refetch,

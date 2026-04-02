@@ -66,7 +66,13 @@ function computeSpecStage(
   reviews: SpecReviewRow[],
   artifacts: SpecArtifactRow[],
   featureId: string,
+  featureStatus?: string,
 ): StageStatus {
+  // Features in testing or released have completed spec by definition
+  if (featureStatus === 'in_testing' || featureStatus === 'released') {
+    return { status: 'completed', label: 'Approved' };
+  }
+
   // Check ALL spec reviews for this feature (not just latest)
   const featureReviews = reviews.filter((r) => r.feature_id === featureId);
 
@@ -140,6 +146,7 @@ function computeBuildStage(
   }
 
   if (featureStatus === 'released') return { status: 'completed', label: 'Completed' };
+  if (featureStatus === 'in_testing') return { status: 'completed', label: 'Completed' };
   if (featureStatus === 'in_development') return { status: 'in_progress', label: 'In Progress' };
 
   return { status: 'not_started', label: 'Not Started' };
@@ -201,7 +208,7 @@ Deno.serve(async (req) => {
     let featuresQuery = supabase
       .from('product_features')
       .select('id, status')
-      .in('status', ['proposed', 'approved', 'in_development', 'released']);
+      .in('status', ['proposed', 'approved', 'in_development', 'in_testing', 'released']);
 
     if (featureIdParam) {
       featuresQuery = featuresQuery.eq('id', featureIdParam);
@@ -254,7 +261,7 @@ Deno.serve(async (req) => {
 
     const pipelines = (features as FeatureRow[]).map((f) => ({
       feature_id: f.id,
-      spec: computeSpecStage(allSpecs, allArtifacts, f.id),
+      spec: computeSpecStage(allSpecs, allArtifacts, f.id, f.status),
       build: computeBuildStage(allImpls, allPipelineRuns, f.id, f.status),
       test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
       deploy: computeDeployStage(f.status),

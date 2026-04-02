@@ -4,7 +4,7 @@
 
 // Review item types
 export type ReviewItemType = 'criterion' | 'test_case' | 'edge_case' | 'description';
-export type ReviewItemSource = 'ai_generated' | 'original' | 'manual';
+export type ReviewItemSource = 'ai_generated' | 'original' | 'manual' | 'speckit';
 export type ReviewItemDecision = 'pending' | 'accepted' | 'rejected' | 'modified';
 export type ReviewStatus = 'in_review' | 'approved' | 'sent_back';
 

@@ -35,6 +35,7 @@ export function ImplementationPanel({
   const [showAddForm, setShowAddForm] = useState(false);
   const [isWritingCode, setIsWritingCode] = useState(false);
   const [ready, setReady] = useState(false);
+  const [isAcceptingAll, setIsAcceptingAll] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 800);
@@ -123,7 +124,19 @@ export function ImplementationPanel({
       <div className="p-4 border-b bg-white">
         <div className="flex items-center gap-2 mb-1">
           <code className="text-xs font-mono text-blue-600">{featureCode}</code>
-          <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
+          <h3 className="text-sm font-semibold text-gray-900 truncate flex-1">{featureTitle}</h3>
+          {impl.pendingCount > 0 && !impl.isImplementing && (
+            <button
+              onClick={() => {
+                setIsAcceptingAll(true);
+                impl.acceptAllTasks().finally(() => setIsAcceptingAll(false));
+              }}
+              disabled={isAcceptingAll || impl.isUpdating}
+              className="px-2.5 py-1 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shrink-0"
+            >
+              {isAcceptingAll ? 'Accepting...' : `Accept All (${impl.pendingCount})`}
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span>Requested by: {impl.request?.requested_by_name ?? 'Admin'}</span>

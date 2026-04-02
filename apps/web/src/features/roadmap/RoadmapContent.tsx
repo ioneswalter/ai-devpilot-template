@@ -17,6 +17,7 @@ import { ImplementationPanel } from './ImplementationPanel';
 import { TestRunPanel } from './TestRunPanel';
 import { ReleasePanel } from './ReleasePanel';
 import { usePipelineStatus } from './usePipelineStatus';
+import { useFeatureAICosts } from './useFeatureAICosts';
 import { NotificationBanner } from './NotificationBanner';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
@@ -25,6 +26,7 @@ import { apiClient } from '../../lib/supabase-client';
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
   const pipeline = usePipelineStatus();
+  const { getFeatureCost } = useFeatureAICosts();
   const [reviewingFeature, setReviewingFeature] = useState<ProductFeature | null>(null);
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
@@ -180,6 +182,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           onLinkCriteria={roadmap.setLinkingCriteriaFeature}
           getPipeline={pipeline.getPipeline}
           onPipelineStageClick={roadmap.isAdmin ? handlePipelineStageClick : undefined}
+          getFeatureCost={roadmap.isAdmin ? getFeatureCost : undefined}
         />
       )}
 

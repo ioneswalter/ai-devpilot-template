@@ -37,7 +37,7 @@ Return ONLY valid JSON (no markdown, no code fences) in this exact format:
 Guidelines:
 - "criterion": Refined or additional acceptance criteria. MUST be testable, specific, and constitution-compliant (e.g., RLS policies, input validation, type safety)
 - "test_case": Specific, testable scenarios with expected outcomes. Check for security, accessibility, and performance requirements from the constitution
-- "edge_case": Boundary conditions, error states, security edge cases (unauthorized access, invalid input, concurrent operations)
+- "edge_case": Boundary conditions, error states, and security edge cases phrased as testable acceptance criteria (NOT as open-ended questions). Example: "The system prevents enrollment in archived courses and shows a clear message" instead of "What happens when a learner enrolls in an archived course?"
 - "description": Improvements to the feature description for clarity and completeness
 
 Generate 3-5 items per type. Be specific and actionable. Focus on:

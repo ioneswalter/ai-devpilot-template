@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useSpecReview } from './useSpecReview';
 import { ReviewItemCard } from './ReviewItemCard';
 import { ReviewApprovalBar } from './ReviewApprovalBar';
+import { SpecArtifactsView } from './SpecArtifactsView';
 import type { ReviewItem, ReviewItemType } from './spec-review-types';
 
 interface SpecReviewPanelProps {
@@ -61,6 +62,8 @@ export function SpecReviewPanel({
   const [newItemType, setNewItemType] = useState<ReviewItemType>('criterion');
   const [newItemContent, setNewItemContent] = useState('');
   const [showSuccess, setShowSuccess] = useState<string | null>(null);
+  const [artifactCount, setArtifactCount] = useState<number | null>(null);
+  const hasSpecArtifacts = artifactCount !== null && artifactCount > 0;
 
   // Show loading while data is being fetched or component just mounted
   if (!ready || spec.isLoading) {
@@ -106,43 +109,37 @@ export function SpecReviewPanel({
         <div className="p-4 border-b">
           <div className="flex items-center gap-2 mb-1">
             <code className="text-xs font-mono text-blue-600">{featureCode}</code>
-            <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 truncate flex-1">{featureTitle}</h3>
           </div>
-          <p className="text-xs text-gray-500">Start a review to enrich this proposal with AI-generated suggestions.</p>
+          <p className="text-xs text-gray-500">Review spec artifacts, then start an AI review to enrich with suggestions.</p>
         </div>
-        <div className="flex-1 flex items-center justify-center p-8">
+        {/* AI Review action bar */}
+        <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-3">
           {spec.isStarting ? (
-            <div className="text-center max-w-xs">
-              <div className="relative w-16 h-16 mx-auto mb-4">
-                <svg className="animate-spin w-16 h-16 text-indigo-200" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                <svg className="absolute inset-0 w-16 h-16 text-indigo-500 p-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
+            <>
+              <div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-900">AI is analyzing the proposal...</p>
+                <p className="text-xs text-gray-500">Generating test cases, edge cases, and refined criteria. 15-30 seconds.</p>
               </div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-1">AI is analyzing the proposal...</h4>
-              <p className="text-xs text-gray-500">
-                Generating test cases, edge cases, and refined acceptance criteria. This may take 15-30 seconds.
-              </p>
-            </div>
+            </>
           ) : (
-            <div className="text-center">
-              <svg className="w-12 h-12 mx-auto text-indigo-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
+            <>
               <button
                 onClick={() => spec.startReview()}
-                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shrink-0"
               >
                 Start AI Review
               </button>
-              {spec.startError && (
-                <p className="mt-2 text-xs text-red-500">{(spec.startError as Error).message}</p>
-              )}
-            </div>
+              <p className="text-xs text-gray-500 flex-1">Enrich this proposal with AI-generated acceptance criteria, test cases, and edge cases.</p>
+            </>
           )}
+          {spec.startError && (
+            <p className="text-xs text-red-500">{(spec.startError as Error).message}</p>
+          )}
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <SpecArtifactsView featureId={featureId} onArtifactsLoaded={setArtifactCount} />
         </div>
         <div className="border-t p-3 flex justify-end">
           <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
@@ -185,7 +182,16 @@ export function SpecReviewPanel({
       <div className="p-4 border-b bg-white">
         <div className="flex items-center gap-2 mb-1">
           <code className="text-xs font-mono text-blue-600">{featureCode}</code>
-          <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
+          <h3 className="text-sm font-semibold text-gray-900 truncate flex-1">{featureTitle}</h3>
+          {spec.isReviewActive && spec.pendingCount > 0 && (
+            <button
+              onClick={() => spec.acceptAll()}
+              disabled={spec.isUpdating}
+              className="px-2.5 py-1 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shrink-0"
+            >
+              {spec.isUpdating ? 'Accepting...' : `Accept All (${spec.pendingCount})`}
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <span>Reviewer: {spec.review?.reviewer_name ?? 'Admin'}</span>
@@ -225,6 +231,9 @@ export function SpecReviewPanel({
           {(anyError as Error).message}
         </div>
       )}
+
+      {/* Spec Artifacts — collapsed when review items are showing */}
+      <SpecArtifactsView featureId={featureId} onArtifactsLoaded={setArtifactCount} defaultCollapsed />
 
       {/* Items grouped by type */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">

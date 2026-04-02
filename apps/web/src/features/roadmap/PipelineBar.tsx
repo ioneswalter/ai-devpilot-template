@@ -11,6 +11,7 @@ interface PipelineBarProps {
   featureStatus: string;
   pipeline: FeaturePipelineState | undefined;
   isAdmin: boolean;
+  isLoading?: boolean;
   onStageClick?: (stage: PipelineStageName) => void;
 }
 
@@ -18,14 +19,14 @@ const STAGE_ORDER: PipelineStageName[] = ['spec', 'build', 'test', 'deploy'];
 
 const DEFAULT_STAGE = { status: 'not_started' as const, label: 'Not Started' };
 
-export function PipelineBar({ featureStatus, pipeline, isAdmin, onStageClick }: PipelineBarProps) {
+export function PipelineBar({ featureStatus, pipeline, isAdmin, isLoading, onStageClick }: PipelineBarProps) {
   // Only show for approved, in_development, released features
   if (!PIPELINE_VISIBLE_STATUSES.includes(featureStatus as typeof PIPELINE_VISIBLE_STATUSES[number])) {
     return null;
   }
 
-  // If pipeline data hasn't loaded yet, show skeleton
-  if (!pipeline) {
+  // If explicitly loading (caller passes isLoading=true), show skeleton
+  if (isLoading) {
     return (
       <div className="flex items-center gap-1.5 py-1.5" aria-label="Pipeline status loading">
         {STAGE_ORDER.map((stage) => (
@@ -38,6 +39,14 @@ export function PipelineBar({ featureStatus, pipeline, isAdmin, onStageClick }: 
     );
   }
 
+  // Use pipeline data if available, or default stages
+  const stages = pipeline ?? {
+    spec: DEFAULT_STAGE,
+    build: DEFAULT_STAGE,
+    test: DEFAULT_STAGE,
+    deploy: DEFAULT_STAGE,
+  } as FeaturePipelineState;
+
   return (
     <div
       className="flex items-center gap-1.5 py-1.5"
@@ -48,7 +57,7 @@ export function PipelineBar({ featureStatus, pipeline, isAdmin, onStageClick }: 
         <div key={stage} className="flex items-center">
           <PipelineStage
             stage={stage}
-            status={pipeline[stage] ?? DEFAULT_STAGE}
+            status={stages[stage] ?? DEFAULT_STAGE}
             isAdmin={isAdmin}
             onClick={onStageClick ? () => onStageClick(stage) : undefined}
           />

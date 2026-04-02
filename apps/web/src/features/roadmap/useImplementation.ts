@@ -167,6 +167,7 @@ export function useImplementation(featureId: string | null) {
   const taskItems: ImplementationTaskItem[] = implQuery.data?.task_items ?? [];
   const activeItems = taskItems.filter(t => (t.implementation_status as string) !== 'split');
   const acceptedItems = activeItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
+  const pendingItems = activeItems.filter(t => t.decision === 'pending');
 
   // Pipeline state (FR-113)
   const activePipeline: PipelineRun | null = pipelineQuery.data?.active ?? null;
@@ -264,6 +265,29 @@ export function useImplementation(featureId: string | null) {
     isAdding: addItemMutation.isPending,
     addTaskItem: (data: { title: string; description?: string; file_path: string; task_type: string }) =>
       addItemMutation.mutateAsync(data),
+
+    acceptAllTasks: async () => {
+      if (pendingItems.length === 0) return;
+      await queryClient.cancelQueries({ queryKey: [...IMPL_KEY, featureId] });
+      const previous = queryClient.getQueryData<ImplementationRequestWithItems>([...IMPL_KEY, featureId]);
+      if (previous) {
+        queryClient.setQueryData([...IMPL_KEY, featureId], {
+          ...previous,
+          task_items: previous.task_items.map((t) =>
+            t.decision === 'pending' && (t.implementation_status as string) !== 'split'
+              ? { ...t, decision: 'accepted' }
+              : t,
+          ),
+        });
+      }
+      try {
+        await Promise.all(
+          pendingItems.map(t => adminApi.updateTaskItem({ item_id: t.id, decision: 'accepted' })),
+        );
+      } finally {
+        queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
+      }
+    },
 
     markCodeApplied: async () => {
       const requestId = implQuery.data?.id;

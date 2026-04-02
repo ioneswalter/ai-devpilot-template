@@ -86,8 +86,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const isAdmin = !!adminRow;
 
-    // Validate request
+    // Validate request — sanitise category before validation
     const body = await req.json();
+    if (body?.proposal?.category === 'null' || body?.proposal?.category === '') {
+      body.proposal.category = null;
+    }
     const validation = proposalSchema.safeParse(body);
     if (!validation.success) {
       return errorResponse('VALIDATION_ERROR', validation.error.errors[0].message, 400);
@@ -212,6 +215,37 @@ Deno.serve(async (req) => {
     if (artifactErr) {
       // Non-blocking: log but don't fail the submission
       console.error('Failed to save SpecKit artifacts:', artifactErr);
+    }
+
+    // Generate test cases from acceptance criteria (non-blocking)
+    const testCasePrefix = featureCode.replace('FR-', 'TC-');
+    const testCases = proposal.acceptance_criteria.map((criterion, i) => {
+      const num = String(i + 1).padStart(2, '0');
+      // Derive title from Then clause or first 100 chars
+      let title = criterion;
+      const thenMatch = title.match(/Then\s+(.+)/i);
+      if (thenMatch) title = thenMatch[1];
+      if (title.length > 100) title = title.substring(0, 97) + '...';
+
+      const isEdgeCase = /unavailable|fail|error|invalid|no modules|no content|expires|malformed|blocked/i.test(criterion);
+      const isHighPriority = /moderat|block|restrict|revok|auth|payment|secur/i.test(criterion);
+
+      return {
+        test_code: `${testCasePrefix}-${num}`,
+        feature_id: feature.id,
+        title,
+        description: criterion,
+        test_type: isEdgeCase ? 'edge_case' : 'e2e',
+        priority: isHighPriority ? 'high' : (isEdgeCase ? 'medium' : 'high'),
+        status: 'draft',
+        automated: false,
+        automation_status: 'manual',
+      };
+    });
+
+    if (testCases.length > 0) {
+      const { error: tcErr } = await supabase.from('test_cases').insert(testCases);
+      if (tcErr) console.error('Failed to create test cases:', tcErr);
     }
 
     // Update conversation — keep first submitted feature as the primary link
