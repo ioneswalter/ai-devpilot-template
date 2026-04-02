@@ -45,7 +45,7 @@ function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
     description: p.description,
     criteria: (p.acceptance_criteria ?? []).join('\n'),
     priority: 'priority' in p ? p.priority : 'P3',
-    category: 'category' in p ? (p.category && p.category !== 'null' ? p.category : '') : '',
+    category: 'category' in p ? (p.category ? p.category : '') : '',
     specSection: 'spec_section' in p ? p.spec_section : 'Community Proposals',
     submitted: false,
     submittedCode: null,

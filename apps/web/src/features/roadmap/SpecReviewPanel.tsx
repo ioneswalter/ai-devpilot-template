@@ -62,8 +62,7 @@ export function SpecReviewPanel({
   const [newItemType, setNewItemType] = useState<ReviewItemType>('criterion');
   const [newItemContent, setNewItemContent] = useState('');
   const [showSuccess, setShowSuccess] = useState<string | null>(null);
-  const [artifactCount, setArtifactCount] = useState<number | null>(null);
-  const hasSpecArtifacts = artifactCount !== null && artifactCount > 0;
+  const [, setArtifactCount] = useState<number | null>(null);
 
   // Show loading while data is being fetched or component just mounted
   if (!ready || spec.isLoading) {
