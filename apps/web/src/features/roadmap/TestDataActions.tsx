@@ -48,7 +48,12 @@ export function TestDataActions({ featureId, featureCode }: TestDataActionsProps
           disabled={generateMut.isPending}
           className="px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
         >
-          {generateMut.isPending ? 'Generating...' : 'Generate Test Data'}
+          {generateMut.isPending ? (
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Generating...
+            </span>
+          ) : 'Generate Test Data'}
         </button>
 
         {activeCount > 0 && (
