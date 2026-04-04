@@ -9,7 +9,8 @@ import pg from 'npm:pg@8.13.1';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logAIUsage } from '../_shared/usage-logger.ts';
 
-const AI_MODEL = 'claude-sonnet-4-6';
+// Use Haiku for speed — test data generation is simple SQL, doesn't need Sonnet
+const AI_MODEL = 'claude-haiku-4-5-20251001';
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -89,10 +90,10 @@ export async function handleGenerate(req: Request): Promise<Response> {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
 
-  const anthropic = new Anthropic({ apiKey });
+  const anthropic = new Anthropic({ apiKey, timeout: 25_000 });
   const response = await anthropic.messages.create({
     model: AI_MODEL,
-    max_tokens: 4096,
+    max_tokens: 2048,
     system: GENERATE_PROMPT,
     messages: [{ role: 'user', content: `${specContext}\n\n${schemaHint}` }],
   });
@@ -181,7 +182,7 @@ function buildSpecContext(title: string, description: string | null, criteria: s
 
 async function getSchemaHint(): Promise<string> {
   try {
-    const client = new pg.Client({ connectionString: buildDbUrl(), ssl: { rejectUnauthorized: false } });
+    const client = new pg.Client({ connectionString: buildDbUrl(), ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
     await client.connect();
     const res = await client.query(`
       SELECT table_name FROM information_schema.tables
@@ -197,7 +198,7 @@ async function getSchemaHint(): Promise<string> {
 }
 
 async function executeSql(sqlText: string, featureId: string) {
-  const client = new pg.Client({ connectionString: buildDbUrl(), ssl: { rejectUnauthorized: false } });
+  const client = new pg.Client({ connectionString: buildDbUrl(), ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
   await client.connect();
 
   // Strip markdown fences if present
