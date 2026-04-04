@@ -139,7 +139,12 @@ function GenerateButton({
       disabled={generating}
       className="px-2 py-1 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
     >
-      {generating ? 'Generating...' : 'Generate'}
+      {generating ? (
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          Generating...
+        </span>
+      ) : 'Generate'}
     </button>
   );
 }

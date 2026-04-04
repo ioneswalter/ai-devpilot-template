@@ -51,7 +51,12 @@ function TestDataPrompt({
           disabled={generating}
           className="px-3 py-1.5 text-xs rounded bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 font-medium"
         >
-          {generating ? 'Generating...' : 'Generate Test Data'}
+          {generating ? (
+            <span className="flex items-center gap-1.5">
+              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Generating...
+            </span>
+          ) : 'Generate Test Data'}
         </button>
         <button
           onClick={onSkip}
