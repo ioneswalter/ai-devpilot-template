@@ -203,13 +203,29 @@ async function getSchemaHint(): Promise<string> {
     const client = await getPgClient();
     await client.connect();
     const res = await client.query(`
-      SELECT table_name FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-      ORDER BY table_name
+      SELECT c.table_name, c.column_name, c.data_type, c.is_nullable,
+             c.column_default
+      FROM information_schema.columns c
+      JOIN information_schema.tables t
+        ON c.table_name = t.table_name AND c.table_schema = t.table_schema
+      WHERE c.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+      ORDER BY c.table_name, c.ordinal_position
     `);
     await client.end();
-    const tables = res.rows.map((r: { table_name: string }) => r.table_name).join(', ');
-    return `Available database tables: ${tables}`;
+
+    // Group columns by table: "table_name(col1 type, col2 type, ...)"
+    type ColRow = { table_name: string; column_name: string; data_type: string; column_default: string | null };
+    const tables = new Map<string, string[]>();
+    for (const r of res.rows as ColRow[]) {
+      if (!tables.has(r.table_name)) tables.set(r.table_name, []);
+      const defaultHint = r.column_default ? ' DEFAULT' : '';
+      tables.get(r.table_name)!.push(`${r.column_name} ${r.data_type}${defaultHint}`);
+    }
+
+    const lines = Array.from(tables.entries())
+      .map(([t, cols]) => `${t}(${cols.join(', ')})`)
+      .join('\n');
+    return `Database schema:\n${lines}`;
   } catch (err) {
     console.warn('getSchemaHint failed (non-fatal):', err instanceof Error ? err.message : err);
     return '';
@@ -253,4 +269,6 @@ Rules:
 - Maintain referential integrity across related tables
 - Include diverse data: different states, amounts, dates, categories
 - Each statement on its own line ending with semicolon
-- Only target tables that exist in the provided schema list`;
+- ONLY use tables and columns that appear in the provided schema
+- For columns marked DEFAULT, you may omit them from INSERT (they auto-fill)
+- Do NOT guess column names — use exactly the names from the schema`;
