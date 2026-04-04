@@ -4,7 +4,6 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import pg from 'npm:pg@8.13.1';
 import { corsHeaders } from '../_shared/cors.ts';
 
 function json(data: unknown, status = 200) {
@@ -18,10 +17,17 @@ function error(code: string, message: string, status: number) {
   return json({ error: { code, message } }, status);
 }
 
-function buildDbUrl(): string {
+/** Get a pg Client using SUPABASE_DB_URL (auto-available in Edge Functions) */
+async function getPgClient() {
+  const pg = (await import('npm:pg@8.13.1')).default;
+  const dbUrl = Deno.env.get('SUPABASE_DB_URL');
+  if (dbUrl) {
+    return new pg.Client({ connectionString: dbUrl, connectionTimeoutMillis: 5000 });
+  }
   const ref = (Deno.env.get('SUPABASE_URL') ?? '').replace('https://', '').split('.')[0];
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  return `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
+  const connStr = `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
+  return new pg.Client({ connectionString: connStr, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
 }
 
 /** Verify auth — accepts user JWT or service-role key */
@@ -72,41 +78,47 @@ export async function handleCleanup(req: Request): Promise<Response> {
     return json({ data: { cleaned: 0, message: 'No active datasets found' } });
   }
 
-  // Build reverse operations from stored SQL
-  let totalCleaned = 0;
-  const errors: string[] = [];
+  try {
+    // Build reverse operations from stored SQL
+    let totalCleaned = 0;
+    const errors: string[] = [];
 
-  const client = new pg.Client({ connectionString: buildDbUrl(), ssl: { rejectUnauthorized: false } });
-  await client.connect();
+    const client = await getPgClient();
+    await client.connect();
 
-  for (const ds of datasets) {
-    const stmts = extractInsertedIds(ds.sql_statements, ds.feature_id);
-    for (const stmt of stmts) {
-      try {
-        await client.query(stmt);
-        totalCleaned++;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(msg.substring(0, 200));
+    for (const ds of datasets) {
+      const stmts = extractInsertedIds(ds.sql_statements, ds.feature_id);
+      for (const stmt of stmts) {
+        try {
+          await client.query(stmt);
+          totalCleaned++;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          errors.push(msg.substring(0, 200));
+        }
       }
+
+      // Mark dataset as cleaned
+      await supabase
+        .from('test_data_sets')
+        .update({ status: 'cleaned', cleaned_at: new Date().toISOString() })
+        .eq('id', ds.id);
     }
 
-    // Mark dataset as cleaned
-    await supabase
-      .from('test_data_sets')
-      .update({ status: 'cleaned', cleaned_at: new Date().toISOString() })
-      .eq('id', ds.id);
+    await client.end();
+
+    return json({
+      data: {
+        datasets_cleaned: datasets.length,
+        statements_executed: totalCleaned,
+        errors,
+      },
+    });
+  } catch (err: unknown) {
+    console.error('test-data-gen cleanup error:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return error('INTERNAL_ERROR', `Cleanup failed: ${msg.substring(0, 200)}`, 500);
   }
-
-  await client.end();
-
-  return json({
-    data: {
-      datasets_cleaned: datasets.length,
-      statements_executed: totalCleaned,
-      errors,
-    },
-  });
 }
 
 /**

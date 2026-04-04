@@ -4,8 +4,6 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
-import pg from 'npm:pg@8.13.1';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logAIUsage } from '../_shared/usage-logger.ts';
 
@@ -30,10 +28,21 @@ function getSupabase() {
   );
 }
 
-function buildDbUrl(): string {
+/**
+ * Get a pg Client using the built-in SUPABASE_DB_URL (available inside Edge Functions).
+ * Falls back to constructing from SUPABASE_URL + SERVICE_ROLE_KEY if needed.
+ */
+async function getPgClient() {
+  const pg = (await import('npm:pg@8.13.1')).default;
+  const dbUrl = Deno.env.get('SUPABASE_DB_URL');
+  if (dbUrl) {
+    return new pg.Client({ connectionString: dbUrl, connectionTimeoutMillis: 5000 });
+  }
+  // Fallback: construct from available env vars
   const ref = (Deno.env.get('SUPABASE_URL') ?? '').replace('https://', '').split('.')[0];
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  return `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
+  const connStr = `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
+  return new pg.Client({ connectionString: connStr, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
 }
 
 type TriggerSource = 'manual' | 'copilot' | 'pipeline';
@@ -80,68 +89,77 @@ export async function handleGenerate(req: Request): Promise<Response> {
 
   if (!feature) return error('NOT_FOUND', 'Feature not found', 404);
 
-  const criteria = (feature.acceptance_criteria as string[]) || [];
-  const specContext = buildSpecContext(feature.title, feature.description, criteria);
+  try {
+    const criteria = (feature.acceptance_criteria as string[]) || [];
+    const specContext = buildSpecContext(feature.title, feature.description, criteria);
 
-  // Get existing table schema for context
-  const schemaHint = await getSchemaHint();
+    // Get table names for AI context (non-fatal if fails)
+    const schemaHint = await getSchemaHint();
 
-  // Generate test data via AI
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
+    // Generate test data via AI
+    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
 
-  const anthropic = new Anthropic({ apiKey, timeout: 25_000 });
-  const response = await anthropic.messages.create({
-    model: AI_MODEL,
-    max_tokens: 2048,
-    system: GENERATE_PROMPT,
-    messages: [{ role: 'user', content: `${specContext}\n\n${schemaHint}` }],
-  });
+    const Anthropic = (await import('npm:@anthropic-ai/sdk@0.39.0')).default;
+    const anthropic = new Anthropic({ apiKey, timeout: 25_000 });
+    const response = await anthropic.messages.create({
+      model: AI_MODEL,
+      max_tokens: 2048,
+      system: GENERATE_PROMPT,
+      messages: [{ role: 'user', content: `${specContext}\n\n${schemaHint}` }],
+    });
 
-  const textBlock = response.content.find((b) => b.type === 'text');
-  const sqlText = textBlock && textBlock.type === 'text' ? textBlock.text.trim() : '';
+    const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
+    const sqlText = textBlock && textBlock.type === 'text'
+      ? (textBlock as { type: 'text'; text: string }).text.trim()
+      : '';
 
-  // Log AI usage (fire-and-forget)
-  logAIUsage(supabase, {
-    featureId, adminId: userId, modelId: AI_MODEL,
-    operationType: 'test_data_gen',
-    inputTokens: response.usage?.input_tokens ?? 0,
-    outputTokens: response.usage?.output_tokens ?? 0,
-  }).catch(() => {});
+    // Log AI usage (fire-and-forget)
+    logAIUsage(supabase, {
+      featureId, adminId: userId, modelId: AI_MODEL,
+      operationType: 'test_data_gen',
+      inputTokens: response.usage?.input_tokens ?? 0,
+      outputTokens: response.usage?.output_tokens ?? 0,
+    }).catch(() => {});
 
-  if (!sqlText || sqlText.length < 10) {
-    return error('AI_ERROR', 'AI returned empty data', 500);
-  }
+    if (!sqlText || sqlText.length < 10) {
+      return error('AI_ERROR', 'AI returned empty data', 500);
+    }
 
-  // Parse and execute SQL
-  const result = await executeSql(sqlText, featureId);
+    // Parse and execute SQL
+    const result = await executeSql(sqlText, featureId);
 
-  // Store dataset metadata for cleanup
-  const datasetId = crypto.randomUUID();
-  await supabase.from('test_data_sets').upsert({
-    id: datasetId,
-    feature_id: featureId,
-    generated_by: userId,
-    sql_statements: sqlText,
-    records_created: result.inserted,
-    status: result.errors.length === 0 ? 'active' : 'partial',
-    trigger_source: triggerSource,
-    pipeline_run_id: pipelineRunId,
-    created_at: new Date().toISOString(),
-  });
-
-  return json({
-    data: {
-      dataset_id: datasetId,
-      feature_code: feature.feature_code,
+    // Store dataset metadata for cleanup
+    const datasetId = crypto.randomUUID();
+    await supabase.from('test_data_sets').upsert({
+      id: datasetId,
+      feature_id: featureId,
+      generated_by: userId,
+      sql_statements: sqlText,
       records_created: result.inserted,
-      total_statements: result.total,
-      errors: result.errors,
-      status: result.errors.length === 0 ? 'success' : 'partial',
+      status: result.errors.length === 0 ? 'active' : 'partial',
       trigger_source: triggerSource,
       pipeline_run_id: pipelineRunId,
-    },
-  });
+      created_at: new Date().toISOString(),
+    });
+
+    return json({
+      data: {
+        dataset_id: datasetId,
+        feature_code: feature.feature_code,
+        records_created: result.inserted,
+        total_statements: result.total,
+        errors: result.errors,
+        status: result.errors.length === 0 ? 'success' : 'partial',
+        trigger_source: triggerSource,
+        pipeline_run_id: pipelineRunId,
+      },
+    });
+  } catch (err: unknown) {
+    console.error('test-data-gen generate error:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return error('AI_ERROR', `Generation failed: ${msg.substring(0, 200)}`, 500);
+  }
 }
 
 /** GET ?action=list — List generated datasets for a feature */
@@ -182,7 +200,7 @@ function buildSpecContext(title: string, description: string | null, criteria: s
 
 async function getSchemaHint(): Promise<string> {
   try {
-    const client = new pg.Client({ connectionString: buildDbUrl(), ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
+    const client = await getPgClient();
     await client.connect();
     const res = await client.query(`
       SELECT table_name FROM information_schema.tables
@@ -192,13 +210,14 @@ async function getSchemaHint(): Promise<string> {
     await client.end();
     const tables = res.rows.map((r: { table_name: string }) => r.table_name).join(', ');
     return `Available database tables: ${tables}`;
-  } catch {
+  } catch (err) {
+    console.warn('getSchemaHint failed (non-fatal):', err instanceof Error ? err.message : err);
     return '';
   }
 }
 
 async function executeSql(sqlText: string, featureId: string) {
-  const client = new pg.Client({ connectionString: buildDbUrl(), ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
+  const client = await getPgClient();
   await client.connect();
 
   // Strip markdown fences if present
@@ -210,7 +229,6 @@ async function executeSql(sqlText: string, featureId: string) {
 
   for (const stmt of statements) {
     try {
-      // Add feature tag comment for traceability
       await client.query(`/* test-data-gen:${featureId} */ ${stmt}`);
       inserted++;
     } catch (err: unknown) {
