@@ -561,18 +561,28 @@ Update the roadmap when complete.
         const fromIndex = statusOrder.indexOf(currentFeature.status);
         const toIndex = statusOrder.indexOf(newStatus);
 
-        // Forward transitions must be exactly one step
-        if (toIndex > fromIndex && toIndex !== fromIndex + 1) {
-          return new Response(
-            JSON.stringify({ error: { code: 'INVALID_TRANSITION', message: `Cannot skip from ${currentFeature.status} to ${newStatus}. Transition one step at a time.` } }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+        // Forward transitions allowed if all intermediate checks pass
+        if (toIndex <= fromIndex && toIndex !== fromIndex) {
+          // Backward — allowed (demotion)
         }
 
-        // Validate requirements for forward transitions
+        // Validate requirements for forward transitions (check all stages being traversed)
         if (toIndex > fromIndex) {
-          if (newStatus === 'released') {
-            // Must have at least 1 test case, all must pass
+          const targetStages = statusOrder.slice(fromIndex + 1, toIndex + 1);
+
+          // Acceptance criteria required for approved, in_development, or released
+          if (targetStages.some(s => s === 'approved' || s === 'in_development' || s === 'released')) {
+            const criteria = currentFeature.acceptance_criteria as string[] | null;
+            if (!criteria || criteria.length === 0) {
+              return new Response(
+                JSON.stringify({ error: { code: 'MISSING_CRITERIA', message: `Cannot move to ${newStatus}: no acceptance criteria defined.` } }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
+            }
+          }
+
+          // Test cases required for released
+          if (targetStages.includes('released')) {
             const { data: testCases } = await supabase
               .from('test_cases')
               .select('passed')
@@ -589,17 +599,6 @@ Update the roadmap when complete.
             if (failedOrNotRun.length > 0) {
               return new Response(
                 JSON.stringify({ error: { code: 'TESTS_NOT_PASSED', message: `Cannot release: ${failedOrNotRun.length} test(s) not passed. All tests must pass before releasing.` } }),
-                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
-            }
-          }
-
-          if (newStatus === 'approved' || newStatus === 'in_development') {
-            // Must have acceptance criteria
-            const criteria = currentFeature.acceptance_criteria as string[] | null;
-            if (!criteria || criteria.length === 0) {
-              return new Response(
-                JSON.stringify({ error: { code: 'MISSING_CRITERIA', message: `Cannot move to ${newStatus}: no acceptance criteria defined.` } }),
                 { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
               );
             }
