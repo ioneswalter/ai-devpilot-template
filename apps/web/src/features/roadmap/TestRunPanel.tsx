@@ -79,7 +79,6 @@ export function TestRunPanel({
   const [environment, setEnvironment] = useState(draft?.environment ?? 'development');
   const [results, setResults] = useState<Record<string, TestRunResult | null>>(draft?.results ?? {});
   const [notes, setNotes] = useState<Record<string, string>>(draft?.notes ?? {});
-  const [hasDraft, setHasDraft] = useState(draft?.view === 'execute');
   const lastSubmitRef = useRef<{ passed: number; failed: number; skipped: number; total: number } | null>(null);
 
   // Persist draft to sessionStorage when in execute view
@@ -137,8 +136,7 @@ export function TestRunPanel({
     setResults({});
     setNotes({});
     clearDraft(featureId);
-    setHasDraft(false);
-  };
+     };
 
   // After successful submission — refresh parent data and return to status view
   if (exec.isSubmitSuccess && (view === 'execute' || view === 'manual')) {
@@ -147,8 +145,7 @@ export function TestRunPanel({
     exec.resetSubmit();
     lastSubmitRef.current = null;
     clearDraft(featureId);
-    setHasDraft(false);
-  }
+     }
 
   /** Called by AutomatedExecuteView when suite completes — auto-mark results */
   const handleAutoResults = useCallback((autoResults: Record<string, TestRunResult>) => {
@@ -173,8 +170,7 @@ export function TestRunPanel({
     };
     exec.submitResults(env, entries);
     clearDraft(featureId);
-    setHasDraft(false);
-  }, [testCases, results, notes, exec, featureId]);
+     }, [testCases, results, notes, exec, featureId]);
 
   // Compute test status from test case data + history
   const passedCount = testCases.filter((tc) => tc.passed === true).length;
@@ -281,8 +277,7 @@ export function TestRunPanel({
                 }
                 setResults(prefilled);
                 setNotes({});
-                setHasDraft(false);
-                setView('execute');
+                               setView('execute');
               }}
               className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
             >{allPassed ? 'Re-Run Tests' : 'Run Tests'}</button>
@@ -313,7 +308,7 @@ export function TestRunPanel({
         isSubmitting={exec.isSubmitting}
         submitError={exec.submitError}
         results={results}
-        onBack={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); setHasDraft(false); }}
+        onBack={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); }}
         onClose={onClose}
         onSwitchToManual={() => setView('manual')}
       />
@@ -370,7 +365,7 @@ export function TestRunPanel({
           <button onClick={() => setView('execute')} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
             Switch to Automated
           </button>
-          <button onClick={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); setHasDraft(false); }} className="text-xs text-gray-500 hover:text-gray-700">
+          <button onClick={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); }} className="text-xs text-gray-500 hover:text-gray-700">
             Back to Overview
           </button>
         </div>

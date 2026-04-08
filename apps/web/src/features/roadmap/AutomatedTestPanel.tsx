@@ -28,7 +28,7 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
   const ext = useExtensionBridge();
   const [expandedScript, setExpandedScript] = useState<string | null>(null);
   const [showPanel, setShowPanel] = useState(false);
-  const [lastCheckpoints, setLastCheckpoints] = useState<Record<string, CheckpointData[]>>({});
+  const [lastCheckpoints] = useState<Record<string, CheckpointData[]>>({});
   const [suiteResult, setSuiteResult] = useState<BrowserSuiteResult | null>(null);
 
   useEffect(() => { auto.loadScripts(); }, [auto.loadScripts]);

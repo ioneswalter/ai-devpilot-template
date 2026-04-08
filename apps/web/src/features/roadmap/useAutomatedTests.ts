@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase-client';
 import { testAutomationApi } from '@/lib/api/test-automation-api';
 import type {
   GenerateScriptsResult,
-  ExecuteSuiteResult,
   ScriptListItem,
 } from './automation-types';
 import type { TestStepResult } from './useExtensionBridge';
