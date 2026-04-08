@@ -542,7 +542,7 @@ Update the roadmap when complete.
       // Validate status transitions if status is changing
       if ('status' in filteredUpdates) {
         const newStatus = filteredUpdates.status as string;
-        const statusOrder = ['proposed', 'approved', 'in_development', 'released'];
+        const statusOrder = ['proposed', 'approved', 'in_development', 'in_testing', 'released'];
 
         // Get current feature to check transition
         const { data: currentFeature, error: fetchError } = await supabase
