@@ -5,7 +5,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { logAIUsage } from '../_shared/usage-logger.ts';
 import { resolveAuth, isAuth } from './auth.ts';
 
-const AI_MODEL = 'claude-sonnet-4-6';
+const AI_MODEL = 'claude-haiku-4-5-20251001';
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -128,9 +128,24 @@ function parseValidationResult(rawText: string): ValidationOutput {
   };
 }
 
+const APP_ROUTES = `APP NAVIGATION REFERENCE (these are the correct routes):
+- /learn — Course catalogue (default tab)
+- /learn?tab=courses — Course Builder (create/edit courses, modules, quizzes)
+- /learn?tab=lms — LMS Monitoring Dashboard
+- /admin?tab=overview — Admin Overview
+- /admin?tab=users — User Management
+- /admin?tab=verifications — Provider Verifications
+- /learn/{courseId} — Individual course view
+- /learn/{courseId}/module/{moduleId} — Module content + quizzes
+- /roadmap — Product Roadmap (features, test panels, pipeline)
+- /dashboard — Main dashboard
+- /marketplace — Service marketplace`;
+
 const VALIDATION_SYSTEM_PROMPT = `You are an AI testing validator. Compare the expected outcome of a test step against the actual page state.
 
 Analyze the DOM elements, their text content, and visual state to determine if the expected outcome is met.
+
+${APP_ROUTES}
 
 Return a JSON object:
 {
@@ -147,5 +162,7 @@ RULES:
 - Distinguish cosmetic differences (spacing, font) from functional failures
 - Only flag mismatches that violate the expected outcome
 - Confidence > 0.8 means high certainty, < 0.5 means uncertain
+- The APP NAVIGATION REFERENCE above shows the correct URLs. Do NOT flag a URL as a mismatch if it matches a route in the reference.
+- Focus on whether the page CONTENT matches the expected outcome, not on URL format
 
 Return ONLY the JSON object. No markdown fences.`;

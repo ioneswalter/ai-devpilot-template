@@ -84,7 +84,7 @@ export function GuidedTestingPanel({
   onComplete,
   onClose,
 }: GuidedTestingPanelProps) {
-  const guided = useGuidedTesting(featureId);
+  const guided = useGuidedTesting(featureId, testCaseId);
   const evidenceCapture = useEvidenceCapture();
   const [validationWarning, setValidationWarning] = useState<ValidationResult | null>(null);
   const [pendingVerdict, setPendingVerdict] = useState<{ verdict: 'passed' | 'failed' | 'skipped'; notes: string } | null>(null);
@@ -98,7 +98,15 @@ export function GuidedTestingPanel({
   const handleCapture = useCallback(async () => {
     const step = guided.currentStep;
     if (!step) return;
-    await evidenceCapture.captureEvidence(step.step_number);
+
+    // If this step is on another page (has navigation or follows a navigation step),
+    // load evidence captured via the extension popup. Otherwise capture directly.
+    const isOnAnotherPage = !!getTargetUrl();
+    if (isOnAnotherPage) {
+      await evidenceCapture.loadStoredEvidence();
+    } else {
+      await evidenceCapture.captureEvidence(step.step_number);
+    }
   }, [guided, evidenceCapture]);
 
   /** Run validate-state API and return result */
@@ -178,15 +186,28 @@ export function GuidedTestingPanel({
     setSuggestions((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  /** Find the navigation URL for the current step (from current or previous steps) */
+  const getTargetUrl = useCallback(() => {
+    const step = guided.currentStep;
+    if (!step) return undefined;
+    return step.requires_navigation
+      ?? guided.steps.slice(0, guided.currentStepIndex).reverse().find((s) => s.requires_navigation)?.requires_navigation;
+  }, [guided]);
+
   /** Finalize step with evidence and move forward */
   const finalizeStep = useCallback(
     async (verdict: 'passed' | 'failed' | 'skipped', notes: string, validation?: ValidationResult | null, override = false) => {
       const step = guided.currentStep;
       if (!step) return;
 
-      const captured = evidenceCapture.extensionAvailable
-        ? await evidenceCapture.captureEvidence(step.step_number)
-        : null;
+      // If step is on another page, use stored evidence; otherwise capture directly.
+      const isOnAnotherPage = !!getTargetUrl();
+      let captured: Awaited<ReturnType<typeof evidenceCapture.captureEvidence>> = null;
+      if (evidenceCapture.extensionAvailable) {
+        captured = isOnAnotherPage
+          ? await evidenceCapture.loadStoredEvidence()
+          : await evidenceCapture.captureEvidence(step.step_number);
+      }
 
       const stepEvidence = evidenceCapture.buildStepEvidence(step, verdict, notes, captured, validation ?? undefined);
       if (override) stepEvidence.override = true;
@@ -208,7 +229,7 @@ export function GuidedTestingPanel({
         guided.nextStep();
       }
     },
-    [guided, evidenceCapture, onComplete, fetchSuggestions],
+    [guided, evidenceCapture, onComplete, fetchSuggestions, getTargetUrl],
   );
 
   const handleMarkComplete = useCallback(
@@ -221,6 +242,13 @@ export function GuidedTestingPanel({
 
       // Auto-validate if marking as passed
       if (verdict === 'passed' && evidenceCapture.extensionAvailable) {
+        // Steps on another page: skip auto-validation — page state is from the roadmap page,
+        // not the test page, so it would always produce a false-positive mismatch.
+        if (getTargetUrl()) {
+          await finalizeStep(verdict, notes);
+          return;
+        }
+
         const captured = await evidenceCapture.captureEvidence(step.step_number);
         const validation = await validateStep(guided.sessionId, step, captured);
 
@@ -238,6 +266,14 @@ export function GuidedTestingPanel({
     },
     [guided, evidenceCapture, validateStep, finalizeStep],
   );
+
+  const handleUploadScreenshot = useCallback((dataUrl: string) => {
+    evidenceCapture.setManualScreenshot(dataUrl);
+  }, [evidenceCapture]);
+
+  const handleClearEvidence = useCallback(() => {
+    evidenceCapture.clearEvidence();
+  }, [evidenceCapture]);
 
   const handleAbandon = useCallback(async () => {
     await guided.abandonSession();
@@ -382,7 +418,10 @@ export function GuidedTestingPanel({
 
       {/* Step cards */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto">
-        {guided.steps.map((step, idx) => (
+        {guided.steps.map((step, idx) => {
+          // A step is "on another page" if it or any preceding step has requires_navigation
+          const onAnotherPage = guided.steps.slice(0, idx + 1).some((s) => s.requires_navigation);
+          return (
           <GuidedStepCard
             key={step.step_number}
             step={step}
@@ -392,8 +431,14 @@ export function GuidedTestingPanel({
             onCapture={handleCapture}
             capturing={evidenceCapture.capturing}
             extensionAvailable={evidenceCapture.extensionAvailable}
-          />
-        ))}
+            captureError={evidenceCapture.error}
+            lastCaptureSuccess={evidenceCapture.lastCapture !== null && !evidenceCapture.capturing}
+            lastCapture={evidenceCapture.lastCapture}
+            isOnAnotherPage={onAnotherPage}
+            onUploadScreenshot={handleUploadScreenshot}
+            onClearEvidence={handleClearEvidence}
+          />);
+        })}
       </div>
     </div>
   );

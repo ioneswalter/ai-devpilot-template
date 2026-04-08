@@ -201,16 +201,36 @@ function parseGuidanceSteps(rawText: string, criteria: string[]): ParsedStep[] {
   }));
 }
 
+const APP_ROUTES = `APP NAVIGATION REFERENCE (use these exact routes):
+- /learn?tab=courses — Course Builder (create/edit courses, modules, quizzes)
+- /learn?tab=lms — LMS Monitoring Dashboard
+- /admin?tab=overview — Admin Overview
+- /admin?tab=users — User Management
+- /admin?tab=verifications — Provider Verifications
+- /learn — Learner course catalog (enrollment, course delivery)
+- /learn/{courseId} — Individual course view
+- /learn/{courseId}/module/{moduleId} — Module content + quizzes
+- /roadmap — Product Roadmap (features, test panels, pipeline)
+- /dashboard — Main dashboard
+- /marketplace — Service marketplace
+- /ideation — Feature ideation chat
+- /membership — Membership page
+- /customer/post-job — Post a new job
+- /provider/invoices — Provider invoices
+NEVER guess URLs. Only use routes from this list.`;
+
 const GUIDANCE_SYSTEM_PROMPT = `You are an AI testing co-pilot. Generate step-by-step test instructions for manual QA testing.
 
 Given a feature's acceptance criteria, test case definition, and the current page state (visible UI elements), generate specific, actionable test steps.
 
 ${CONSTITUTION_PRINCIPLES}
 
+${APP_ROUTES}
+
 CRITICAL RULES:
 1. Reference ACTUAL UI elements from the page state (buttons by text, inputs by label, etc.)
 2. Each step maps to a specific acceptance criterion (use AC-1, AC-2, etc.)
-3. Include navigation instructions if the tester needs to go to a different page
+3. Include navigation instructions if the tester needs to go to a different page — use ONLY routes from the APP NAVIGATION REFERENCE above
 4. Describe expected visual outcomes clearly
 
 Return a JSON array of steps:
@@ -222,7 +242,7 @@ Return a JSON array of steps:
     "expected_outcome": "A modal opens showing AI model selection options",
     "criterion_id": "AC-3",
     "criterion_text": "The full criterion text...",
-    "requires_navigation": "/admin/features/FR-108"
+    "requires_navigation": "/admin?tab=courses"
   }
 ]
 

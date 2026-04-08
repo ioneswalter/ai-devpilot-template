@@ -28,11 +28,11 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
               <p className="text-xs lg:text-sm text-blue-300 font-medium">Think It. Spec It. Ship It.</p>
             </div>
             {/* Mobile action buttons */}
-            <div className="md:hidden flex items-center gap-2">
+            <div className="md:hidden grid grid-cols-3 gap-1.5">
               {isAdmin && (
                 <button
                   onClick={() => navigate({ to: '/strategic-plan' })}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
                 >
                   Strategy
                 </button>
@@ -40,7 +40,7 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
               {isAdmin && onOpenReleases && (
                 <button
                   onClick={onOpenReleases}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
                 >
                   Releases
                 </button>
@@ -48,21 +48,40 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
               {isAdmin ? (
                 <button
                   onClick={() => navigate({ to: '/admin/devpilot' })}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  className="inline-flex items-center justify-center px-2 py-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded-lg transition-colors text-xs font-medium"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
                   Ideation
                 </button>
               ) : isMember ? (
                 <button
                   onClick={() => alert('Coming soon!')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
                 >
                   Ideation
                 </button>
               ) : null}
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => navigate({ to: '/devpilot-architecture' })}
+                    className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  >
+                    Architecture
+                  </button>
+                  <button
+                    onClick={() => navigate({ to: '/devpilot-flowchart' })}
+                    className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  >
+                    Flowchart
+                  </button>
+                  <button
+                    onClick={() => navigate({ to: '/devpilot-prompts' })}
+                    className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                  >
+                    Prompts
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -73,29 +92,29 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
               <div className="text-[10px] lg:text-xs text-blue-200">{isFiltered ? 'Filtered' : 'Total'}</div>
             </div>
             <div className="text-center">
-              <div className="text-lg lg:text-xl font-bold text-green-300">{stats.released}</div>
-              <div className="text-[10px] lg:text-xs text-blue-200">Released</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg lg:text-xl font-bold text-sky-300">{stats.inDevelopment}</div>
-              <div className="text-[10px] lg:text-xs text-blue-200">In Dev</div>
+              <div className="text-lg lg:text-xl font-bold text-blue-200">{stats.proposed}</div>
+              <div className="text-[10px] lg:text-xs text-blue-200">Proposed</div>
             </div>
             <div className="text-center">
               <div className="text-lg lg:text-xl font-bold text-yellow-300">{stats.approved}</div>
               <div className="text-[10px] lg:text-xs text-blue-200">Approved</div>
             </div>
             <div className="text-center">
-              <div className="text-lg lg:text-xl font-bold text-blue-200">{stats.proposed}</div>
-              <div className="text-[10px] lg:text-xs text-blue-200">Proposed</div>
+              <div className="text-lg lg:text-xl font-bold text-sky-300">{stats.inDevelopment}</div>
+              <div className="text-[10px] lg:text-xs text-blue-200">In Dev</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg lg:text-xl font-bold text-green-300">{stats.released}</div>
+              <div className="text-[10px] lg:text-xs text-blue-200">Released</div>
             </div>
           </div>
 
-          {/* Right: Action buttons (desktop) */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          {/* Right: Action buttons (desktop) — 2 rows x 3 columns */}
+          <div className="hidden md:grid grid-cols-3 gap-1.5 shrink-0">
             {isAdmin && (
               <button
                 onClick={() => navigate({ to: '/strategic-plan' })}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -106,7 +125,7 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
             {isAdmin && onOpenReleases && (
               <button
                 onClick={onOpenReleases}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
@@ -117,7 +136,7 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
             {isAdmin ? (
               <button
                 onClick={() => navigate({ to: '/admin/devpilot' })}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded-lg transition-colors text-xs font-medium"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded-lg transition-colors text-xs font-medium"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -127,11 +146,44 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
             ) : isMember ? (
               <button
                 onClick={() => alert('Coming soon!')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
               >
                 Ideation
               </button>
             ) : null}
+            {isAdmin && (
+              <button
+                onClick={() => navigate({ to: '/devpilot-architecture' })}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Architecture
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => navigate({ to: '/devpilot-flowchart' })}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                Flowchart
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => navigate({ to: '/devpilot-prompts' })}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                Prompts
+              </button>
+            )}
           </div>
         </div>
       </div>

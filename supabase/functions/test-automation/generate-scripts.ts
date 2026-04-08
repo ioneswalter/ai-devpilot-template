@@ -11,9 +11,11 @@ import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
 const GenerateSchema = z.object({
   feature_id: z.string().uuid(),
   test_case_ids: z.array(z.string().uuid()).optional(),
+  force: z.boolean().optional(),
 });
 
-const AI_MODEL = 'claude-sonnet-4-6';
+// Use Haiku for speed — test script generation is structured prompt output, doesn't need Sonnet
+const AI_MODEL = 'claude-haiku-4-5-20251001';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -97,6 +99,21 @@ EXPECTED RESULT: ${testCase.expected_result}
 ACCEPTANCE CRITERIA:
 ${criteriaList}
 
+APP ROUTE MAP (use these exact URLs for navigation):
+- /learn — AI Learning Lab (Catalogue tab default, admin sees: Catalogue, LMS Dashboard, Course Builder tabs)
+- /learn?tab=courses — Admin Course Builder (CourseListPanel with course list, "+ Create Course" button)
+- /learn?tab=lms — LMS Dashboard (admin analytics)
+- /admin — Admin panel (Settings, Pipeline, features management)
+- /roadmap — Product roadmap / feature board
+- /marketplace — Marketplace listings
+- /dashboard — User dashboard
+- /ai-coach — AI Coach chat
+- /community — Community page
+- /strategic-plan — Strategic Plan / Prompt Library
+
+IMPORTANT: The Course Builder is at /learn?tab=courses, NOT /course-builder or /admin/course-builder.
+Admin features are accessed by navigating to the page and clicking the relevant tab.
+
 Return JSON with this structure:
 \`\`\`json
 {
@@ -119,6 +136,7 @@ Return JSON with this structure:
 
 RULES:
 - Use SEMANTIC references only: visible text, ARIA roles, labels. Never use CSS selectors or XPaths.
+- Always use the APP ROUTE MAP above for navigation URLs. Never guess routes.
 - Include checkpoint:true for steps that validate acceptance criteria visually.
 - Map each step to a criterion_index when it directly validates that criterion.
 - If this test case cannot be reliably automated (complex drag-drop, multi-step wizard), return null.
@@ -135,7 +153,7 @@ export async function handleGenerateScripts(
     return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
   }
 
-  const { feature_id, test_case_ids } = validation.data;
+  const { feature_id, test_case_ids, force } = validation.data;
 
   // Load feature and acceptance criteria
   const { data: feature } = await supabase
@@ -171,7 +189,7 @@ export async function handleGenerateScripts(
   const skipped: Array<{ test_case_id: string; reason: string }> = [];
 
   for (const tc of testCases || []) {
-    if (tc.automation_status === 'automated') {
+    if (tc.automation_status === 'automated' && !force) {
       skipped.push({ test_case_id: tc.id, reason: 'Already automated' });
       continue;
     }

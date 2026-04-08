@@ -6,7 +6,6 @@
 import { useState } from 'react';
 import { getTestTypeBadge } from '@/components/roadmap/badge-utils';
 import { GuidedTestingPanel } from './GuidedTestingPanel';
-import { AutomationConvertPanel } from './AutomationConvertPanel';
 import type { TestRunResult } from './test-execution-types';
 import type { GuidedTestEvidence } from './guided-testing-types';
 
@@ -115,66 +114,83 @@ export function TestCaseExecutionCard({
     <div className={`border rounded-lg p-3 transition-colors ${borderClass}`}>
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
-          {/* Header: test code, type badge, previous status */}
-          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            <code className="text-xs font-mono text-gray-500">{testCase.test_code}</code>
-            {getTestTypeBadge(testCase.test_type)}
-            <span className="ml-auto">
-              <PreviousStatusIndicator passed={testCase.passed} lastRunResult={lastRunResult} />
-            </span>
-          </div>
-
-          {/* Title and description */}
-          <p className="text-sm font-medium text-gray-900">{testCase.title}</p>
-          {testCase.description && (
-            <p className="mt-0.5 text-xs text-gray-600">{testCase.description}</p>
-          )}
-
-          {/* Result toggle buttons */}
-          <div className="flex items-center gap-1.5 mt-2">
-            {RESULT_BUTTONS.map((btn) => (
-              <button
-                key={btn.value}
-                onClick={() => onResultChange(btn.value)}
-                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
-                  result === btn.value ? btn.activeClass : btn.inactiveClass
-                }`}
-              >
-                {btn.label}
-              </button>
-            ))}
-
-            {/* Notes toggle */}
-            {!showNotes && (
-              <button
-                onClick={() => setShowNotes(true)}
-                className="ml-auto text-xs text-blue-600 hover:text-blue-700"
-              >
-                Add notes
-              </button>
-            )}
-
-            {/* AI Guide toggle */}
-            {featureId && !showGuided && (
-              <button
-                onClick={() => setShowGuided(true)}
-                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-              >
-                AI Guide
-              </button>
-            )}
-          </div>
-
-          {/* Notes textarea */}
-          {showNotes && !showGuided && (
-            <div className="mt-2">
-              <textarea
-                value={notes}
-                onChange={(e) => onNotesChange(e.target.value)}
-                placeholder="Add notes about this test result..."
-                className="w-full text-xs border rounded px-2 py-1.5 h-16 resize-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300"
-              />
+          {/* Collapsed header when guided testing is active */}
+          {showGuided ? (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <code className="text-xs font-mono text-gray-500">{testCase.test_code}</code>
+              {getTestTypeBadge(testCase.test_type)}
+              <span className="text-xs text-gray-700 font-medium truncate">{testCase.title}</span>
             </div>
+          ) : (
+            <>
+              {/* Header: test code, type badge, previous status */}
+              <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                <code className="text-xs font-mono text-gray-500">{testCase.test_code}</code>
+                {getTestTypeBadge(testCase.test_type)}
+                <span className="ml-auto">
+                  <PreviousStatusIndicator passed={testCase.passed} lastRunResult={lastRunResult} />
+                </span>
+              </div>
+
+              {/* Title and description */}
+              <p className="text-sm font-medium text-gray-900">{testCase.title}</p>
+              {testCase.description && (
+                <p className="mt-0.5 text-xs text-gray-600">{testCase.description}</p>
+              )}
+
+              {/* Result toggle buttons */}
+              <div className="flex items-center gap-1.5 mt-2">
+                {RESULT_BUTTONS.map((btn) => (
+                  <button
+                    key={btn.value}
+                    onClick={() => onResultChange(btn.value)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                      result === btn.value ? btn.activeClass : btn.inactiveClass
+                    }`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Action buttons row */}
+              <div className="flex items-center gap-2 mt-2">
+                {featureId && (
+                  <button
+                    onClick={() => setShowGuided(true)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI Guide
+                  </button>
+                )}
+                {!showNotes && (
+                  <button
+                    onClick={() => setShowNotes(true)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Notes
+                  </button>
+                )}
+              </div>
+
+              {/* Notes textarea */}
+              {showNotes && (
+                <div className="mt-2">
+                  <textarea
+                    value={notes}
+                    onChange={(e) => onNotesChange(e.target.value)}
+                    placeholder="Add notes about this test result..."
+                    className="w-full text-xs border rounded px-2 py-1.5 h-16 resize-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300"
+                  />
+                </div>
+              )}
+            </>
           )}
 
           {/* AI Guided Testing Panel */}
@@ -189,16 +205,6 @@ export function TestCaseExecutionCard({
             </div>
           )}
 
-          {/* Convert to Automated (FR-109 J3) */}
-          {!showGuided && featureId && (
-            <div className="mt-2">
-              <AutomationConvertPanel
-                testCaseId={testCase.id}
-                hasGuidedEvidence={lastRunResult !== null && lastRunResult !== undefined}
-                isAutomated={false}
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>

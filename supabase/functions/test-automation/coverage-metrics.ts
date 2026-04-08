@@ -137,6 +137,7 @@ export async function handleListScripts(
       test_case_id: s.test_case_id,
       test_case_title: tc?.title || 'Unknown',
       step_count: Array.isArray(steps) ? steps.length : 0,
+      script_steps: Array.isArray(steps) ? steps : [],
       generation_source: s.generation_source,
       is_stale: s.is_stale,
       is_custom_modified: s.is_custom_modified,

@@ -90,44 +90,56 @@ export async function handleGenerate(req: Request): Promise<Response> {
   if (!feature) return error('NOT_FOUND', 'Feature not found', 404);
 
   try {
-    const criteria = (feature.acceptance_criteria as string[]) || [];
-    const specContext = buildSpecContext(feature.title, feature.description, criteria);
+    // Check for a pre-built template first (reliable, no AI guessing)
+    const { getTemplate } = await import('./templates.ts');
+    const template = getTemplate(feature.feature_code);
 
-    // Get table names for AI context (non-fatal if fails)
-    const schemaHint = await getSchemaHint();
+    let sqlText: string;
+    let usedTemplate = false;
 
-    // Generate test data via AI
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
+    if (template) {
+      // Use pre-built SQL — no AI needed
+      sqlText = template.join(';\n');
+      usedTemplate = true;
+      console.log(`test-data-gen: using template for ${feature.feature_code}`);
+    } else {
+      // Fall back to AI generation for features without templates
+      const criteria = (feature.acceptance_criteria as string[]) || [];
+      const specContext = buildSpecContext(feature.title, feature.description, criteria);
+      const schemaHint = await getSchemaHint();
 
-    const Anthropic = (await import('npm:@anthropic-ai/sdk@0.39.0')).default;
-    const anthropic = new Anthropic({ apiKey, timeout: 25_000 });
-    const response = await anthropic.messages.create({
-      model: AI_MODEL,
-      max_tokens: 2048,
-      system: GENERATE_PROMPT,
-      messages: [{ role: 'user', content: `${specContext}\n\n${schemaHint}` }],
-    });
+      const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+      if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
 
-    const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
-    const sqlText = textBlock && textBlock.type === 'text'
-      ? (textBlock as { type: 'text'; text: string }).text.trim()
-      : '';
+      const Anthropic = (await import('npm:@anthropic-ai/sdk@0.39.0')).default;
+      const anthropic = new Anthropic({ apiKey, timeout: 25_000 });
+      const response = await anthropic.messages.create({
+        model: AI_MODEL,
+        max_tokens: 2048,
+        system: GENERATE_PROMPT,
+        messages: [{ role: 'user', content: `${specContext}\n\n${schemaHint}` }],
+      });
 
-    // Log AI usage (fire-and-forget)
-    logAIUsage(supabase, {
-      featureId, adminId: userId, modelId: AI_MODEL,
-      operationType: 'test_data_gen',
-      inputTokens: response.usage?.input_tokens ?? 0,
-      outputTokens: response.usage?.output_tokens ?? 0,
-    }).catch(() => {});
+      const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
+      sqlText = textBlock && textBlock.type === 'text'
+        ? (textBlock as { type: 'text'; text: string }).text.trim()
+        : '';
+
+      // Log AI usage (fire-and-forget)
+      logAIUsage(supabase, {
+        featureId, adminId: userId, modelId: AI_MODEL,
+        operationType: 'test_data_gen',
+        inputTokens: response.usage?.input_tokens ?? 0,
+        outputTokens: response.usage?.output_tokens ?? 0,
+      }).catch(() => {});
+    }
 
     if (!sqlText || sqlText.length < 10) {
       return error('AI_ERROR', 'AI returned empty data', 500);
     }
 
-    // Parse and execute SQL
-    const result = await executeSql(sqlText, featureId);
+    // Execute SQL — template array or AI-generated text
+    const result = await executeSql(usedTemplate ? template! : sqlText, featureId);
 
     // Store dataset metadata for cleanup
     const datasetId = crypto.randomUUID();
@@ -232,13 +244,15 @@ async function getSchemaHint(): Promise<string> {
   }
 }
 
-async function executeSql(sqlText: string, featureId: string) {
+/** Execute SQL statements against the database. Accepts raw text or pre-split array. */
+async function executeSql(input: string | string[], featureId: string) {
   const client = await getPgClient();
   await client.connect();
 
-  // Strip markdown fences if present
-  const cleaned = sqlText.replace(/```sql?\s*/gi, '').replace(/```/g, '').trim();
-  const statements = cleaned.split(';').map((s: string) => s.trim()).filter((s: string) => s.length > 5);
+  const statements = Array.isArray(input)
+    ? input
+    : input.replace(/```sql?\s*/gi, '').replace(/```/g, '').trim()
+        .split(';').map((s: string) => s.trim()).filter((s: string) => s.length > 5);
 
   let inserted = 0;
   const errors: string[] = [];

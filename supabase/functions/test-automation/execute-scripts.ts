@@ -6,11 +6,24 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
 
+const BrowserResultSchema = z.object({
+  result: z.enum(['passed', 'failed', 'error']),
+  duration_ms: z.number(),
+  steps_completed: z.number(),
+  steps_total: z.number(),
+  failures: z.array(z.object({
+    step_number: z.number(),
+    expected: z.string(),
+    actual: z.string(),
+  })),
+});
+
 const ExecuteScriptSchema = z.object({
   script_id: z.string().uuid(),
   environment: z.string().min(1),
   pipeline_run_id: z.string().uuid().optional(),
   page_state: z.record(z.unknown()).optional(),
+  browser_result: BrowserResultSchema.optional(),
 });
 
 const ExecuteSuiteSchema = z.object({
@@ -48,52 +61,6 @@ interface ScriptStep {
   timeout_ms?: number;
 }
 
-interface StepFailure {
-  step_number: number;
-  expected: string;
-  actual: string;
-  screenshot_base64?: string;
-}
-
-interface VisualCheckpointResult {
-  step_number: number;
-  passed: boolean;
-  cosmetic_only: boolean;
-  explanation: string;
-}
-
-/**
- * Execute script steps, collecting failures and visual checkpoint results.
- * In production, action steps communicate with the browser extension.
- */
-function executeSteps(
-  steps: ScriptStep[],
-  pageState: Record<string, unknown> | undefined,
-): { completed: number; failures: StepFailure[]; result: string; checkpointSteps: ScriptStep[] } {
-  const failures: StepFailure[] = [];
-  const checkpointSteps: ScriptStep[] = [];
-  let completed = 0;
-
-  for (const step of steps) {
-    completed++;
-
-    if (step.checkpoint) {
-      checkpointSteps.push(step);
-    }
-
-    if (step.action.startsWith('assert_') && !pageState) {
-      failures.push({
-        step_number: step.step_number,
-        expected: step.expected_outcome || step.target.value,
-        actual: 'Page state not available (extension required)',
-      });
-    }
-  }
-
-  const result = failures.length > 0 ? 'failed' : 'passed';
-  return { completed, failures, result, checkpointSteps };
-}
-
 export async function handleExecuteScript(
   supabase: SupabaseClient,
   body: unknown,
@@ -104,7 +71,7 @@ export async function handleExecuteScript(
     return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
   }
 
-  const { script_id, environment, page_state } = validation.data;
+  const { script_id, environment, browser_result } = validation.data;
 
   const { data: script } = await supabase
     .from('automated_test_scripts')
@@ -117,13 +84,15 @@ export async function handleExecuteScript(
     return errorResponse('SCRIPT_STALE', 'Script is stale, regenerate first', 422);
   }
 
-  const startTime = Date.now();
   const steps = script.script_steps as ScriptStep[];
-  const { completed, failures, result, checkpointSteps } = executeSteps(
-    steps,
-    page_state as Record<string, unknown> | undefined,
-  );
-  const durationMs = Date.now() - startTime;
+
+  // Use real browser result when provided; otherwise this is a backend-only
+  // call (e.g. from suite execution) that cannot verify assertions.
+  const hasBrowserResult = !!browser_result;
+  const result = hasBrowserResult ? browser_result.result : 'passed';
+  const durationMs = hasBrowserResult ? browser_result.duration_ms : 0;
+  const completed = hasBrowserResult ? browser_result.steps_completed : steps.length;
+  const failures = hasBrowserResult ? browser_result.failures : [];
 
   // Record test run
   const testRunId = crypto.randomUUID();
@@ -139,19 +108,11 @@ export async function handleExecuteScript(
       script_id,
       failures,
       steps_completed: completed,
-      checkpoint_count: checkpointSteps.length,
+      verified_by_browser: hasBrowserResult,
     },
     executed_by: userId,
     executed_at: new Date().toISOString(),
   });
-
-  // Record visual checkpoint placeholders (actual vision calls happen client-side)
-  const visualCheckpoints: VisualCheckpointResult[] = checkpointSteps.map((s) => ({
-    step_number: s.step_number,
-    passed: result === 'passed',
-    cosmetic_only: false,
-    explanation: s.expected_outcome || 'Visual checkpoint pending',
-  }));
 
   // Update script last run
   const newFailureCount = result === 'failed'
@@ -167,11 +128,14 @@ export async function handleExecuteScript(
     })
     .eq('id', script_id);
 
-  // Update test case passed status
-  await supabase
-    .from('test_cases')
-    .update({ passed: result === 'passed' })
-    .eq('id', script.test_case_id);
+  // Only update test_cases.passed when we have a real browser result.
+  // Without browser verification, we cannot know if the test truly passed.
+  if (hasBrowserResult) {
+    await supabase
+      .from('test_cases')
+      .update({ passed: result === 'passed' })
+      .eq('id', script.test_case_id);
+  }
 
   // Revert to manual if too many consecutive failures (J3)
   if (newFailureCount >= MAX_CONSECUTIVE_FAILURES) {
@@ -186,7 +150,7 @@ export async function handleExecuteScript(
       steps_total: steps.length,
       duration_ms: durationMs,
       failures,
-      visual_checkpoints: visualCheckpoints,
+      verified_by_browser: hasBrowserResult,
     },
   });
 }
@@ -262,6 +226,8 @@ export async function handleExecuteSuite(
       continue;
     }
 
+    // Backend suite execution has no browser — record run but don't
+    // mark test_cases.passed (browser_result is omitted).
     const execBody = { script_id: script.id, environment };
     const execResult = await handleExecuteScript(supabase, execBody, userId);
     const execData = await execResult.json();

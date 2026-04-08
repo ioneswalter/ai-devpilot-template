@@ -25,14 +25,18 @@ export function useEvidenceCapture() {
     error: null,
   });
 
-  /** Capture evidence for a given step number */
+  /** Capture evidence for a given step number, optionally targeting a specific URL's tab */
   const captureEvidence = useCallback(
-    async (stepNumber: number): Promise<CaptureEvidenceResult | null> => {
+    async (stepNumber: number, targetUrl?: string): Promise<CaptureEvidenceResult | null> => {
       if (!extension.isAvailable) return null;
 
       setState((prev) => ({ ...prev, capturing: true, error: null }));
       try {
-        const result = await extension.captureEvidence(stepNumber);
+        const result = await extension.captureEvidence(stepNumber, targetUrl);
+        if (!result) {
+          setState({ capturing: false, lastCapture: null, error: 'Extension did not return evidence — check that the extension is active and reload the page' });
+          return null;
+        }
         setState({ capturing: false, lastCapture: result, error: null });
         return result;
       } catch (err) {
@@ -71,10 +75,53 @@ export function useEvidenceCapture() {
     [],
   );
 
+  /** Load evidence previously captured via the extension popup (for navigation steps) */
+  const loadStoredEvidence = useCallback(
+    async (): Promise<CaptureEvidenceResult | null> => {
+      if (!extension.isAvailable) return null;
+
+      setState((prev) => ({ ...prev, capturing: true, error: null }));
+      try {
+        const result = await extension.getStoredEvidence();
+        if (!result) {
+          setState({ capturing: false, lastCapture: null, error: 'No stored evidence found — capture evidence on the test page first using the SpecKit extension' });
+          return null;
+        }
+        setState({ capturing: false, lastCapture: result, error: null });
+        return result;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load stored evidence';
+        setState({ capturing: false, lastCapture: null, error: message });
+        return null;
+      }
+    },
+    [extension],
+  );
+
+  /** Clear any loaded/uploaded evidence */
+  const clearEvidence = useCallback(() => {
+    setState({ capturing: false, lastCapture: null, error: null });
+  }, []);
+
+  /** Manually set a screenshot (e.g. from file upload) as evidence */
+  const setManualScreenshot = useCallback((dataUrl: string) => {
+    const result: CaptureEvidenceResult = {
+      screenshot: dataUrl,
+      page_state: { url: '', title: 'Manual upload', viewport: { width: 0, height: 0, scrollX: 0, scrollY: 0 }, visible_elements: [] },
+      console_output: [],
+      network_log: [],
+      timestamp: new Date().toISOString(),
+    };
+    setState({ capturing: false, lastCapture: result, error: null });
+  }, []);
+
   return {
     ...state,
     extensionAvailable: extension.isAvailable,
     captureEvidence,
+    loadStoredEvidence,
+    setManualScreenshot,
+    clearEvidence,
     buildStepEvidence,
   };
 }

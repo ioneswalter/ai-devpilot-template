@@ -192,6 +192,7 @@ export interface ScriptListItem {
   test_case_id: string;
   test_case_title: string;
   step_count: number;
+  script_steps?: ScriptStep[];
   generation_source: GenerationSource;
   is_stale: boolean;
   is_custom_modified: boolean;

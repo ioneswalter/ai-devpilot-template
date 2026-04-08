@@ -11,6 +11,7 @@ import { TestRunHistory } from './TestRunHistory';
 import { TestDataActions } from './TestDataActions';
 import { AutomatedTestPanel } from './AutomatedTestPanel';
 import { AutomationDashboard } from './AutomationDashboard';
+import { AutomatedExecuteView } from './AutomatedExecuteView';
 import { CriteriaCoverageBar } from './CriteriaCoverageBar';
 import { useCriteriaCoverage } from './useCriteriaCoverage';
 import type { TestCase } from './roadmap-helpers';
@@ -67,7 +68,7 @@ interface TestRunPanelProps {
   onRefresh?: () => void;
 }
 
-type PanelView = 'status' | 'execute';
+type PanelView = 'status' | 'execute' | 'manual';
 
 export function TestRunPanel({
   featureId, featureCode, featureTitle, featureStatus, testCases, acceptanceCriteria, onClose, onComplete, onRefresh,
@@ -140,7 +141,7 @@ export function TestRunPanel({
   };
 
   // After successful submission — refresh parent data and return to status view
-  if (exec.isSubmitSuccess && view === 'execute') {
+  if (exec.isSubmitSuccess && (view === 'execute' || view === 'manual')) {
     onRefresh?.();
     setView('status');
     exec.resetSubmit();
@@ -148,6 +149,32 @@ export function TestRunPanel({
     clearDraft(featureId);
     setHasDraft(false);
   }
+
+  /** Called by AutomatedExecuteView when suite completes — auto-mark results */
+  const handleAutoResults = useCallback((autoResults: Record<string, TestRunResult>) => {
+    setResults(autoResults);
+  }, []);
+
+  /** Submit auto-populated results directly */
+  const handleAutoSubmit = useCallback((env: string) => {
+    const entries: TestResultInput[] = testCases
+      .filter((tc) => results[tc.id!])
+      .map((tc) => ({
+        test_case_id: tc.id!,
+        result: results[tc.id!]!,
+        notes: notes[tc.id!] || undefined,
+      }));
+    if (entries.length === 0) return;
+    lastSubmitRef.current = {
+      passed: entries.filter((e) => e.result === 'passed').length,
+      failed: entries.filter((e) => e.result === 'failed').length,
+      skipped: entries.filter((e) => e.result === 'skipped').length,
+      total: entries.length,
+    };
+    exec.submitResults(env, entries);
+    clearDraft(featureId);
+    setHasDraft(false);
+  }, [testCases, results, notes, exec, featureId]);
 
   // Compute test status from test case data + history
   const passedCount = testCases.filter((tc) => tc.passed === true).length;
@@ -243,24 +270,22 @@ export function TestRunPanel({
           </span>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-            {!allPassed && (
-              <button
-                onClick={() => {
-                  const prefilled: Record<string, TestRunResult | null> = {};
-                  for (const tc of testCases) {
-                    if (!tc.id) continue;
-                    if (lastRunResults[tc.id]) prefilled[tc.id] = lastRunResults[tc.id];
-                    else if (tc.passed === true) prefilled[tc.id] = 'passed';
-                    else if (tc.passed === false) prefilled[tc.id] = 'failed';
-                  }
-                  setResults(prefilled);
-                  setNotes({});
-                  setHasDraft(false);
-                  setView('execute');
-                }}
-                className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-              >Run Tests</button>
-            )}
+            <button
+              onClick={() => {
+                const prefilled: Record<string, TestRunResult | null> = {};
+                for (const tc of testCases) {
+                  if (!tc.id) continue;
+                  if (lastRunResults[tc.id]) prefilled[tc.id] = lastRunResults[tc.id];
+                  else if (tc.passed === true) prefilled[tc.id] = 'passed';
+                  else if (tc.passed === false) prefilled[tc.id] = 'failed';
+                }
+                setResults(prefilled);
+                setNotes({});
+                setHasDraft(false);
+                setView('execute');
+              }}
+              className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+            >{allPassed ? 'Re-Run Tests' : 'Run Tests'}</button>
             {allPassed && featureStatus !== 'released' && (
               <button
                 onClick={onComplete}
@@ -273,6 +298,29 @@ export function TestRunPanel({
     );
   }
 
+  // Automated execute view — primary flow
+  if (view === 'execute') {
+    return (
+      <AutomatedExecuteView
+        featureId={featureId}
+        featureCode={featureCode}
+        featureTitle={featureTitle}
+        testCases={testCases}
+        environment={environment}
+        onEnvironmentChange={setEnvironment}
+        onResultsReady={handleAutoResults}
+        onSubmit={() => handleAutoSubmit(environment)}
+        isSubmitting={exec.isSubmitting}
+        submitError={exec.submitError}
+        results={results}
+        onBack={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); setHasDraft(false); }}
+        onClose={onClose}
+        onSwitchToManual={() => setView('manual')}
+      />
+    );
+  }
+
+  // Manual fallback view — same as old execute view
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b bg-white">
@@ -300,25 +348,9 @@ export function TestRunPanel({
           </span>
         </div>
       )}
-      {hasDraft && (
-        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
-          <span className="text-xs text-blue-700">Draft restored — your previous progress was saved.</span>
-          <button
-            onClick={() => {
-              setResults({});
-              setNotes({});
-              clearDraft(featureId);
-              setHasDraft(false);
-            }}
-            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Discard
-          </button>
-        </div>
-      )}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Mark Results ({markedCount}/{testCases.length})
+          Manual Results ({markedCount}/{testCases.length})
         </h4>
         {testCases.map((tc) => (
           <TestCaseExecutionCard
@@ -334,9 +366,14 @@ export function TestRunPanel({
         ))}
       </div>
       <div className="border-t p-3 flex items-center justify-between bg-white">
-        <button onClick={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); setHasDraft(false); }} className="text-xs text-gray-500 hover:text-gray-700">
-          Back to Overview
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setView('execute')} className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+            Switch to Automated
+          </button>
+          <button onClick={() => { setView('status'); setResults({}); setNotes({}); clearDraft(featureId); setHasDraft(false); }} className="text-xs text-gray-500 hover:text-gray-700">
+            Back to Overview
+          </button>
+        </div>
         <div className="flex gap-2">
           <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
           {markedCount > 0 && (

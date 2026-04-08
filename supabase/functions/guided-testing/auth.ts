@@ -35,15 +35,18 @@ export async function resolveAuth(req: Request): Promise<AuthContext | Response>
   }
 
   const token = authHeader.substring(7);
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const supabase = getSupabase();
 
-  if (token === serviceKey) {
-    return { supabase, userId: 'service-role', isServiceRole: true };
-  }
-
+  // Validate token via Supabase Auth — works for both user JWTs and service-role JWTs
   const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
   if (authErr || !user) {
+    // If getUser fails, check if this is a service-role JWT by decoding the role claim
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.role === 'service_role') {
+        return { supabase, userId: 'service-role', isServiceRole: true };
+      }
+    } catch { /* not a valid JWT */ }
     return error('UNAUTHORIZED', 'Invalid token', 401);
   }
 

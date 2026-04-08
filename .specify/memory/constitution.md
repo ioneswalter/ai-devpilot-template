@@ -1,24 +1,29 @@
 <!--
   SYNC IMPACT REPORT
   ==================
-  Version Change: 2.2.0 → 2.3.0
-  Rationale: MINOR version bump - Added Principle X: AI-Driven Implementation
-             Pipeline (FR-105). Establishes autonomous feature delivery as a
-             foundational pillar of AI DevPilot, integrating with SpecKit
-             (constitution, spec, roadmap) for seamless end-to-end implementation.
+  Version Change: 2.3.0 → 2.4.0
+  Rationale: MINOR version bump - Added Principle XI: Verification-Driven
+             Implementation. Establishes incremental verification, smaller
+             delivery batches, and structured defect resolution as mandatory
+             quality gates. Driven by user feedback on defect rates in
+             AI-generated features.
 
   Key Additions:
-  - New Principle X: AI-Driven Implementation Pipeline
-  - Covers: SpecKit integration, CI pipeline stages, auto-migration,
-    auto-deploy, context-aware codegen, task splitting
-  - Establishes FR-105 as foundational to AI DevPilot's SDLC vision
+  - New Principle XI: Verification-Driven Implementation (NON-NEGOTIABLE)
+  - Covers: task-level verification gates, incremental delivery by journey,
+    post-implementation self-review, structured defect tracing, regression checks
+  - New command: \speckit.fix for structured defect resolution
 
   Templates Requiring Updates:
-  - CLAUDE.md - Add AI-Driven Implementation Pipeline principle summary
+  - CLAUDE.md - Add Verification-Driven Implementation principle summary
+  - speckit.implement.md - Add verification gates between tasks
+  - build.md - Add verification gates
 
-  Date: 2026-03-30
+  Date: 2026-04-05
 
   Previous Version History:
+  - 2.2.0 → 2.3.0 (2026-03-30): Added Principle X: AI-Driven Implementation
+    Pipeline (FR-105).
   - 2.1.0 → 2.2.0 (2026-03-04): Added Deployment & Hosting subsection to
     Technology Stack.
   - 2.0.0 → 2.1.0 (2026-03-02): Split Security from Performance, elevate Security
@@ -347,6 +352,43 @@ The AI-Driven Implementation Pipeline is the engine that powers AI DevPilot. It 
 
 **Rationale**: AI DevPilot's value proposition is simplifying the SDLC so that Business, Analysis, and Engineering collaborate seamlessly. The implementation pipeline is the mechanism that delivers this promise. Without autonomous, SpecKit-integrated implementation, every feature requires manual developer intervention — defeating the purpose of AI-driven development. FR-105 is foundational because every other feature (FR-108 testing, FR-109 validation, FR-111 review, FR-112 usage tracking) depends on a reliable implementation pipeline to deliver their code.
 
+### XI. Verification-Driven Implementation (NON-NEGOTIABLE)
+
+**MUST** verify each implementation step works before proceeding to the next:
+
+AI-generated code has consistently produced integration defects when tasks are executed sequentially without verification. Unit tests alone are insufficient — most defects are integration bugs (wrong column names, missing RLS policies, mismatched API contracts, UI state issues) that only surface when components interact. This principle establishes verification as a mandatory quality gate at every level of implementation.
+
+- **Task-Level Verification Gates**:
+  - After each task, verify: Does it compile? (`pnpm tsc --noEmit`) Does the type check pass?
+  - For database tasks: Does the migration apply? Does the query return expected results?
+  - For Edge Functions: Does the function deploy? Does it respond correctly to a test request?
+  - For frontend tasks: Does the component render without errors? Does the UI state behave correctly?
+  - **DO NOT proceed to the next task until the current task is verified working**
+- **Incremental Delivery by Journey**:
+  - Implement P1 journey first, verify with user, then proceed to P2
+  - Each journey must be independently testable before moving to the next
+  - Never implement all journeys at once — smaller batches catch issues earlier
+  - User verification between journeys is a quality gate, not a bottleneck
+- **Post-Implementation Self-Review** (before declaring any feature complete):
+  - Error handling: Every async handler has try/catch with visible error UI
+  - Type safety: No `any` types, all API contracts match between frontend and Edge Functions
+  - RLS: All new tables have RLS policies (`pnpm verify:rls`)
+  - Edge cases: Empty states, loading states, error states all handled
+  - Regression: Existing features still work after new code lands
+- **Structured Defect Resolution** (when defects are found post-implementation):
+  - **Trace**: Identify which spec/task produced the defect
+  - **Update artifact**: Edit acceptance criteria in spec.md or add a patch task in tasks.md
+  - **Re-implement**: Fix from the updated artifact, not ad-hoc
+  - **Verify**: Confirm the fix works before marking done
+  - **NEVER vibe code a fix** — all defect fixes must be traceable to an artifact
+- **Verification Over Testing**:
+  - TDD is valuable for pure logic (calculations, validation, transformations)
+  - But integration verification ("does this actually work end-to-end?") catches more defects than mocked unit tests
+  - Prioritize: compile check → type check → integration verification → unit tests
+  - Every task in tasks.md SHOULD include a verification criterion describing how to confirm it works
+
+**Rationale**: Recent AI-generated features consistently required manual intervention to fix integration defects. The root cause was executing tasks sequentially without verifying each step worked before moving on. Errors in early tasks compounded through later ones, and context window pressure caused inconsistencies. This principle establishes verification discipline as a mandatory part of implementation — not optional, not aspirational, but required at every step. The cost of verifying is minutes; the cost of not verifying is hours of defect fixing.
+
 ## Technology Stack
 
 **MUST** use these technologies unless specific feature requirements demand
@@ -631,4 +673,4 @@ Tracking** section of `plan.md`:
   choices
 - Component storybook (if implemented) for UI component documentation
 
-**Version**: 2.3.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-03-30
+**Version**: 2.4.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-04-05

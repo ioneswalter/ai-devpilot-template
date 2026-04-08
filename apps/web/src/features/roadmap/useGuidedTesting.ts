@@ -39,8 +39,73 @@ const INITIAL_STATE: GuidedState = {
   generatingData: false,
 };
 
-export function useGuidedTesting(featureId: string) {
-  const [state, setState] = useState<GuidedState>(INITIAL_STATE);
+/** Cache key for persisting guidance session per test case */
+function cacheKey(testCaseId: string): string {
+  return `speckit_guidance_${testCaseId}`;
+}
+
+interface CachedSession {
+  sessionId: string;
+  steps: GuidedStep[];
+  currentStepIndex: number;
+  evidence: StepEvidence[];
+  savedAt: number;
+}
+
+/** Save session to localStorage */
+function saveSession(testCaseId: string, state: GuidedState): void {
+  try {
+    const data: CachedSession = {
+      sessionId: state.sessionId ?? '',
+      steps: state.steps,
+      currentStepIndex: state.currentStepIndex,
+      evidence: state.evidence,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(cacheKey(testCaseId), JSON.stringify(data));
+  } catch { /* storage full or unavailable */ }
+}
+
+/** Load cached session (expires after 2 hours) */
+function loadSession(testCaseId: string): CachedSession | null {
+  try {
+    const raw = localStorage.getItem(cacheKey(testCaseId));
+    if (!raw) return null;
+    const data = JSON.parse(raw) as CachedSession;
+    // Expire after 2 hours
+    if (Date.now() - data.savedAt > 2 * 60 * 60 * 1000) {
+      localStorage.removeItem(cacheKey(testCaseId));
+      return null;
+    }
+    if (!data.steps?.length) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function clearSession(testCaseId: string): void {
+  try { localStorage.removeItem(cacheKey(testCaseId)); } catch { /* ignore */ }
+}
+
+export function useGuidedTesting(featureId: string, testCaseId?: string) {
+  const [state, setState] = useState<GuidedState>(() => {
+    // Restore cached session on mount
+    if (testCaseId) {
+      const cached = loadSession(testCaseId);
+      if (cached) {
+        return {
+          ...INITIAL_STATE,
+          phase: 'active' as GuidedPhase,
+          sessionId: cached.sessionId,
+          steps: cached.steps,
+          currentStepIndex: cached.currentStepIndex,
+          evidence: cached.evidence,
+        };
+      }
+    }
+    return INITIAL_STATE;
+  });
   const extension = useExtensionBridge();
   const startTime = useState(() => Date.now())[0];
 
@@ -105,13 +170,18 @@ export function useGuidedTesting(featureId: string) {
         },
       );
 
-      updateState({
+      const activeState: Partial<GuidedState> = {
         phase: 'active',
         sessionId: response.data.session_id,
         steps: response.data.steps,
         currentStepIndex: 0,
         evidence: [],
-      });
+      };
+      updateState(activeState);
+      // Cache the generated guidance
+      if (testCaseId) {
+        saveSession(testCaseId, { ...state, ...activeState } as GuidedState);
+      }
     } catch (err) {
       updateState({
         phase: 'error',
@@ -122,18 +192,20 @@ export function useGuidedTesting(featureId: string) {
 
   /** Navigate steps */
   const nextStep = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      currentStepIndex: Math.min(prev.currentStepIndex + 1, prev.steps.length - 1),
-    }));
-  }, []);
+    setState((prev) => {
+      const next = { ...prev, currentStepIndex: Math.min(prev.currentStepIndex + 1, prev.steps.length - 1) };
+      if (testCaseId) saveSession(testCaseId, next);
+      return next;
+    });
+  }, [testCaseId]);
 
   const prevStep = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      currentStepIndex: Math.max(prev.currentStepIndex - 1, 0),
-    }));
-  }, []);
+    setState((prev) => {
+      const next = { ...prev, currentStepIndex: Math.max(prev.currentStepIndex - 1, 0) };
+      if (testCaseId) saveSession(testCaseId, next);
+      return next;
+    });
+  }, [testCaseId]);
 
   /** Record step evidence */
   const recordStepEvidence = useCallback((evidence: StepEvidence) => {
@@ -142,9 +214,11 @@ export function useGuidedTesting(featureId: string) {
       const idx = updated.findIndex((e) => e.step_number === evidence.step_number);
       if (idx >= 0) updated[idx] = evidence;
       else updated.push(evidence);
-      return { ...prev, evidence: updated };
+      const next = { ...prev, evidence: updated };
+      if (testCaseId) saveSession(testCaseId, next);
+      return next;
     });
-  }, []);
+  }, [testCaseId]);
 
   /** Capture evidence for current step via extension */
   const captureCurrentStepEvidence = useCallback(async (): Promise<CaptureEvidenceResult | null> => {
@@ -177,8 +251,9 @@ export function useGuidedTesting(featureId: string) {
     };
 
     updateState({ phase: 'completed' });
+    if (testCaseId) clearSession(testCaseId);
     return guidedEvidence;
-  }, [state.sessionId, state.evidence, startTime, updateState]);
+  }, [state.sessionId, state.evidence, startTime, updateState, testCaseId]);
 
   /** Abandon the guided session */
   const abandonSession = useCallback(async () => {
@@ -195,8 +270,9 @@ export function useGuidedTesting(featureId: string) {
         });
       } catch { /* non-critical */ }
     }
+    if (testCaseId) clearSession(testCaseId);
     setState(INITIAL_STATE);
-  }, [state.sessionId, state.evidence.length, startTime]);
+  }, [state.sessionId, state.evidence.length, startTime, testCaseId]);
 
   const currentStep = state.steps[state.currentStepIndex] ?? null;
   const isLastStep = state.currentStepIndex >= state.steps.length - 1;

@@ -30,7 +30,8 @@ Deno.serve(async (req) => {
         *,
         test_cases:test_cases(*)
       `)
-      .order('feature_code', { ascending: true });
+      .order('feature_code', { ascending: true })
+      .order('test_code', { ascending: true, referencedTable: 'test_cases' });
 
     if (featuresError) {
       console.error('Get features error:', featuresError);

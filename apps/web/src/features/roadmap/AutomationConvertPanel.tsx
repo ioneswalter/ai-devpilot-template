@@ -23,8 +23,9 @@ export function AutomationConvertPanel({
   const [converting, setConverting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ConvertManualResult | null>(null);
+  const [alreadyAutomated, setAlreadyAutomated] = useState(false);
 
-  if (isAutomated) {
+  if (isAutomated || alreadyAutomated) {
     return (
       <div className="text-xs text-green-600 flex items-center gap-1">
         <span className="w-2 h-2 rounded-full bg-green-500" />
@@ -49,7 +50,13 @@ export function AutomationConvertPanel({
       setResult(data);
       onConverted?.(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Conversion failed');
+      const message = err instanceof Error ? err.message : 'Conversion failed';
+      // 409 = script already exists — show as "already automated" rather than error
+      if (message.toLowerCase().includes('already') && message.toLowerCase().includes('active')) {
+        setAlreadyAutomated(true);
+      } else {
+        setError(message);
+      }
     } finally {
       setConverting(false);
     }

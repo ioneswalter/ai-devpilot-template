@@ -122,7 +122,9 @@ export function useRoadmapData(featureParam?: string) {
   const visibleFeatures = isAdmin ? features : features.filter((f) => f.category !== 'internal');
 
   const filteredFeatures = visibleFeatures.filter((feature) => {
-    const matchesStatus = filterStatus === 'all' || feature.status === filterStatus;
+    const matchesStatus = filterStatus === 'all'
+      || feature.status === filterStatus
+      || (filterStatus === 'in_development' && feature.status === 'in_testing');
     const matchesPriority = filterPriority === 'all' || feature.priority === filterPriority;
     const matchesType = filterType === 'all' || feature.feature_type === filterType;
     const matchesCategory = filterCategory === 'all' ||
@@ -142,7 +144,7 @@ export function useRoadmapData(featureParam?: string) {
   const stats: RoadmapStats = {
     total: filteredFeatures.length,
     released: filteredFeatures.filter((f) => f.status === 'released').length,
-    inDevelopment: filteredFeatures.filter((f) => f.status === 'in_development').length,
+    inDevelopment: filteredFeatures.filter((f) => f.status === 'in_development' || f.status === 'in_testing').length,
     approved: filteredFeatures.filter((f) => f.status === 'approved').length,
     proposed: filteredFeatures.filter((f) => f.status === 'proposed').length,
   };

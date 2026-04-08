@@ -1,6 +1,6 @@
 /**
  * Hook: Browser extension bridge for AI Testing Co-Pilot (FR-108)
- * Detects extension, sends CAPTURE_EVIDENCE / GET_PAGE_STATE messages.
+ * Communicates with the extension content script via window.postMessage.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -9,14 +9,24 @@ import type {
   CaptureEvidenceResult,
   ExtensionCapabilities,
 } from './guided-testing-types';
+import type { ScriptStep } from './automation-types';
 
-// Extension ID from manifest.json externally_connectable
-const EXTENSION_ID = 'your-extension-id'; // Replaced at runtime via detection
-
-interface ExtensionMessage {
-  type: string;
-  payload?: Record<string, unknown>;
+export interface TestStepResult {
+  step_number: number;
+  passed: boolean;
+  actual_outcome: string;
+  duration_ms: number;
 }
+
+export interface TestScriptExecutionResult {
+  results: TestStepResult[];
+  passed: number;
+  failed: number;
+  duration_ms: number;
+  screenshots: Record<string, string>;
+}
+
+let requestCounter = 0;
 
 interface ExtensionResponse {
   success: boolean;
@@ -26,30 +36,31 @@ interface ExtensionResponse {
   capabilities?: string[];
 }
 
-function sendToExtension(message: ExtensionMessage): Promise<ExtensionResponse> {
+/** Send a message to the extension content script via window.postMessage */
+function sendToExtension(
+  type: string,
+  payload?: Record<string, unknown>,
+  timeoutMs = 3000,
+): Promise<ExtensionResponse> {
   return new Promise((resolve) => {
-    try {
-      const chromeRuntime = (window as unknown as Record<string, unknown>).chrome as
-        { runtime?: { sendMessage?: Function; lastError?: { message?: string } } } | undefined;
-      if (!chromeRuntime?.runtime?.sendMessage) {
-        resolve({ success: false, error: 'Chrome runtime not available' });
-        return;
-      }
-      // Use externally_connectable pattern — message any extension listening
-      chromeRuntime.runtime.sendMessage(
-        EXTENSION_ID,
-        message,
-        (response: ExtensionResponse | undefined) => {
-          if (chromeRuntime.runtime?.lastError) {
-            resolve({ success: false, error: chromeRuntime.runtime.lastError.message });
-            return;
-          }
-          resolve(response ?? { success: false, error: 'No response' });
-        },
-      );
-    } catch {
-      resolve({ success: false, error: 'Extension communication failed' });
+    const requestId = `speckit_${++requestCounter}_${Date.now()}`;
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      resolve({ success: false, error: 'Extension timeout' });
+    }, timeoutMs);
+
+    function handler(event: MessageEvent) {
+      if (event.source !== window) return;
+      if (event.data?.type !== 'SPECKIT_RESPONSE') return;
+      if (event.data?.requestId !== requestId) return;
+
+      clearTimeout(timeout);
+      window.removeEventListener('message', handler);
+      resolve(event.data as ExtensionResponse);
     }
+
+    window.addEventListener('message', handler);
+    window.postMessage({ type: `SPECKIT_${type}`, requestId, payload }, '*');
   });
 }
 
@@ -59,12 +70,15 @@ export function useExtensionBridge() {
     screenshot: false, dom: false, console: false, network: false,
   });
   const [checking, setChecking] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const checkExtension = useCallback(async () => {
     setChecking(true);
-    const resp = await sendToExtension({ type: 'CHECK_EXTENSION' });
+    setConnectionError(null);
+    const resp = await sendToExtension('CHECK_EXTENSION');
     if (resp.success && resp.capabilities) {
       setIsAvailable(true);
+      setConnectionError(null);
       setCapabilities({
         screenshot: resp.capabilities.includes('screenshot'),
         dom: resp.capabilities.includes('dom'),
@@ -73,6 +87,7 @@ export function useExtensionBridge() {
       });
     } else {
       setIsAvailable(false);
+      setConnectionError(resp.error || 'Extension not available');
     }
     setChecking(false);
     return resp.success;
@@ -83,7 +98,7 @@ export function useExtensionBridge() {
   }, [checkExtension]);
 
   const getPageState = useCallback(async (): Promise<PageState | null> => {
-    const resp = await sendToExtension({ type: 'GET_PAGE_STATE' });
+    const resp = await sendToExtension('GET_PAGE_STATE');
     if (resp.success && resp.data) {
       return resp.data as PageState;
     }
@@ -91,14 +106,44 @@ export function useExtensionBridge() {
   }, []);
 
   const captureEvidence = useCallback(
-    async (stepNumber: number): Promise<CaptureEvidenceResult | null> => {
-      const resp = await sendToExtension({
-        type: 'CAPTURE_EVIDENCE',
-        payload: { step_number: stepNumber },
-      });
+    async (stepNumber: number, targetUrl?: string): Promise<CaptureEvidenceResult | null> => {
+      const resp = await sendToExtension('CAPTURE_EVIDENCE', { step_number: stepNumber, target_url: targetUrl }, 8000);
       if (resp.success && resp.data) {
         return resp.data as CaptureEvidenceResult;
       }
+      return null;
+    },
+    [],
+  );
+
+  /** Retrieve evidence previously captured via the extension popup button */
+  const getStoredEvidence = useCallback(
+    async (): Promise<CaptureEvidenceResult | null> => {
+      const resp = await sendToExtension('GET_LAST_EVIDENCE', {}, 5000);
+      if (resp.success && resp.data) {
+        return resp.data as CaptureEvidenceResult;
+      }
+      return null;
+    },
+    [],
+  );
+
+  /** Execute a full test script via the browser extension (real browser actions) */
+  const executeTestScript = useCallback(
+    async (steps: ScriptStep[], baseUrl?: string): Promise<TestScriptExecutionResult | null> => {
+      // Generous timeout: 10s per step + 30s overhead
+      const timeoutMs = (steps.length * 10000) + 30000;
+      console.log('[SpecKit Bridge] executeTestScript called with', steps.length, 'steps, timeout:', timeoutMs);
+      const resp = await sendToExtension(
+        'EXECUTE_TEST_SCRIPT',
+        { steps, base_url: baseUrl || window.location.origin },
+        timeoutMs,
+      );
+      console.log('[SpecKit Bridge] executeTestScript response:', JSON.stringify(resp).slice(0, 500));
+      if (resp.success && resp.data) {
+        return resp.data as TestScriptExecutionResult;
+      }
+      console.warn('[SpecKit Bridge] executeTestScript failed:', resp.error);
       return null;
     },
     [],
@@ -108,8 +153,11 @@ export function useExtensionBridge() {
     isAvailable,
     capabilities,
     checking,
+    connectionError,
     checkExtension,
     getPageState,
     captureEvidence,
+    getStoredEvidence,
+    executeTestScript,
   };
 }
