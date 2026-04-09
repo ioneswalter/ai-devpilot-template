@@ -31,7 +31,8 @@ type PreflightCode =
   | 'SHORT_TIMEOUT'
   | 'EMPTY_TARGET'
   | 'NULL_CONFIG'
-  | 'NO_SCRIPTS';
+  | 'NO_SCRIPTS'
+  | 'TEXT_FIRST_SELECTOR';
 
 interface ScriptForValidation {
   id: string;

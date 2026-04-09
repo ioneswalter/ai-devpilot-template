@@ -135,11 +135,11 @@ export function SuiteResultSummary({ result }: { result: ExecuteSuiteResult }) {
         </h4>
       </div>
       <div className="flex gap-4 text-xs">
-        <span className="text-green-700">{result.passed} passed</span>
-        {result.failed > 0 && <span className="text-red-700">{result.failed} failed</span>}
-        {result.errors > 0 && <span className="text-red-700">{result.errors} errors</span>}
-        {result.skipped_stale > 0 && <span className="text-amber-700">{result.skipped_stale} skipped (stale)</span>}
-        <span className="text-gray-500">{(result.duration_ms / 1000).toFixed(1)}s</span>
+        <span className="text-green-700">{result.api_results.passed + result.e2e_results.passed} passed</span>
+        {(result.api_results.failed + result.e2e_results.failed) > 0 && <span className="text-red-700">{result.api_results.failed + result.e2e_results.failed} failed</span>}
+        {(result.api_results.errors + result.e2e_results.errors) > 0 && <span className="text-red-700">{result.api_results.errors + result.e2e_results.errors} errors</span>}
+        {result.e2e_results.skipped_stale > 0 && <span className="text-amber-700">{result.e2e_results.skipped_stale} skipped (stale)</span>}
+        <span className="text-gray-500">{(result.total_duration_ms / 1000).toFixed(1)}s</span>
       </div>
     </div>
   );

@@ -385,7 +385,7 @@ export function useAutomatedTests(featureId: string) {
     const scripts = scriptsRef.current.filter((s) => !s.is_stale).map((s) => ({
       id: s.id,
       testCaseTitle: s.test_case_title,
-      steps: s.script_steps,
+      steps: s.script_steps ?? [],
     }));
     const result = await runPreflight(featureCode, scripts);
     setState((s) => ({ ...s, preflightRunning: false, preflightResult: result }));
