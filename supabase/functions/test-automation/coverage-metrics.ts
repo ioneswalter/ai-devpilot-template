@@ -71,6 +71,21 @@ export async function handleGetCoverage(
 
   const percentage = total > 0 ? Math.round((automated / total) * 10000) / 100 : 0;
 
+  // v2: Count API vs E2E tests separately
+  const { count: apiCount } = await supabase
+    .from('api_verification_tests')
+    .select('id', { count: 'exact', head: true })
+    .eq('feature_id', featureId).eq('is_stale', false);
+  const { count: e2eCount } = await supabase
+    .from('automated_test_scripts')
+    .select('id', { count: 'exact', head: true })
+    .eq('feature_id', featureId).eq('is_stale', false);
+
+  const apiTestCount = apiCount ?? 0;
+  const e2eTestCount = e2eCount ?? 0;
+  const apiPct = total > 0 ? Math.round((apiTestCount / total) * 10000) / 100 : 0;
+  const e2ePct = total > 0 ? Math.round((e2eTestCount / total) * 10000) / 100 : 0;
+
   // Update cache
   const cacheRow = {
     feature_id: featureId,
@@ -81,6 +96,10 @@ export async function handleGetCoverage(
     criteria_total: criteriaTotal,
     criteria_automated: criteriaAutomated,
     coverage_percentage: percentage,
+    api_test_count: apiTestCount,
+    e2e_test_count: e2eTestCount,
+    api_coverage_pct: apiPct,
+    e2e_coverage_pct: e2ePct,
     last_computed_at: new Date().toISOString(),
   };
 

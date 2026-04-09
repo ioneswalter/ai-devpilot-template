@@ -1,15 +1,20 @@
 /**
- * Test Automation API (FR-109)
+ * Test Automation API (FR-109 v2 — Two-Tier)
  *
- * POST ?action=generate-scripts  — Generate automated scripts from acceptance criteria
- * POST ?action=execute-script    — Execute a single automated test script
- * POST ?action=execute-suite     — Execute all automated tests for a feature
- * POST ?action=visual-assert     — AI vision visual assertion
- * POST ?action=convert-manual    — Convert guided test to automated script
- * POST ?action=check-staleness   — Check/update script staleness
- * GET  ?action=coverage          — Get automation coverage metrics
- * GET  ?action=scripts           — List automated scripts for a feature
- * DELETE ?action=delete-script   — Delete an automated script
+ * POST ?action=generate-scripts     — Categorize criteria + generate API & E2E tests
+ * POST ?action=execute-script       — Execute a single E2E test script
+ * POST ?action=execute-api-test     — Execute a single API verification test
+ * POST ?action=execute-suite        — Execute full two-tier suite (fail-fast)
+ * POST ?action=check-staleness      — Check/update script staleness
+ * POST ?action=analyze-failures     — Generate failure guidance from test evidence
+ * POST ?action=analyze-improvements — Generate improvement recommendations
+ * GET  ?action=coverage             — Get two-tier automation coverage metrics
+ * GET  ?action=scripts              — List automated scripts for a feature
+ * GET  ?action=guidance             — Get failure guidance for a feature
+ * GET  ?action=recommendations      — Get improvement recommendations
+ * PATCH ?action=update-guidance     — Update guidance status
+ * PATCH ?action=update-recommendation — Update recommendation status
+ * DELETE ?action=delete-script      — Delete an automated script
  */
 
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
@@ -17,7 +22,7 @@ import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
 };
 
 function jsonResponse(data: unknown, status = 200): Response {
@@ -87,17 +92,21 @@ Deno.serve(async (req) => {
         const { handleExecuteSuite } = await import('./execute-scripts.ts');
         return handleExecuteSuite(supabase, body, userId);
       }
-      if (action === 'visual-assert') {
-        const { handleVisualAssert } = await import('./visual-assertion.ts');
-        return handleVisualAssert(supabase, body, userId);
-      }
-      if (action === 'convert-manual') {
-        const { handleConvertManual } = await import('./convert-manual.ts');
-        return handleConvertManual(supabase, body, userId);
+      if (action === 'execute-api-test') {
+        const { handleExecuteApiTest } = await import('./execute-api-tests.ts');
+        return handleExecuteApiTest(supabase, body, userId);
       }
       if (action === 'check-staleness') {
         const { handleCheckStaleness } = await import('./staleness-check.ts');
         return handleCheckStaleness(supabase, body);
+      }
+      if (action === 'analyze-failures') {
+        const { handleAnalyzeFailures } = await import('./failure-analysis.ts');
+        return handleAnalyzeFailures(supabase, body, userId);
+      }
+      if (action === 'analyze-improvements') {
+        const { handleAnalyzeImprovements } = await import('./improvement-analysis.ts');
+        return handleAnalyzeImprovements(supabase, body, userId);
       }
       return errorResponse('INVALID_ACTION', `Unknown POST action: ${action}`, 400);
     }
@@ -115,7 +124,30 @@ Deno.serve(async (req) => {
         const { handleListScripts } = await import('./coverage-metrics.ts');
         return handleListScripts(supabase, featureId);
       }
+      if (action === 'guidance') {
+        const status = url.searchParams.get('status') || undefined;
+        const { handleGetGuidance } = await import('./failure-analysis.ts');
+        return handleGetGuidance(supabase, featureId, status);
+      }
+      if (action === 'recommendations') {
+        const status = url.searchParams.get('status') || undefined;
+        const { handleGetRecommendations } = await import('./improvement-analysis.ts');
+        return handleGetRecommendations(supabase, featureId, status);
+      }
       return errorResponse('INVALID_ACTION', `Unknown GET action: ${action}`, 400);
+    }
+
+    if (req.method === 'PATCH') {
+      const body = await req.json();
+      if (action === 'update-guidance') {
+        const { handleUpdateGuidance } = await import('./failure-analysis.ts');
+        return handleUpdateGuidance(supabase, body);
+      }
+      if (action === 'update-recommendation') {
+        const { handleUpdateRecommendation } = await import('./improvement-analysis.ts');
+        return handleUpdateRecommendation(supabase, body);
+      }
+      return errorResponse('INVALID_ACTION', `Unknown PATCH action: ${action}`, 400);
     }
 
     if (req.method === 'DELETE') {
@@ -128,7 +160,7 @@ Deno.serve(async (req) => {
       return handleDeleteScript(supabase, scriptId, force);
     }
 
-    return errorResponse('METHOD_NOT_ALLOWED', 'Use GET, POST, or DELETE', 405);
+    return errorResponse('METHOD_NOT_ALLOWED', 'Use GET, POST, PATCH, or DELETE', 405);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal server error';
     return errorResponse('INTERNAL_ERROR', message, 500);

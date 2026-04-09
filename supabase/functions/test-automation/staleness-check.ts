@@ -127,10 +127,38 @@ export async function handleCheckStaleness(
       .in('id', freshIds);
   }
 
+  // v2: Also check API verification tests for staleness
+  const { data: apiTests } = await supabase
+    .from('api_verification_tests')
+    .select('id, test_case_id, generated_from_hash, is_stale')
+    .eq('feature_id', feature_id);
+
+  const staleApiIds: string[] = [];
+  const freshApiIds: string[] = [];
+  for (const apiTest of apiTests ?? []) {
+    if (apiTest.generated_from_hash !== currentHash) {
+      staleApiIds.push(apiTest.id);
+      staleScripts.push({
+        script_id: apiTest.id, test_case_id: apiTest.test_case_id,
+        test_case_title: '', criterion_changed: 'Criteria modified (API test)',
+      });
+    } else if (apiTest.is_stale) {
+      freshApiIds.push(apiTest.id);
+    }
+  }
+  if (staleApiIds.length > 0) {
+    await supabase.from('api_verification_tests').update({ is_stale: true }).in('id', staleApiIds);
+    const tcIds = staleScripts.filter(s => staleApiIds.includes(s.script_id)).map(s => s.test_case_id);
+    await supabase.from('test_cases').update({ automation_status: 'stale', test_tier: 'unassigned' }).in('id', tcIds);
+  }
+  if (freshApiIds.length > 0) {
+    await supabase.from('api_verification_tests').update({ is_stale: false }).in('id', freshApiIds);
+  }
+
   return jsonResponse({
     data: {
-      total_scripts: scripts.length,
-      stale_count: staleIds.length,
+      total_scripts: (scripts?.length ?? 0) + (apiTests?.length ?? 0),
+      stale_count: staleIds.length + staleApiIds.length,
       stale_scripts: staleScripts,
     },
   });

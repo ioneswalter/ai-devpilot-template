@@ -6,6 +6,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { testAutomationApi } from '@/lib/api/test-automation-api';
+import { runPreflight } from './usePreflightValidation';
+import type { PreflightResult } from './usePreflightValidation';
 import type {
   GenerateScriptsResult,
   ScriptListItem,
@@ -24,6 +26,9 @@ interface UseAutomatedTestsState {
   error: string | null;
   lastGeneration: GenerateScriptsResult | null;
   lastSuiteResult: BrowserSuiteResult | null;
+  /** Preflight validation result — null until preflight runs */
+  preflightResult: PreflightResult | null;
+  preflightRunning: boolean;
 }
 
 /** Result from a single script executed in the browser */
@@ -64,6 +69,8 @@ export function useAutomatedTests(featureId: string) {
     error: null,
     lastGeneration: null,
     lastSuiteResult: null,
+    preflightResult: null,
+    preflightRunning: false,
   });
 
   // Use ref to avoid stale closures in executeSuite
@@ -96,6 +103,7 @@ export function useAutomatedTests(featureId: string) {
           step_count: Array.isArray(steps) ? steps.length : 0,
           script_steps: Array.isArray(steps) ? steps as ScriptListItem['script_steps'] : [],
           generation_source: s.generation_source as ScriptListItem['generation_source'],
+          tier: 'e2e' as const,
           is_stale: s.is_stale,
           is_custom_modified: s.is_custom_modified,
           last_run_result: s.last_run_result as ScriptListItem['last_run_result'],
@@ -130,15 +138,21 @@ export function useAutomatedTests(featureId: string) {
         return null;
       }
 
-      const allGenerated: GenerateScriptsResult['generated'] = [];
+      const allApiTests: GenerateScriptsResult['api_tests'] = [];
+      const allE2eScripts: GenerateScriptsResult['e2e_scripts'] = [];
       const allSkipped: GenerateScriptsResult['skipped'] = [];
+      let catApi = 0, catE2e = 0, catManual = 0;
 
       for (let i = 0; i < ids.length; i++) {
         setState((s) => ({ ...s, generatingProgress: `${i + 1} of ${ids.length}` }));
         try {
           const result = await testAutomationApi.generateScripts(featureId, [ids[i]], force);
-          allGenerated.push(...result.generated);
+          allApiTests.push(...result.api_tests);
+          allE2eScripts.push(...result.e2e_scripts);
           allSkipped.push(...result.skipped);
+          catApi += result.categorized.api;
+          catE2e += result.categorized.e2e;
+          catManual += result.categorized.manual;
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Generation failed';
           allSkipped.push({ test_case_id: ids[i], reason: msg });
@@ -146,10 +160,10 @@ export function useAutomatedTests(featureId: string) {
       }
 
       const merged: GenerateScriptsResult = {
-        generated: allGenerated,
+        categorized: { api: catApi, e2e: catE2e, manual: catManual },
+        api_tests: allApiTests,
+        e2e_scripts: allE2eScripts,
         skipped: allSkipped,
-        total_generated: allGenerated.length,
-        total_skipped: allSkipped.length,
       };
 
       setState((s) => ({ ...s, generating: false, generatingProgress: null, lastGeneration: merged }));
@@ -365,6 +379,24 @@ export function useAutomatedTests(featureId: string) {
     setState((s) => ({ ...s, executing: false, executingProgress: null }));
   }, []);
 
+  /** Run preflight validation before test execution */
+  const runPreflightCheck = useCallback(async (featureCode: string): Promise<PreflightResult> => {
+    setState((s) => ({ ...s, preflightRunning: true, preflightResult: null }));
+    const scripts = scriptsRef.current.filter((s) => !s.is_stale).map((s) => ({
+      id: s.id,
+      testCaseTitle: s.test_case_title,
+      steps: s.script_steps,
+    }));
+    const result = await runPreflight(featureCode, scripts);
+    setState((s) => ({ ...s, preflightRunning: false, preflightResult: result }));
+    return result;
+  }, []);
+
+  /** Clear preflight result (e.g., after fixing issues) */
+  const clearPreflight = useCallback(() => {
+    setState((s) => ({ ...s, preflightResult: null }));
+  }, []);
+
   return {
     ...state,
     loadScripts,
@@ -373,5 +405,7 @@ export function useAutomatedTests(featureId: string) {
     executeSuite,
     stopExecution,
     deleteScript,
+    runPreflightCheck,
+    clearPreflight,
   };
 }

@@ -59,11 +59,6 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
       <div className="bg-indigo-50 px-3 py-2 flex items-center justify-between">
         <h4 className="text-xs font-semibold text-indigo-800">AI Test Automation</h4>
         <div className="flex gap-2">
-          <GenerateButton
-            generating={auto.generating}
-            progress={auto.generatingProgress}
-            onGenerate={() => auto.generateScripts()}
-          />
           <button
             onClick={() => setShowPanel(false)}
             className="text-xs text-indigo-500 hover:text-indigo-700"
@@ -93,12 +88,6 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
         </div>
       )}
 
-      {auto.lastGeneration && (
-        <GenerationSummary
-          generated={auto.lastGeneration.total_generated}
-          skipped={auto.lastGeneration.skipped}
-        />
-      )}
 
       {/* Running progress */}
       {auto.executing && auto.executingProgress && (
@@ -135,7 +124,7 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
       <div className="divide-y">
         {auto.scripts.length === 0 && !auto.generating && (
           <div className="px-3 py-4 text-center text-xs text-gray-500">
-            No automated scripts yet. Click "Generate" to create them from acceptance criteria.
+            No automated scripts yet. Run <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-indigo-600">\generate-tests FR-XXX</code> in Claude Code to create them from actual source code.
           </div>
         )}
         {auto.scripts.map((script) => {
@@ -221,53 +210,6 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
   );
 }
 
-function GenerateButton({
-  generating,
-  progress,
-  onGenerate,
-}: {
-  generating: boolean;
-  progress: string | null;
-  onGenerate: () => void;
-}) {
-  return (
-    <button
-      onClick={onGenerate}
-      disabled={generating}
-      className="px-2 py-1 text-xs font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 disabled:opacity-50"
-    >
-      {generating ? (
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          {progress ? `Generating ${progress}...` : 'Generating...'}
-        </span>
-      ) : 'Generate'}
-    </button>
-  );
-}
-
-function GenerationSummary({
-  generated,
-  skipped,
-}: {
-  generated: number;
-  skipped: Array<{ test_case_id: string; reason: string }>;
-}) {
-  const alreadyAutomated = skipped.filter((s) => s.reason === 'Already automated').length;
-  const notAutomatable = skipped.length - alreadyAutomated;
-
-  const parts: string[] = [];
-  if (alreadyAutomated > 0) parts.push(`${alreadyAutomated} already automated`);
-  if (notAutomatable > 0) parts.push(`${notAutomatable} not automatable`);
-
-  return (
-    <div className="px-3 py-2 bg-green-50 border-b border-green-100 text-xs text-green-700">
-      Generated {generated} new script{generated !== 1 ? 's' : ''}.
-      {parts.length > 0 && ` ${parts.join(', ')}.`}
-    </div>
-  );
-}
-
 function ScriptRow({
   script,
   expanded,
@@ -294,6 +236,7 @@ function ScriptRow({
       <div className="flex items-center gap-2">
         <button onClick={onToggle} className="flex-1 min-w-0 text-left flex items-center gap-2">
           <StatusBadge result={scriptResult?.result ?? script.last_run_result} stale={script.is_stale} />
+          <TierBadge tier={script.tier} />
           <span className="text-xs font-medium text-gray-800 truncate">
             {script.test_case_title}
           </span>
@@ -330,6 +273,12 @@ function ScriptRow({
       )}
     </div>
   );
+}
+
+function TierBadge({ tier }: { tier?: string }) {
+  if (tier === 'api') return <span className="px-1 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-700 rounded">API</span>;
+  if (tier === 'e2e') return <span className="px-1 py-0.5 text-[9px] font-bold bg-purple-100 text-purple-700 rounded">E2E</span>;
+  return <span className="px-1 py-0.5 text-[9px] font-bold bg-gray-100 text-gray-500 rounded">MAN</span>;
 }
 
 function StatusBadge({ result, stale }: { result: string | null; stale: boolean }) {

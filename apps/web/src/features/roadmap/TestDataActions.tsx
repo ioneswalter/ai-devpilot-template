@@ -16,14 +16,15 @@ export function TestDataActions({ featureId, featureCode }: TestDataActionsProps
   const qc = useQueryClient();
   const [showDatasets, setShowDatasets] = useState(false);
 
-  const { data: datasetsRes } = useQuery({
+  const { data: datasetsRes, isLoading: datasetsLoading } = useQuery({
     queryKey: ['test-datasets', featureId],
     queryFn: () => testDataApi.list(featureId),
-    enabled: showDatasets,
+    staleTime: 30_000,
   });
 
   const datasets: TestDataSet[] = datasetsRes?.data ?? [];
   const activeCount = datasets.filter((d) => d.status === 'active').length;
+  const hasData = activeCount > 0;
 
   const generateMut = useMutation({
     mutationFn: () => testDataApi.generate(featureId),
@@ -43,18 +44,36 @@ export function TestDataActions({ featureId, featureCode }: TestDataActionsProps
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => generateMut.mutate()}
-          disabled={generateMut.isPending}
-          className="px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
-        >
-          {generateMut.isPending ? (
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Generating...
-            </span>
-          ) : 'Generate Test Data'}
-        </button>
+        {hasData ? (
+          <button
+            onClick={() => generateMut.mutate()}
+            disabled={generateMut.isPending}
+            title="Regenerate test data"
+            className="px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg inline-flex items-center gap-1.5 hover:bg-green-100 transition-colors disabled:opacity-50"
+          >
+            {generateMut.isPending ? (
+              <span className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+            {generateMut.isPending ? 'Regenerating...' : `Test Data Ready (${activeCount})`}
+          </button>
+        ) : (
+          <button
+            onClick={() => generateMut.mutate()}
+            disabled={generateMut.isPending || datasetsLoading}
+            className="px-3 py-1.5 text-xs font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+          >
+            {generateMut.isPending ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Generating...
+              </span>
+            ) : datasetsLoading ? 'Checking...' : 'Generate Test Data'}
+          </button>
+        )}
 
         {activeCount > 0 && (
           <button

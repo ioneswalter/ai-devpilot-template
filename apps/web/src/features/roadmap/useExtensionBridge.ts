@@ -16,6 +16,7 @@ export interface TestStepResult {
   passed: boolean;
   actual_outcome: string;
   duration_ms: number;
+  retry_attempts?: number;
 }
 
 export interface TestScriptExecutionResult {

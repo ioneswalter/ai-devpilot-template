@@ -5,17 +5,27 @@
  *
  * Each template uses ON CONFLICT DO NOTHING for idempotent re-runs.
  * UUIDs use dd-prefixed patterns (hex-safe) to avoid colliding with seed data.
+ *
+ * IMPORTANT — Admin user convention:
+ * `adminUserId` is the real auth.users ID of the person running the tests.
+ * ALL user-scoped data the admin interacts with in the browser (enrollments,
+ * progress, attempts, certificates, payments) MUST use `adminUserId`.
+ * Fake user IDs are only for background/secondary data the admin never
+ * directly interacts with (e.g., other learners' stats in an admin report).
  */
 
-/** Map of feature_code → array of SQL statements */
-const TEMPLATES: Record<string, string[]> = {
-  'FR-122': buildFR122(),
-  'FR-123': buildFR123(),
+type TemplateFn = (adminUserId: string) => string[];
+
+/** Map of feature_code → template builder (receives the admin's real user ID) */
+const TEMPLATES: Record<string, TemplateFn> = {
+  'FR-122': () => buildFR122(),
+  'FR-123': (uid) => buildFR123(uid),
 };
 
 /** Look up a pre-built template by feature code. Returns null if none exists. */
-export function getTemplate(featureCode: string): string[] | null {
-  return TEMPLATES[featureCode] ?? null;
+export function getTemplate(featureCode: string, adminUserId: string): string[] | null {
+  const fn = TEMPLATES[featureCode];
+  return fn ? fn(adminUserId) : null;
 }
 
 /** FR-122: Admin Course Builder — courses, modules, quizzes, templates, image prompts */
@@ -31,7 +41,7 @@ function buildFR122(): string[] {
   return [
     // Course 1: published with modules, quizzes, images
     `INSERT INTO lms_courses (id, title, description, service_category, status, price_cents)
-     VALUES ('${courseId}', 'Landscaping Business Mastery', 'Build and grow a successful landscaping business from quoting to customer retention.', 'landscaping', 'active', NULL)
+     VALUES ('${courseId}', 'Landscaping Business Mastery', 'Build and grow a successful landscaping business from quoting to customer retention.', 'landscaping', 'published', NULL)
      ON CONFLICT (id) DO NOTHING`,
 
     // Course 2: draft with no modules (edge case)
@@ -106,70 +116,77 @@ function buildFR122(): string[] {
 }
 
 /** FR-123: Learner Enrollment and Course Delivery — enrollments, progress, assessments, certificates, payments */
-function buildFR123(): string[] {
-  // Reference existing seed courses and modules
-  const plumbCourse = 'c0000001-0000-0000-0000-000000000001';
-  const custCourse = 'c0000001-0000-0000-0000-000000000004';
-  const plumbMod1 = 'm0000001-0000-0000-0000-000000000001';
-  const plumbMod2 = 'm0000001-0000-0000-0000-000000000002';
-  const custMod1 = 'm0000004-0000-0000-0000-000000000001';
-  const custMod2 = 'm0000004-0000-0000-0000-000000000002';
+function buildFR123(adminUserId: string): string[] {
+  // Reference FR-122 test data courses (verified to exist in DB)
+  const landscapeCourse = 'dd000122-0000-0000-0000-000000000001'; // Landscaping Business Mastery (active, free)
+  const solarCourse = 'dd000122-0000-0000-0000-000000000002';     // Solar Panel Installation Basics (draft, $49)
+  const landscapeMod1 = 'dd000122-0001-0000-0000-000000000001';   // Getting Started with Landscaping
+  const landscapeMod2 = 'dd000122-0001-0000-0000-000000000002';   // Quoting and Pricing Jobs
+  const landscapeMod3 = 'dd000122-0001-0000-0000-000000000003';   // Customer Retention Strategies
 
-  const enroll1 = 'dd000123-0001-0000-0000-000000000001';
-  const enroll2 = 'dd000123-0001-0000-0000-000000000002';
-  const userId1 = 'dd000123-aaa0-0000-0000-000000000001';
+  // Admin user — the person running the tests. ALL browser-interactive data uses this ID.
+  const adminId = adminUserId;
+  const enrollAdmin = 'dd000123-0001-0000-0000-000000000004';
+  const assessMod1 = 'dd000122-0004-0000-0000-000000000001'; // Assessment on Landscaping mod1
+
+  // Secondary users — background data only (admin reports, certificate verification demo)
   const userId2 = 'dd000123-aaa0-0000-0000-000000000002';
+  const enroll2 = 'dd000123-0001-0000-0000-000000000002';
 
   return [
-    // Enrollments (referencing existing seed courses)
+    // ── Course setup ──────────────────────────────────────────────
+    `UPDATE lms_courses SET status = 'published' WHERE id = '${landscapeCourse}'`,
+
+    // Set max_retries on mod1 assessment so retry-exhausted flow is testable (totalAllowed = 1 + 2 = 3)
+    `UPDATE module_assessments SET max_retries = 1 WHERE id = '${assessMod1}'`,
+
+    // ── Admin user enrollment (primary test path) ─────────────────
+    // In-progress: mod1 in_progress with exhausted assessment retries, mod2/mod3 locked
     `INSERT INTO course_enrollments (id, course_id, user_id, user_name, status, enrolled_at)
-     VALUES ('${enroll1}', '${plumbCourse}', '${userId1}', 'Lisa Thompson', 'in_progress', '2026-03-01')
-     ON CONFLICT ON CONSTRAINT uq_enrollment_user_course DO NOTHING`,
-    `INSERT INTO course_enrollments (id, course_id, user_id, user_name, status, enrolled_at, completed_at)
-     VALUES ('${enroll2}', '${custCourse}', '${userId2}', 'David Chen', 'completed', '2026-02-15', '2026-03-20')
+     VALUES ('${enrollAdmin}', '${landscapeCourse}', '${adminId}', 'Test Admin', 'in_progress', '2026-03-25')
      ON CONFLICT ON CONSTRAINT uq_enrollment_user_course DO NOTHING`,
 
-    // Module progress
-    `INSERT INTO module_progress (id, enrollment_id, module_id, status, completed_at)
-     VALUES ('dd000123-0002-0000-0000-000000000001', '${enroll1}', '${plumbMod1}', 'completed', '2026-03-05')
-     ON CONFLICT ON CONSTRAINT uq_progress_enrollment_module DO NOTHING`,
     `INSERT INTO module_progress (id, enrollment_id, module_id, status)
-     VALUES ('dd000123-0002-0000-0000-000000000002', '${enroll1}', '${plumbMod2}', 'in_progress')
+     VALUES ('dd000123-0002-0000-0000-000000000020', '${enrollAdmin}', '${landscapeMod1}', 'in_progress')
+     ON CONFLICT ON CONSTRAINT uq_progress_enrollment_module DO NOTHING`,
+
+    // 3 failed assessment attempts on mod1 (exhausts totalAllowed = 3)
+    `INSERT INTO assessment_attempts (id, enrollment_id, module_id, score, passed, attempted_at)
+     VALUES ('dd000123-0004-0000-0000-000000000020', '${enrollAdmin}', '${landscapeMod1}', 40, false, '2026-03-26')
+     ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO assessment_attempts (id, enrollment_id, module_id, score, passed, attempted_at)
+     VALUES ('dd000123-0004-0000-0000-000000000021', '${enrollAdmin}', '${landscapeMod1}', 50, false, '2026-03-27')
+     ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO assessment_attempts (id, enrollment_id, module_id, score, passed, attempted_at)
+     VALUES ('dd000123-0004-0000-0000-000000000022', '${enrollAdmin}', '${landscapeMod1}', 55, false, '2026-03-28')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // ── Secondary user: David (background data for certificate verification) ──
+    `INSERT INTO course_enrollments (id, course_id, user_id, user_name, status, enrolled_at, completed_at)
+     VALUES ('${enroll2}', '${landscapeCourse}', '${userId2}', 'David Chen', 'completed', '2026-02-15', '2026-03-20')
+     ON CONFLICT ON CONSTRAINT uq_enrollment_user_course DO NOTHING`,
+
+    `INSERT INTO module_progress (id, enrollment_id, module_id, status, completed_at)
+     VALUES ('dd000123-0002-0000-0000-000000000003', '${enroll2}', '${landscapeMod1}', 'completed', '2026-02-20')
      ON CONFLICT ON CONSTRAINT uq_progress_enrollment_module DO NOTHING`,
     `INSERT INTO module_progress (id, enrollment_id, module_id, status, completed_at)
-     VALUES ('dd000123-0002-0000-0000-000000000003', '${enroll2}', '${custMod1}', 'completed', '2026-02-20')
+     VALUES ('dd000123-0002-0000-0000-000000000004', '${enroll2}', '${landscapeMod2}', 'completed', '2026-03-01')
      ON CONFLICT ON CONSTRAINT uq_progress_enrollment_module DO NOTHING`,
     `INSERT INTO module_progress (id, enrollment_id, module_id, status, completed_at)
-     VALUES ('dd000123-0002-0000-0000-000000000004', '${enroll2}', '${custMod2}', 'completed', '2026-03-01')
+     VALUES ('dd000123-0002-0000-0000-000000000005', '${enroll2}', '${landscapeMod3}', 'completed', '2026-03-15')
      ON CONFLICT ON CONSTRAINT uq_progress_enrollment_module DO NOTHING`,
 
-    // Module assessments (ensure they exist for the referenced modules)
-    `INSERT INTO module_assessments (id, module_id, passing_score, max_retries, cooldown_minutes)
-     VALUES ('dd000123-0003-0000-0000-000000000001', '${plumbMod1}', 70, 3, 30)
-     ON CONFLICT (module_id) DO NOTHING`,
-    `INSERT INTO module_assessments (id, module_id, passing_score, max_retries, cooldown_minutes)
-     VALUES ('dd000123-0003-0000-0000-000000000002', '${custMod1}', 60, NULL, NULL)
-     ON CONFLICT (module_id) DO NOTHING`,
-
-    // Assessment attempts
     `INSERT INTO assessment_attempts (id, enrollment_id, module_id, score, passed, attempted_at)
-     VALUES ('dd000123-0004-0000-0000-000000000001', '${enroll1}', '${plumbMod1}', 55, false, '2026-03-04')
-     ON CONFLICT (id) DO NOTHING`,
-    `INSERT INTO assessment_attempts (id, enrollment_id, module_id, score, passed, attempted_at)
-     VALUES ('dd000123-0004-0000-0000-000000000002', '${enroll1}', '${plumbMod1}', 85, true, '2026-03-05')
-     ON CONFLICT (id) DO NOTHING`,
-    `INSERT INTO assessment_attempts (id, enrollment_id, module_id, score, passed, attempted_at)
-     VALUES ('dd000123-0004-0000-0000-000000000003', '${enroll2}', '${custMod1}', 90, true, '2026-02-20')
+     VALUES ('dd000123-0004-0000-0000-000000000003', '${enroll2}', '${landscapeMod1}', 90, true, '2026-02-20')
      ON CONFLICT (id) DO NOTHING`,
 
-    // Certificate for completed enrollment
-    `INSERT INTO certificates (id, enrollment_id, user_id, user_name, course_title, verification_code, issued_at)
-     VALUES ('dd000123-0005-0000-0000-000000000001', '${enroll2}', '${userId2}', 'David Chen', 'Customer Service Excellence', 'CERT-OYG-2026-DCHEN-001', '2026-03-20')
+    `INSERT INTO certificates (id, enrollment_id, user_id, user_name, course_title, verification_code, issued_at, pdf_url)
+     VALUES ('dd000123-0005-0000-0000-000000000001', '${enroll2}', '${userId2}', 'David Chen', 'Landscaping Business Mastery', 'CERT-OYG-2026-DCHEN-001', '2026-03-20', 'https://storage.example.com/certs/CERT-OYG-2026-DCHEN-001.pdf')
      ON CONFLICT (enrollment_id) DO NOTHING`,
 
-    // Course payment (for a paid course scenario — use HVAC which has no enrollments)
+    // ── Payment test data (secondary user) ────────────────────────
     `INSERT INTO course_payments (id, user_id, course_id, stripe_session_id, stripe_payment_intent, amount_cents, status, created_at, completed_at)
-     VALUES ('dd000123-0006-0000-0000-000000000001', '${userId2}', 'c0000001-0000-0000-0000-000000000005', 'cs_test_td123_david_hvac', 'pi_test_td123_david_hvac', 4900, 'completed', '2026-02-14', '2026-02-14')
+     VALUES ('dd000123-0006-0000-0000-000000000001', '${userId2}', '${solarCourse}', 'cs_test_td123_david_solar', 'pi_test_td123_david_solar', 4900, 'completed', '2026-02-14', '2026-02-14')
      ON CONFLICT (stripe_session_id) DO NOTHING`,
   ];
 }

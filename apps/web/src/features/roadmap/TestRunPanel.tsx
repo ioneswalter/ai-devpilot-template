@@ -8,9 +8,7 @@ import { useTestExecution } from './useTestExecution';
 import { TestCaseExecutionCard } from './TestCaseExecutionCard';
 import { TestCaseStatusCard } from './TestCaseStatusCard';
 import { TestRunHistory } from './TestRunHistory';
-import { TestDataActions } from './TestDataActions';
-import { AutomatedTestPanel } from './AutomatedTestPanel';
-import { AutomationDashboard } from './AutomationDashboard';
+import { TestPipelineSteps } from './TestPipelineSteps';
 import { AutomatedExecuteView } from './AutomatedExecuteView';
 import { CriteriaCoverageBar } from './CriteriaCoverageBar';
 import { useCriteriaCoverage } from './useCriteriaCoverage';
@@ -178,7 +176,7 @@ export function TestRunPanel({
   const skippedCount = testCases.filter((tc) => tc.passed == null && tc.id && lastRunResults[tc.id] === 'skipped').length;
   const notRunCount = testCases.filter((tc) => tc.passed == null).length - skippedCount;
   const allPassed = testCases.length > 0 && failedCount === 0 && notRunCount === 0 && skippedCount === 0;
-  const hasFailed = failedCount > 0;
+
 
   if (view === 'status') {
     return (
@@ -190,8 +188,30 @@ export function TestRunPanel({
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <TestDataActions featureId={featureId} featureCode={featureCode} />
-          <AutomatedTestPanel featureId={featureId} testCaseCount={testCases.length} />
+          {/* Guided pipeline: Data → Scripts → Run */}
+          <TestPipelineSteps
+            featureId={featureId}
+            featureCode={featureCode}
+            testCaseCount={testCases.length}
+            automatedCount={testCases.filter((tc) => tc.automated).length}
+            passedCount={passedCount}
+            failedCount={failedCount}
+            notRunCount={notRunCount}
+            onRunTests={() => {
+              const prefilled: Record<string, TestRunResult | null> = {};
+              for (const tc of testCases) {
+                if (!tc.id) continue;
+                if (lastRunResults[tc.id]) prefilled[tc.id] = lastRunResults[tc.id];
+                else if (tc.passed === true) prefilled[tc.id] = 'passed';
+                else if (tc.passed === false) prefilled[tc.id] = 'failed';
+              }
+              setResults(prefilled);
+              setNotes({});
+              setView('execute');
+            }}
+          />
+
+          {/* Test case list */}
           {testCases.map((tc) => (
             <TestCaseStatusCard
               key={tc.id}
@@ -201,60 +221,7 @@ export function TestRunPanel({
               isSkipped={tc.id ? lastRunResults[tc.id] === 'skipped' : false}
             />
           ))}
-          {allPassed && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-green-800">All Tests Passed</h4>
-                  <p className="text-sm text-green-700 mt-0.5">{passedCount} of {testCases.length} tests passed successfully.</p>
-                </div>
-              </div>
-            </div>
-          )}
-          {hasFailed && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-red-800">Tests Failing — Release Blocked</h4>
-                  <p className="text-sm text-red-700 mt-0.5">
-                    {failedCount} of {testCases.length} test{failedCount > 1 ? 's' : ''} failed. {passedCount} passed{skippedCount > 0 ? `, ${skippedCount} skipped` : ''}{notRunCount > 0 ? `, ${notRunCount} not yet run` : ''}.
-                  </p>
-                  <p className="text-xs text-red-600 mt-2">Fix failing tests before releasing this feature.</p>
-                </div>
-              </div>
-            </div>
-          )}
-          {!hasFailed && (notRunCount > 0 || skippedCount > 0) && (
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-amber-800">Tests Pending — Release Blocked</h4>
-                  <p className="text-sm text-amber-700 mt-0.5">
-                    {notRunCount > 0 && `${notRunCount} test${notRunCount > 1 ? 's' : ''} not yet run. `}
-                    {skippedCount > 0 && `${skippedCount} test${skippedCount > 1 ? 's' : ''} skipped. `}
-                    {passedCount > 0 ? `${passedCount} passed.` : ''}
-                  </p>
-                  <p className="text-xs text-amber-600 mt-2">All tests must pass before releasing this feature.</p>
-                </div>
-              </div>
-            </div>
-          )}
-          <AutomationDashboard featureId={featureId} />
+
           {acceptanceCriteria && acceptanceCriteria.length > 0 && (
             <CriteriaCoverageBar coverage={coverage} />
           )}
@@ -266,21 +233,6 @@ export function TestRunPanel({
           </span>
           <div className="flex gap-2">
             <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-            <button
-              onClick={() => {
-                const prefilled: Record<string, TestRunResult | null> = {};
-                for (const tc of testCases) {
-                  if (!tc.id) continue;
-                  if (lastRunResults[tc.id]) prefilled[tc.id] = lastRunResults[tc.id];
-                  else if (tc.passed === true) prefilled[tc.id] = 'passed';
-                  else if (tc.passed === false) prefilled[tc.id] = 'failed';
-                }
-                setResults(prefilled);
-                setNotes({});
-                               setView('execute');
-              }}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
-            >{allPassed ? 'Re-Run Tests' : 'Run Tests'}</button>
             {allPassed && featureStatus !== 'released' && (
               <button
                 onClick={onComplete}

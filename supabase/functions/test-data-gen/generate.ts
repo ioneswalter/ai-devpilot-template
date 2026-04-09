@@ -71,6 +71,20 @@ export async function handleGenerate(req: Request): Promise<Response> {
     userId = user.id;
   }
 
+  // Resolve admin user ID for test data templates — templates need a real user ID
+  // so browser-interactive data (enrollments, progress) belongs to the logged-in admin.
+  // Falls back to the super_admin from admin_users when called via service-role (pipeline/copilot).
+  let adminUserId = userId;
+  if (userId === 'service-role') {
+    const { data: admin } = await supabase
+      .from('admin_users')
+      .select('user_id')
+      .eq('role', 'super_admin')
+      .limit(1)
+      .maybeSingle();
+    adminUserId = admin?.user_id ?? 'service-role';
+  }
+
   const body = await req.json();
   const featureId = body.feature_id;
   const triggerSource: TriggerSource = body.trigger_source ?? 'manual';
@@ -92,7 +106,7 @@ export async function handleGenerate(req: Request): Promise<Response> {
   try {
     // Check for a pre-built template first (reliable, no AI guessing)
     const { getTemplate } = await import('./templates.ts');
-    const template = getTemplate(feature.feature_code);
+    const template = getTemplate(feature.feature_code, adminUserId);
 
     let sqlText: string;
     let usedTemplate = false;

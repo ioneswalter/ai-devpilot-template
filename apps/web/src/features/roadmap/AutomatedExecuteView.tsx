@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAutomatedTests } from './useAutomatedTests';
 import { useExtensionBridge } from './useExtensionBridge';
+import { PreflightReport } from './PreflightReport';
 import { PhaseIndicator, ScriptList, TestCaseResultRow } from './AutomatedExecuteWidgets';
 import type { SingleRunResult } from './AutomatedExecuteWidgets';
 import type { ScriptListItem } from './automation-types';
@@ -30,7 +31,7 @@ interface AutomatedExecuteViewProps {
   onSwitchToManual: () => void;
 }
 
-type Phase = 'loading' | 'ready' | 'running' | 'done' | 'error';
+type Phase = 'loading' | 'ready' | 'preflight' | 'preflight-failed' | 'running' | 'done' | 'error';
 
 export function AutomatedExecuteView({
   featureId,
@@ -93,13 +94,7 @@ export function AutomatedExecuteView({
     return mapped;
   }, []);
 
-  const handleRunAll = useCallback(async () => {
-    if (!ext.isAvailable) {
-      // Fallback: show error about extension
-      setPhase('error');
-      return;
-    }
-
+  const executeAfterPreflight = useCallback(async () => {
     setPhase('running');
     setSuiteResult(null);
     const result = await auto.executeSuite(environment, ext.executeTestScript);
@@ -111,7 +106,25 @@ export function AutomatedExecuteView({
     } else {
       setPhase('error');
     }
-  }, [auto, environment, ext.isAvailable, ext.executeTestScript, mapSuiteToResults, onResultsReady]);
+  }, [auto, environment, ext.executeTestScript, mapSuiteToResults, onResultsReady]);
+
+  const handleRunAll = useCallback(async () => {
+    if (!ext.isAvailable) {
+      setPhase('error');
+      return;
+    }
+
+    // Run preflight validation before executing tests
+    setPhase('preflight');
+    const preflight = await auto.runPreflightCheck(featureCode);
+    if (!preflight.passed) {
+      setPhase('preflight-failed');
+      return;
+    }
+
+    // Preflight passed — proceed to execution
+    await executeAfterPreflight();
+  }, [auto, featureCode, ext.isAvailable, executeAfterPreflight]);
 
   const handleRunSingle = useCallback(async (script: ScriptListItem) => {
     if (!ext.isAvailable || runningScriptId) return;
@@ -215,6 +228,26 @@ export function AutomatedExecuteView({
           </div>
         )}
 
+        {/* Phase: Preflight — running validation */}
+        {phase === 'preflight' && (
+          <PhaseIndicator label="Running preflight checks..." />
+        )}
+
+        {/* Phase: Preflight Failed — show issues */}
+        {phase === 'preflight-failed' && auto.preflightResult && (
+          <PreflightReport
+            result={auto.preflightResult}
+            onRetry={async () => {
+              const result = await auto.runPreflightCheck(featureCode);
+              if (result.passed) {
+                await executeAfterPreflight();
+              }
+            }}
+            onRunAnyway={executeAfterPreflight}
+            isRetrying={auto.preflightRunning}
+          />
+        )}
+
         {/* Phase: Ready — show scripts, ready to run */}
         {phase === 'ready' && (
           <>
@@ -222,6 +255,14 @@ export function AutomatedExecuteView({
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 {auto.scripts.length} Automated Scripts
               </h4>
+              <div className="flex gap-2">
+                <span className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-700 rounded">
+                  {auto.scripts.filter(s => s.tier === 'api').length} API
+                </span>
+                <span className="px-1.5 py-0.5 text-[9px] font-bold bg-purple-100 text-purple-700 rounded">
+                  {auto.scripts.filter(s => s.tier === 'e2e').length} E2E
+                </span>
+              </div>
             </div>
             <ScriptList
               scripts={auto.scripts}
