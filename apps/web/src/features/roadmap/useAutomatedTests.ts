@@ -79,9 +79,8 @@ export function useAutomatedTests(featureId: string) {
 
   const loadScripts = useCallback(async () => {
     try {
-      // Fetch scripts directly from Supabase to ensure script_steps are included
-      // (Edge Function may not be deployed with latest code)
-      const { data, error } = await supabase
+      // Fetch E2E scripts
+      const { data: e2eData, error: e2eErr } = await supabase
         .from('automated_test_scripts')
         .select(`
           id, test_case_id, generation_source, is_stale, is_custom_modified,
@@ -91,9 +90,9 @@ export function useAutomatedTests(featureId: string) {
         .eq('feature_id', featureId)
         .order('created_at', { ascending: false });
 
-      if (error) throw new Error(error.message);
+      if (e2eErr) throw new Error(e2eErr.message);
 
-      const scripts: ScriptListItem[] = (data ?? []).map((s) => {
+      const e2eScripts: ScriptListItem[] = (e2eData ?? []).map((s) => {
         const steps = s.script_steps as unknown[];
         const tc = s.test_cases as unknown as { title: string };
         return {
@@ -112,6 +111,35 @@ export function useAutomatedTests(featureId: string) {
         };
       });
 
+      // v2: Also fetch API verification tests
+      const { data: apiData } = await supabase
+        .from('api_verification_tests')
+        .select(`
+          id, test_case_id, endpoint, method, is_stale,
+          last_run_result, last_run_at, created_at, generation_notes,
+          test_cases!inner(title)
+        `)
+        .eq('feature_id', featureId)
+        .order('created_at', { ascending: false });
+
+      const apiScripts: ScriptListItem[] = (apiData ?? []).map((s) => {
+        const tc = s.test_cases as unknown as { title: string };
+        return {
+          id: s.id,
+          test_case_id: s.test_case_id,
+          test_case_title: tc?.title || 'Unknown',
+          step_count: 0,
+          generation_source: 'ai_criteria' as const,
+          tier: 'api' as const,
+          is_stale: s.is_stale,
+          is_custom_modified: false,
+          last_run_result: s.last_run_result as ScriptListItem['last_run_result'],
+          last_run_at: s.last_run_at,
+          created_at: s.created_at,
+        };
+      });
+
+      const scripts = [...apiScripts, ...e2eScripts];
       scriptsRef.current = scripts;
       setState((s) => ({ ...s, scripts, scriptsLoaded: true, error: null }));
     } catch (err) {
