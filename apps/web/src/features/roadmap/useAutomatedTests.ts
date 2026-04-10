@@ -344,7 +344,30 @@ export function useAutomatedTests(featureId: string) {
         }));
 
         try {
-          const scriptResult = await executeScript(script, environment, extensionExecute);
+          // v2: API tests run server-side, E2E tests run via browser extension
+          let scriptResult: BrowserScriptResult;
+          if (script.tier === 'api') {
+            try {
+              const apiRes = await testAutomationApi.executeApiTest(script.id, environment);
+              scriptResult = {
+                script_id: script.id, test_case_id: script.test_case_id,
+                test_case_title: script.test_case_title, result: apiRes.result,
+                duration_ms: apiRes.duration_ms, steps_completed: apiRes.result === 'passed' ? 1 : 0,
+                steps_total: 1, step_results: [], failures: apiRes.result !== 'passed'
+                  ? [{ step_number: 0, expected: 'API assertions pass', actual: (apiRes.assertions?.find((a: { passed: boolean }) => !a.passed) as { description?: string })?.description || 'Failed' }]
+                  : [],
+              };
+            } catch (err) {
+              scriptResult = {
+                script_id: script.id, test_case_id: script.test_case_id,
+                test_case_title: script.test_case_title, result: 'error',
+                duration_ms: 0, steps_completed: 0, steps_total: 1, step_results: [],
+                failures: [{ step_number: 0, expected: 'API test executes', actual: err instanceof Error ? err.message : 'Unknown error' }],
+              };
+            }
+          } else {
+            scriptResult = await executeScript(script, environment, extensionExecute);
+          }
           results.push(scriptResult);
           if (scriptResult.result === 'passed') passed++;
           else if (scriptResult.result === 'failed') failed++;
