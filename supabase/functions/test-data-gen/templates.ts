@@ -18,6 +18,7 @@ type TemplateFn = (adminUserId: string) => string[];
 
 /** Map of feature_code → template builder (receives the admin's real user ID) */
 const TEMPLATES: Record<string, TemplateFn> = {
+  'FR-104': () => buildFR104(),
   'FR-122': () => buildFR122(),
   'FR-123': (uid) => buildFR123(uid),
 };
@@ -26,6 +27,26 @@ const TEMPLATES: Record<string, TemplateFn> = {
 export function getTemplate(featureCode: string, adminUserId: string): string[] | null {
   const fn = TEMPLATES[featureCode];
   return fn ? fn(adminUserId) : null;
+}
+
+/** FR-104: LMS Admin Monitoring Dashboard — ensures edge-case courses exist for all test scenarios */
+function buildFR104(): string[] {
+  const zeroCourse = 'dd000104-0000-0000-0000-000000000001';
+
+  return [
+    // Active course with zero enrollments (TC-104-007: zero enrollments empty state)
+    `INSERT INTO lms_courses (id, title, description, service_category, status)
+     VALUES ('${zeroCourse}', 'HVAC Maintenance Fundamentals', 'Introduction to heating, ventilation, and air conditioning maintenance and repair.', 'HVAC', 'active')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // Give it modules so "Not Configured" badge doesn't appear on this course
+    `INSERT INTO course_modules (id, course_id, title, sort_order)
+     VALUES ('dd000104-0001-0000-0000-000000000001', '${zeroCourse}', 'Module 1: HVAC Safety Basics', 1)
+     ON CONFLICT (id) DO NOTHING`,
+    `INSERT INTO course_modules (id, course_id, title, sort_order)
+     VALUES ('dd000104-0001-0000-0000-000000000002', '${zeroCourse}', 'Module 2: Refrigeration Cycles', 2)
+     ON CONFLICT (id) DO NOTHING`,
+  ];
 }
 
 /** FR-122: Admin Course Builder — courses, modules, quizzes, templates, image prompts */

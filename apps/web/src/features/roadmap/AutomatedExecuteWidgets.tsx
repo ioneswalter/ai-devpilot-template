@@ -75,7 +75,9 @@ export function ScriptList({
                 </span>
               )}
               {(!singleResult || singleResult.duration_ms === 0) && (
-                <span className="text-[10px] text-gray-400 shrink-0">{script.step_count} steps</span>
+                <span className="text-[10px] text-gray-400 shrink-0">
+                  {script.tier === 'api' ? 'API' : `${script.step_count} steps`}
+                </span>
               )}
               {script.is_stale && (
                 <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">stale</span>

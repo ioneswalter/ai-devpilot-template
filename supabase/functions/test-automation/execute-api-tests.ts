@@ -75,12 +75,13 @@ async function callEndpoint(
   }
   const start = Date.now();
 
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   const response = await fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
-      'apikey': authToken,
+      'apikey': anonKey,
     },
     body: method !== 'GET' ? JSON.stringify(body) : undefined,
   });
@@ -105,12 +106,23 @@ function checkResponseAssertions(
 
   for (const [path, expected] of Object.entries(assertions.response_match || {})) {
     const actualValue = getNestedValue(actual.body, path);
-    results.push({
-      description: `Response ${path} equals ${JSON.stringify(expected)}`,
-      expected,
-      actual: actualValue,
-      passed: JSON.stringify(actualValue) === JSON.stringify(expected),
-    });
+
+    // null expected = "exists" check (value is defined and not null/undefined)
+    if (expected === null) {
+      results.push({
+        description: `Response ${path} exists`,
+        expected: '(any non-null value)',
+        actual: actualValue,
+        passed: actualValue !== undefined && actualValue !== null,
+      });
+    } else {
+      results.push({
+        description: `Response ${path} equals ${JSON.stringify(expected)}`,
+        expected,
+        actual: actualValue,
+        passed: JSON.stringify(actualValue) === JSON.stringify(expected),
+      });
+    }
   }
 
   return results;
@@ -136,11 +148,17 @@ async function checkDbAssertions(
     try {
       const { data, error } = await supabase.rpc('exec_sql', { sql_text: assertion.query });
       const actual = error ? `ERROR: ${error.message}` : data;
+
+      // null expected = "exists" check (result is defined and not error)
+      const passed = assertion.expected === null
+        ? actual !== undefined && actual !== null && !String(actual).startsWith('ERROR:')
+        : JSON.stringify(actual) === JSON.stringify(assertion.expected);
+
       results.push({
         description: assertion.description,
-        expected: assertion.expected,
+        expected: assertion.expected === null ? '(any non-error result)' : assertion.expected,
         actual,
-        passed: JSON.stringify(actual) === JSON.stringify(assertion.expected),
+        passed,
       });
     } catch (err) {
       results.push({

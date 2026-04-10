@@ -1,9 +1,7 @@
 /**
- * ImplementationStartForm — Initial form shown before an implementation request exists.
- * Lets admin add optional notes and trigger AI plan generation.
+ * ImplementationStartForm — Shown before \build has been run for a feature.
+ * Guides the admin to use Claude Code for implementation.
  */
-
-import { useState } from 'react';
 
 interface ImplementationStartFormProps {
   featureCode: string;
@@ -18,12 +16,8 @@ export function ImplementationStartForm({
   featureCode,
   featureTitle,
   isRequesting,
-  requestError,
-  onStart,
   onClose,
 }: ImplementationStartFormProps) {
-  const [notes, setNotes] = useState('');
-
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
@@ -32,7 +26,7 @@ export function ImplementationStartForm({
           <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
         </div>
         <p className="text-xs text-gray-500">
-          Start the AI implementation workflow to generate a detailed implementation plan.
+          Implementation is managed through Claude Code using the SpecKit workflow.
         </p>
       </div>
 
@@ -50,36 +44,35 @@ export function ImplementationStartForm({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h4 className="text-sm font-semibold text-gray-900 mb-1">AI is generating the implementation plan...</h4>
+              <h4 className="text-sm font-semibold text-gray-900 mb-1">Building implementation tasks...</h4>
               <p className="text-xs text-gray-500">
                 Analyzing acceptance criteria, test cases, and project patterns. This may take 30-60 seconds.
               </p>
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Implementation Notes (optional)
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add constraints, priorities, or special instructions for the AI..."
-                className="w-full text-sm border rounded-lg px-3 py-2 h-24 resize-none focus:ring-1 focus:ring-blue-300 focus:border-blue-300"
-              />
+          <div className="space-y-5">
+            {/* Claude Code instructions */}
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-indigo-900">How to implement this feature</h4>
+              <p className="text-xs text-indigo-700">
+                Run the following command in Claude Code to start the full implementation pipeline:
+              </p>
+              <div className="bg-white border border-indigo-200 rounded-md px-3 py-2 font-mono text-sm text-indigo-800 select-all">
+                \build {featureCode}
+              </div>
+              <ol className="text-xs text-indigo-700 space-y-1 list-decimal list-inside">
+                <li>Claude Code generates implementation tasks from the spec</li>
+                <li><strong>You review each task</strong> — accept, edit, or reject before execution</li>
+                <li>Accepted tasks are implemented, tested, and the roadmap is updated</li>
+              </ol>
             </div>
 
-            {requestError && (
-              <p className="text-xs text-red-600">{requestError.message}</p>
-            )}
-
-            <button
-              onClick={() => onStart(notes || undefined)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Start AI Implementation
-            </button>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <p className="text-xs text-gray-500 text-center">
+                After running <code className="bg-white px-1 py-0.5 rounded text-indigo-600 font-mono">\build</code>, tasks will appear here for your review.
+              </p>
+            </div>
           </div>
         )}
       </div>

@@ -17,6 +17,7 @@ interface TestPipelineStepsProps {
   failedCount: number;
   notRunCount: number;
   onRunTests: () => void;
+  onRefresh?: () => void;
 }
 
 type StepStatus = 'ready' | 'action-needed' | 'loading' | 'blocked';
@@ -30,6 +31,7 @@ export function TestPipelineSteps({
   failedCount,
   notRunCount,
   onRunTests,
+  onRefresh,
 }: TestPipelineStepsProps) {
   const qc = useQueryClient();
 
@@ -108,6 +110,16 @@ export function TestPipelineSteps({
           automatedCount === 0
             ? `No scripts — run \\generate-tests ${featureCode} in Claude Code`
             : `${automatedCount}/${testCaseCount} test cases automated`
+        }
+        action={
+          onRefresh ? (
+            <button
+              onClick={onRefresh}
+              className="px-3 py-1 text-xs font-medium text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-100"
+            >
+              Refresh
+            </button>
+          ) : undefined
         }
       />
 

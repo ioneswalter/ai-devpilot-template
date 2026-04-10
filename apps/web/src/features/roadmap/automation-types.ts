@@ -41,6 +41,12 @@ export interface ScriptStep {
   timeout_ms?: number;
   condition?: WaitCondition;
   retry?: boolean;
+  /** HTTP method for api_setup/api_cleanup steps (default: POST) */
+  method?: string;
+  /** Auth token for api_setup/api_cleanup steps */
+  auth_token?: string;
+  /** Extra headers for api_setup/api_cleanup steps */
+  extra_headers?: Record<string, string>;
 }
 
 // --- Automated Test Script ---

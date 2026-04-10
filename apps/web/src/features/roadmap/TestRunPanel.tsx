@@ -197,6 +197,7 @@ export function TestRunPanel({
             passedCount={passedCount}
             failedCount={failedCount}
             notRunCount={notRunCount}
+            onRefresh={onRefresh}
             onRunTests={() => {
               const prefilled: Record<string, TestRunResult | null> = {};
               for (const tc of testCases) {

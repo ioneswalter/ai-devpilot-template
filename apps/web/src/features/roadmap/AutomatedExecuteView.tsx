@@ -9,8 +9,9 @@ import { useExtensionBridge } from './useExtensionBridge';
 import { testAutomationApi } from '@/lib/api/test-automation-api';
 import { PreflightReport } from './PreflightReport';
 import { PhaseIndicator, ScriptList, TestCaseResultRow } from './AutomatedExecuteWidgets';
+import { ImprovementPanel } from './ImprovementPanel';
 import type { SingleRunResult } from './AutomatedExecuteWidgets';
-import type { ScriptListItem } from './automation-types';
+import type { ScriptListItem, ImprovementRecommendation } from './automation-types';
 import type { TestCase } from './roadmap-helpers';
 import type { TestRunResult } from './test-execution-types';
 import type { BrowserSuiteResult, BrowserScriptResult } from './useAutomatedTests';
@@ -56,6 +57,8 @@ export function AutomatedExecuteView({
   const [suiteResult, setSuiteResult] = useState<BrowserSuiteResult | null>(null);
   const [runningScriptId, setRunningScriptId] = useState<string | null>(null);
   const [singleResults, setSingleResults] = useState<Record<string, SingleRunResult>>({});
+  const [recommendations, setRecommendations] = useState<ImprovementRecommendation[]>([]);
+  const [loadingRecs, setLoadingRecs] = useState(false);
 
   // Step 1: Load scripts on mount
   useEffect(() => {
@@ -95,19 +98,81 @@ export function AutomatedExecuteView({
     return mapped;
   }, []);
 
+  const fetchRecommendations = useCallback(async () => {
+    setLoadingRecs(true);
+    try {
+      const { recommendations: recs } = await testAutomationApi.getRecommendations(featureId);
+      setRecommendations(recs);
+    } catch {
+      // Best-effort — don't block results display
+    }
+    setLoadingRecs(false);
+  }, [featureId]);
+
+  const handleUpdateRecommendation = useCallback(async (id: string, status: 'accepted' | 'dismissed' | 'deferred') => {
+    try {
+      await testAutomationApi.updateRecommendation(id, status);
+      setRecommendations((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+    } catch {
+      // Best-effort
+    }
+  }, []);
+
+  const triggerImprovementAnalysis = useCallback(async (suiteResult: BrowserSuiteResult) => {
+    setLoadingRecs(true);
+    try {
+      // Build execution data from suite results for AI analysis
+      const apiTimings = suiteResult.results
+        .filter((r) => r.steps_total === 1 && r.result === 'passed')
+        .map((r) => ({ test_case_id: r.test_case_id, endpoint: r.test_case_title, duration_ms: r.duration_ms }));
+      const e2eTimings = suiteResult.results
+        .filter((r) => r.steps_total > 1)
+        .map((r) => ({
+          test_case_id: r.test_case_id,
+          step_timings: (r.step_results || []).map((s) => ({ step: s.step_number, duration_ms: s.duration_ms })),
+        }));
+
+      // Determine coverage from test cases
+      const testedIds = new Set(suiteResult.results.map((r) => r.test_case_id));
+      const untestedCases = testCases.filter((tc) => tc.id && !testedIds.has(tc.id));
+
+      const { recommendations: recs } = await testAutomationApi.analyzeImprovements(
+        `suite-${Date.now()}`,
+        featureId,
+        {
+          api_timings: apiTimings,
+          e2e_timings: e2eTimings,
+          criteria_coverage: {
+            total_criteria: testCases.length,
+            tested_criteria: testedIds.size,
+            untested_criteria: untestedCases.map((tc) => tc.title),
+          },
+        },
+      );
+      setRecommendations(recs);
+    } catch {
+      // Fall back to fetching existing recommendations
+      await fetchRecommendations();
+    }
+    setLoadingRecs(false);
+  }, [featureId, testCases, fetchRecommendations]);
+
   const executeAfterPreflight = useCallback(async () => {
     setPhase('running');
     setSuiteResult(null);
+    setRecommendations([]);
     const result = await auto.executeSuite(environment, ext.executeTestScript);
     if (result) {
       setSuiteResult(result);
       const mapped = mapSuiteToResults(result);
       onResultsReady(mapped);
       setPhase('done');
+      // Generate AI improvement recommendations from suite results
+      triggerImprovementAnalysis(result);
     } else {
       setPhase('error');
     }
-  }, [auto, environment, ext.executeTestScript, mapSuiteToResults, onResultsReady]);
+  }, [auto, environment, ext.executeTestScript, mapSuiteToResults, onResultsReady, triggerImprovementAnalysis]);
 
   const handleRunAll = useCallback(async () => {
     if (!ext.isAvailable) {
@@ -230,7 +295,7 @@ export function AutomatedExecuteView({
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className={`flex-1 min-h-0 p-4 ${phase === 'running' ? 'flex flex-col' : 'overflow-y-auto space-y-3'}`}>
         {/* Phase: Loading */}
         {phase === 'loading' && (
           <PhaseIndicator label="Loading test scripts..." />
@@ -361,6 +426,21 @@ export function AutomatedExecuteView({
                 </div>
               </div>
             )}
+
+            {/* Improvement Recommendations */}
+            {loadingRecs && (
+              <div className="mt-4">
+                <PhaseIndicator label="Loading improvement recommendations..." />
+              </div>
+            )}
+            {!loadingRecs && recommendations.length > 0 && (
+              <div className="mt-4">
+                <ImprovementPanel
+                  recommendations={recommendations}
+                  onUpdateStatus={handleUpdateRecommendation}
+                />
+              </div>
+            )}
           </>
         )}
       </div>
@@ -424,11 +504,11 @@ function RunningProgress({
   const failed = liveResults.filter((r) => r.result !== 'passed').length;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full gap-2">
       {/* Progress bar */}
       <div className="flex items-center gap-3">
         <span className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900">
             Running test {progress.current} of {progress.total}
           </p>
@@ -452,9 +532,9 @@ function RunningProgress({
         </div>
       )}
 
-      {/* Completed test results */}
+      {/* Completed test results — fills remaining space */}
       {liveResults.length > 0 && (
-        <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+        <div className="border rounded-lg divide-y flex-1 overflow-y-auto min-h-0">
           {liveResults.map((r) => (
             <div key={r.script_id} className="px-3 py-1.5 flex items-center gap-2 text-xs">
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -473,10 +553,6 @@ function RunningProgress({
           ))}
         </div>
       )}
-
-      <p className="text-[10px] text-gray-400 text-center">
-        Browser is executing real actions — tabs may briefly switch focus
-      </p>
     </div>
   );
 }
