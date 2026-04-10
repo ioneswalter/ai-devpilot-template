@@ -45,6 +45,16 @@ async function authenticateAdmin(
     return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
   }
   const token = authHeader.substring(7);
+
+  // Service role key bypasses user auth (used by API test runner and pipeline)
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.role === 'service_role') {
+      const { data: admin } = await supabase.from('admin_users').select('user_id').limit(1).single();
+      return { userId: admin?.user_id || 'service-role' };
+    }
+  } catch { /* not a parseable JWT, continue */ }
+
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) {
     return errorResponse('UNAUTHORIZED', 'Invalid token', 401);
@@ -94,7 +104,8 @@ Deno.serve(async (req) => {
       }
       if (action === 'execute-api-test') {
         const { handleExecuteApiTest } = await import('./execute-api-tests.ts');
-        return handleExecuteApiTest(supabase, body, userId);
+        const callerToken = req.headers.get('Authorization')?.substring(7);
+        return handleExecuteApiTest(supabase, body, userId, callerToken);
       }
       if (action === 'check-staleness') {
         const { handleCheckStaleness } = await import('./staleness-check.ts');
@@ -166,3 +177,4 @@ Deno.serve(async (req) => {
     return errorResponse('INTERNAL_ERROR', message, 500);
   }
 });
+// deployed 1775805574

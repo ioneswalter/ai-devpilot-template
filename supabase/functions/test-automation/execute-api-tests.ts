@@ -66,7 +66,13 @@ async function callEndpoint(
   body: Record<string, unknown>,
   authToken: string,
 ): Promise<{ status: number; body: unknown; duration_ms: number }> {
-  const url = `${baseUrl}/functions/v1/${endpoint.replace(/^\//, '')}`;
+  // For GET endpoints with query params already in the endpoint string, append body as query params
+  let url = `${baseUrl}/functions/v1/${endpoint.replace(/^\//, '')}`;
+  if (method === 'GET' && Object.keys(body).length > 0) {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(body)) params.set(k, String(v));
+    url += (url.includes('?') ? '&' : '?') + params.toString();
+  }
   const start = Date.now();
 
   const response = await fetch(url, {
@@ -74,6 +80,7 @@ async function callEndpoint(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
+      'apikey': authToken,
     },
     body: method !== 'GET' ? JSON.stringify(body) : undefined,
   });
@@ -186,6 +193,7 @@ export async function handleExecuteApiTest(
   supabase: SupabaseClient,
   body: unknown,
   _userId: string,
+  callerToken?: string,
 ): Promise<Response> {
   const validation = ExecuteSchema.safeParse(body);
   if (!validation.success) return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
@@ -201,7 +209,8 @@ export async function handleExecuteApiTest(
   if (test.is_stale) return errorResponse('TEST_STALE', 'Test is stale — regenerate first', 422);
 
   const baseUrl = Deno.env.get('SUPABASE_URL') || '';
-  const serviceToken = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  // Use caller's token for target endpoint auth (user JWT from browser), fall back to service key
+  const serviceToken = callerToken || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   const startTime = Date.now();
   let setupSuccess = false;
   let cleanupSuccess = false;
