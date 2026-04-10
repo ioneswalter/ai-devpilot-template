@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAutomatedTests } from './useAutomatedTests';
 import { useExtensionBridge } from './useExtensionBridge';
+import { testAutomationApi } from '@/lib/api/test-automation-api';
 import { PreflightReport } from './PreflightReport';
 import { PhaseIndicator, ScriptList, TestCaseResultRow } from './AutomatedExecuteWidgets';
 import type { SingleRunResult } from './AutomatedExecuteWidgets';
@@ -127,7 +128,33 @@ export function AutomatedExecuteView({
   }, [auto, featureCode, ext.isAvailable, executeAfterPreflight]);
 
   const handleRunSingle = useCallback(async (script: ScriptListItem) => {
-    if (!ext.isAvailable || runningScriptId) return;
+    if (runningScriptId) return;
+
+    // v2: API tests run server-side, E2E tests run via browser extension
+    if (script.tier === 'api') {
+      setRunningScriptId(script.id);
+      try {
+        const apiResult = await testAutomationApi.executeApiTest(script.id, environment);
+        const failureReason = apiResult.result !== 'passed'
+          ? apiResult.assertions.find((a: { passed: boolean; description: string }) => !a.passed)?.description || 'API assertion failed'
+          : undefined;
+        setSingleResults((prev) => ({
+          ...prev,
+          [script.id]: { result: apiResult.result, duration_ms: apiResult.duration_ms, failure_reason: failureReason },
+        }));
+      } catch (err) {
+        setSingleResults((prev) => ({
+          ...prev,
+          [script.id]: { result: 'error', duration_ms: 0, failure_reason: err instanceof Error ? err.message : 'API test execution failed' },
+        }));
+      }
+      setRunningScriptId(null);
+      await auto.loadScripts();
+      return;
+    }
+
+    // E2E: needs browser extension
+    if (!ext.isAvailable) return;
     setRunningScriptId(script.id);
     const result = await auto.executeScript(script, environment, ext.executeTestScript);
     const firstFailure = result.failures[0];
@@ -139,7 +166,6 @@ export function AutomatedExecuteView({
       [script.id]: { result: result.result, duration_ms: result.duration_ms, failure_reason: failureReason },
     }));
     setRunningScriptId(null);
-    // Reload scripts so next run uses latest from DB
     await auto.loadScripts();
   }, [auto, environment, ext.isAvailable, ext.executeTestScript, runningScriptId]);
 
@@ -266,7 +292,7 @@ export function AutomatedExecuteView({
             </div>
             <ScriptList
               scripts={auto.scripts}
-              onRunSingle={ext.isAvailable ? handleRunSingle : undefined}
+              onRunSingle={handleRunSingle}
               runningScriptId={runningScriptId}
               singleResults={singleResults}
             />
