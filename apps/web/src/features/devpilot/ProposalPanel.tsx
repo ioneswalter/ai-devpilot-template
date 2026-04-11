@@ -11,7 +11,7 @@ import { ProposalFormFields, initJourneyForm } from './ProposalFormFields';
 import type { ProposalFormState } from './ProposalFormFields';
 import { devpilotApi } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase-client';
-import type { AdminProposal, MemberProposal, ProposalTestCase, SubmitProposalResponse } from './types';
+import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
 
 function useAvailableSections() {
   const [sections, setSections] = useState<string[]>([]);
