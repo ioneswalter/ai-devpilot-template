@@ -76,8 +76,8 @@ export function PipelineStage({ stage, status, isAdmin, onClick }: PipelineStage
       }}
       disabled={!isClickable}
       className={`
-        inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-medium
-        transition-all duration-150
+        inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-md border text-[11px] sm:text-xs font-medium
+        transition-all duration-150 shrink-0
         ${styles.bg} ${styles.text} ${styles.border}
         ${isClickable ? 'cursor-pointer hover:shadow-sm active:scale-95' : 'cursor-default'}
         disabled:cursor-default

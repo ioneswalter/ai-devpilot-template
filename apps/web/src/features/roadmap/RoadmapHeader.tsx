@@ -21,46 +21,49 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row md:items-center gap-3 max-w-6xl mx-auto">
           {/* Left: Title */}
-          <div className="flex items-center justify-between md:block shrink-0">
-            <div>
-              <h1 className="text-xl lg:text-2xl font-bold">AI DevPilot</h1>
-              <p className="text-xs lg:text-sm text-blue-200">From Idea to Feature, Powered by AI.</p>
-              <p className="text-xs lg:text-sm text-blue-300 font-medium">Think It. Spec It. Ship It.</p>
-            </div>
-            {/* Mobile action buttons — compact 2x3 grid */}
-            <div className="md:hidden flex flex-wrap gap-1.5 justify-end max-w-[180px]">
-              {isAdmin && (
-                <button onClick={() => navigate({ to: '/strategic-plan' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
-                  Strategy
-                </button>
-              )}
-              {isAdmin && onOpenReleases && (
-                <button onClick={onOpenReleases} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
-                  Releases
-                </button>
-              )}
-              {isAdmin ? (
-                <button onClick={() => navigate({ to: '/admin/devpilot' })} className="px-2 py-1 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded text-[10px] font-medium">
-                  + Ideation
-                </button>
-              ) : isMember ? (
-                <button onClick={() => alert('Coming soon!')} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
-                  + Ideation
-                </button>
-              ) : null}
-              {isAdmin && (
-                <>
-                  <button onClick={() => navigate({ to: '/devpilot-architecture' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
-                    Arch
+          <div className="shrink-0">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-xl lg:text-2xl font-bold">AI DevPilot</h1>
+                <p className="text-xs lg:text-sm text-blue-200">From Idea to Feature,</p>
+                <p className="text-xs lg:text-sm text-blue-200">Powered by AI.</p>
+                <p className="text-xs lg:text-sm text-blue-300 font-medium">Think It. Spec It. Ship It.</p>
+              </div>
+              {/* Mobile action buttons — 3x2 grid aligned right */}
+              <div className="md:hidden grid grid-cols-3 gap-1 shrink-0">
+                {isAdmin && (
+                  <button onClick={() => navigate({ to: '/strategic-plan' })} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
+                    Strategy
                   </button>
-                  <button onClick={() => navigate({ to: '/devpilot-flowchart' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
-                    Flow
+                )}
+                {isAdmin && onOpenReleases && (
+                  <button onClick={onOpenReleases} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
+                    Releases
                   </button>
-                  <button onClick={() => navigate({ to: '/devpilot-prompts' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
-                    Prompts
+                )}
+                {isAdmin ? (
+                  <button onClick={() => navigate({ to: '/admin/devpilot' })} className="px-2 py-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded text-[10px] font-medium text-center">
+                    + Ideation
                   </button>
-                </>
-              )}
+                ) : isMember ? (
+                  <button onClick={() => alert('Coming soon!')} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
+                    + Ideation
+                  </button>
+                ) : null}
+                {isAdmin && (
+                  <>
+                    <button onClick={() => navigate({ to: '/devpilot-architecture' })} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
+                      Arch
+                    </button>
+                    <button onClick={() => navigate({ to: '/devpilot-flowchart' })} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
+                      Flowchart
+                    </button>
+                    <button onClick={() => navigate({ to: '/devpilot-prompts' })} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
+                      Prompts
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 

@@ -49,7 +49,7 @@ export function PipelineBar({ featureStatus, pipeline, isAdmin, isLoading, onSta
 
   return (
     <div
-      className="flex items-center gap-1.5 py-1.5"
+      className="flex items-center gap-1 sm:gap-1.5 py-1.5 overflow-x-auto"
       role="toolbar"
       aria-label="Development pipeline"
     >
