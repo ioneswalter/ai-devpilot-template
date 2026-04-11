@@ -27,57 +27,36 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
               <p className="text-xs lg:text-sm text-blue-200">From Idea to Feature, Powered by AI.</p>
               <p className="text-xs lg:text-sm text-blue-300 font-medium">Think It. Spec It. Ship It.</p>
             </div>
-            {/* Mobile action buttons */}
-            <div className="md:hidden grid grid-cols-3 gap-1.5">
+            {/* Mobile action buttons — compact 2x3 grid */}
+            <div className="md:hidden flex flex-wrap gap-1.5 justify-end max-w-[180px]">
               {isAdmin && (
-                <button
-                  onClick={() => navigate({ to: '/strategic-plan' })}
-                  className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
-                >
+                <button onClick={() => navigate({ to: '/strategic-plan' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
                   Strategy
                 </button>
               )}
               {isAdmin && onOpenReleases && (
-                <button
-                  onClick={onOpenReleases}
-                  className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
-                >
+                <button onClick={onOpenReleases} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
                   Releases
                 </button>
               )}
               {isAdmin ? (
-                <button
-                  onClick={() => navigate({ to: '/admin/devpilot' })}
-                  className="inline-flex items-center justify-center px-2 py-1.5 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded-lg transition-colors text-xs font-medium"
-                >
-                  Ideation
+                <button onClick={() => navigate({ to: '/admin/devpilot' })} className="px-2 py-1 bg-emerald-500/80 hover:bg-emerald-500 text-white rounded text-[10px] font-medium">
+                  + Ideation
                 </button>
               ) : isMember ? (
-                <button
-                  onClick={() => alert('Coming soon!')}
-                  className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
-                >
-                  Ideation
+                <button onClick={() => alert('Coming soon!')} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
+                  + Ideation
                 </button>
               ) : null}
               {isAdmin && (
                 <>
-                  <button
-                    onClick={() => navigate({ to: '/devpilot-architecture' })}
-                    className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
-                  >
-                    Architecture
+                  <button onClick={() => navigate({ to: '/devpilot-architecture' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
+                    Arch
                   </button>
-                  <button
-                    onClick={() => navigate({ to: '/devpilot-flowchart' })}
-                    className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
-                  >
-                    Flowchart
+                  <button onClick={() => navigate({ to: '/devpilot-flowchart' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
+                    Flow
                   </button>
-                  <button
-                    onClick={() => navigate({ to: '/devpilot-prompts' })}
-                    className="inline-flex items-center justify-center px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
-                  >
+                  <button onClick={() => navigate({ to: '/devpilot-prompts' })} className="px-2 py-1 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium">
                     Prompts
                   </button>
                 </>

@@ -88,7 +88,7 @@ export function PipelineStage({ stage, status, isAdmin, onClick }: PipelineStage
       tabIndex={isClickable ? 0 : -1}
     >
       {isDone ? <CheckIcon /> : <CircleIcon />}
-      <span className="hidden sm:inline">{STAGE_LABELS[stage]}</span>
+      <span>{STAGE_LABELS[stage]}</span>
       {status.label !== 'Not Started' && status.label !== STAGE_LABELS[stage] && (
         <span className="hidden lg:inline text-[10px] opacity-75">· {status.label}</span>
       )}
