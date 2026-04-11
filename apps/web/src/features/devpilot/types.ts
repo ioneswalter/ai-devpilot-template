@@ -87,8 +87,6 @@ export interface AdminProposal {
   journeys?: ProposalJourney[];
   /** AI-generated test cases with type classification */
   test_cases?: ProposalTestCase[];
-  edge_cases?: string[];
-  success_criteria?: string[];
 }
 
 export interface MemberProposal {

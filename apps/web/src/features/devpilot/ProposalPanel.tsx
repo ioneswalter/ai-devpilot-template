@@ -51,8 +51,6 @@ function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
     submittedCode: null,
     journeys: p.journeys ? p.journeys.map(initJourneyForm) : [],
     testCases: p.test_cases ?? [],
-    edgeCases: 'edge_cases' in p && p.edge_cases ? p.edge_cases.join('\n') : '',
-    successCriteria: 'success_criteria' in p && p.success_criteria ? p.success_criteria.join('\n') : '',
   };
 }
 
@@ -151,8 +149,6 @@ export function ProposalPanel({
           independent_test: j.independent_test,
           acceptance_scenarios: j.acceptance_scenarios.split('\n').map((s: string) => s.trim()).filter(Boolean),
         }));
-        proposalData.edge_cases = f.edgeCases.split('\n').map((e: string) => e.trim()).filter(Boolean);
-        proposalData.success_criteria = f.successCriteria.split('\n').map((s: string) => s.trim()).filter(Boolean);
       }
 
       // Pass AI-generated test cases with type classification

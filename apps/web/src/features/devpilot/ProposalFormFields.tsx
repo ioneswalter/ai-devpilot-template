@@ -24,8 +24,6 @@ export interface ProposalFormState {
   journeys: JourneyFormState[];
   /** AI-generated test cases with type classification — passed through to backend */
   testCases: ProposalTestCase[];
-  edgeCases: string;
-  successCriteria: string;
 }
 
 export function initJourneyForm(j: ProposalJourney): JourneyFormState {
@@ -115,31 +113,6 @@ export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections 
         </Field>
       )}
 
-      {/* Edge Cases (SpecKit) */}
-      {hasJourneys && (
-        <Field label="Edge Cases" hint="One per line">
-          <textarea
-            value={form.edgeCases}
-            onChange={(e) => onUpdate({ edgeCases: e.target.value })}
-            disabled={form.submitted}
-            rows={3}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
-          />
-        </Field>
-      )}
-
-      {/* Success Criteria (SpecKit) */}
-      {hasJourneys && (
-        <Field label="Success Criteria" hint="Measurable outcomes, one per line">
-          <textarea
-            value={form.successCriteria}
-            onChange={(e) => onUpdate({ successCriteria: e.target.value })}
-            disabled={form.submitted}
-            rows={3}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none font-mono disabled:bg-gray-50 disabled:text-gray-500"
-          />
-        </Field>
-      )}
 
       {isAdmin && (
         <>

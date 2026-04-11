@@ -53,8 +53,6 @@ const proposalSchema = z.object({
       type: z.enum(['api', 'e2e']),
       scenario: z.string().min(1),
     })).optional(),
-    edge_cases: z.array(z.string()).optional(),
-    success_criteria: z.array(z.string()).optional(),
     problem_statement: z.string().optional(),
     solution: z.string().optional(),
   }),
