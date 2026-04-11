@@ -57,6 +57,13 @@ export interface DedupMatch {
   recommendation: 'use_existing' | 'enhance_existing' | 'converge';
 }
 
+/** AI-generated test case within a proposal */
+export interface ProposalTestCase {
+  title: string;
+  type: 'api' | 'e2e';
+  scenario: string;
+}
+
 /** A single user journey within a SpecKit-compatible proposal */
 export interface ProposalJourney {
   title: string;
@@ -78,6 +85,8 @@ export interface AdminProposal {
   solution?: string;
   /** SpecKit-compatible journeys (new format from AI) */
   journeys?: ProposalJourney[];
+  /** AI-generated test cases with type classification */
+  test_cases?: ProposalTestCase[];
   edge_cases?: string[];
   success_criteria?: string[];
 }
@@ -88,6 +97,8 @@ export interface MemberProposal {
   acceptance_criteria: string[];
   /** SpecKit-compatible journeys (new format from AI) */
   journeys?: ProposalJourney[];
+  /** AI-generated test cases with type classification */
+  test_cases?: ProposalTestCase[];
 }
 
 export interface TriageResult {

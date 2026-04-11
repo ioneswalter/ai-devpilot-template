@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { CheckCircleIcon } from './icons';
 import { JourneyFields } from './JourneyFields';
 import type { JourneyFormState } from './JourneyFields';
-import type { ProposalJourney } from './types';
+import type { ProposalJourney, ProposalTestCase } from './types';
 
 export type { JourneyFormState };
 
@@ -22,6 +22,8 @@ export interface ProposalFormState {
   submittedCode: string | null;
   /** SpecKit journey data — populated when AI provides structured journeys */
   journeys: JourneyFormState[];
+  /** AI-generated test cases with type classification — passed through to backend */
+  testCases: ProposalTestCase[];
   edgeCases: string;
   successCriteria: string;
 }

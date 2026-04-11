@@ -48,6 +48,11 @@ const proposalSchema = z.object({
     spec_section: z.string().optional(),
     // SpecKit journey data (optional — backward compatible)
     journeys: z.array(journeySchema).optional(),
+    test_cases: z.array(z.object({
+      title: z.string().min(1),
+      type: z.enum(['api', 'e2e']),
+      scenario: z.string().min(1),
+    })).optional(),
     edge_cases: z.array(z.string()).optional(),
     success_criteria: z.array(z.string()).optional(),
     problem_statement: z.string().optional(),
@@ -217,31 +222,44 @@ Deno.serve(async (req) => {
       console.error('Failed to save SpecKit artifacts:', artifactErr);
     }
 
-    // Generate test cases from acceptance criteria (non-blocking)
+    // Generate test cases — prefer AI-generated, fall back to mechanical
     const testCasePrefix = featureCode.replace('FR-', 'TC-');
-    const testCases = proposal.acceptance_criteria.map((criterion, i) => {
-      const num = String(i + 1).padStart(2, '0');
-      // Derive title from Then clause or first 100 chars
-      let title = criterion;
-      const thenMatch = title.match(/Then\s+(.+)/i);
-      if (thenMatch) title = thenMatch[1];
-      if (title.length > 100) title = title.substring(0, 97) + '...';
-
-      const isEdgeCase = /unavailable|fail|error|invalid|no modules|no content|expires|malformed|blocked/i.test(criterion);
-      const isHighPriority = /moderat|block|restrict|revok|auth|payment|secur/i.test(criterion);
-
-      return {
-        test_code: `${testCasePrefix}-${num}`,
-        feature_id: feature.id,
-        title,
-        description: criterion,
-        test_type: isEdgeCase ? 'edge_case' : 'e2e',
-        priority: isHighPriority ? 'high' : (isEdgeCase ? 'medium' : 'high'),
-        status: 'draft',
-        automated: false,
-        automation_status: 'manual',
-      };
-    });
+    const testCases = proposal.test_cases && proposal.test_cases.length > 0
+      ? proposal.test_cases.map((tc, i) => {
+          const num = String(i + 1).padStart(2, '0');
+          const isHighPriority = /auth|payment|secur|block|restrict/i.test(tc.scenario);
+          return {
+            test_code: `${testCasePrefix}-${num}`,
+            feature_id: feature.id,
+            title: tc.title.length > 100 ? tc.title.substring(0, 97) + '...' : tc.title,
+            description: tc.scenario,
+            test_type: tc.type === 'api' ? 'integration' : 'e2e',
+            priority: isHighPriority ? 'high' : 'medium',
+            status: 'draft',
+            automated: false,
+            automation_status: 'manual',
+          };
+        })
+      : proposal.acceptance_criteria.map((criterion, i) => {
+          const num = String(i + 1).padStart(2, '0');
+          let title = criterion;
+          const thenMatch = title.match(/Then\s+(.+)/i);
+          if (thenMatch) title = thenMatch[1];
+          if (title.length > 100) title = title.substring(0, 97) + '...';
+          const isEdgeCase = /unavailable|fail|error|invalid|no modules|no content|expires|malformed|blocked/i.test(criterion);
+          const isHighPriority = /moderat|block|restrict|revok|auth|payment|secur/i.test(criterion);
+          return {
+            test_code: `${testCasePrefix}-${num}`,
+            feature_id: feature.id,
+            title,
+            description: criterion,
+            test_type: isEdgeCase ? 'edge_case' : 'e2e',
+            priority: isHighPriority ? 'high' : (isEdgeCase ? 'medium' : 'high'),
+            status: 'draft',
+            automated: false,
+            automation_status: 'manual',
+          };
+        });
 
     if (testCases.length > 0) {
       const { error: tcErr } = await supabase.from('test_cases').insert(testCases);

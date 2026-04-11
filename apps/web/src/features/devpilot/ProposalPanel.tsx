@@ -11,7 +11,7 @@ import { ProposalFormFields, initJourneyForm } from './ProposalFormFields';
 import type { ProposalFormState } from './ProposalFormFields';
 import { devpilotApi } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase-client';
-import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
+import type { AdminProposal, MemberProposal, ProposalTestCase, SubmitProposalResponse } from './types';
 
 function useAvailableSections() {
   const [sections, setSections] = useState<string[]>([]);
@@ -50,6 +50,7 @@ function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
     submitted: false,
     submittedCode: null,
     journeys: p.journeys ? p.journeys.map(initJourneyForm) : [],
+    testCases: p.test_cases ?? [],
     edgeCases: 'edge_cases' in p && p.edge_cases ? p.edge_cases.join('\n') : '',
     successCriteria: 'success_criteria' in p && p.success_criteria ? p.success_criteria.join('\n') : '',
   };
@@ -152,6 +153,11 @@ export function ProposalPanel({
         }));
         proposalData.edge_cases = f.edgeCases.split('\n').map((e: string) => e.trim()).filter(Boolean);
         proposalData.success_criteria = f.successCriteria.split('\n').map((s: string) => s.trim()).filter(Boolean);
+      }
+
+      // Pass AI-generated test cases with type classification
+      if (f.testCases.length > 0) {
+        proposalData.test_cases = f.testCases;
       }
 
       if (isAdmin) {
