@@ -96,6 +96,11 @@ function computeSpecStage(
     return { status: 'in_progress', label: 'Draft (DevPilot)' };
   }
 
+  // Proposal review gate: reviewed features are ready for spec generation
+  if (featureStatus === 'reviewed') {
+    return { status: 'not_started', label: 'Reviewed' };
+  }
+
   if (featureReviews.length === 0) return { status: 'not_started', label: 'Not Started' };
   return { status: 'not_started', label: 'Not Started' };
 }
@@ -208,7 +213,7 @@ Deno.serve(async (req) => {
     let featuresQuery = supabase
       .from('product_features')
       .select('id, status')
-      .in('status', ['proposed', 'approved', 'in_development', 'in_testing', 'released']);
+      .in('status', ['proposed', 'reviewed', 'approved', 'in_development', 'in_testing', 'released']);
 
     if (featureIdParam) {
       featuresQuery = featuresQuery.eq('id', featureIdParam);

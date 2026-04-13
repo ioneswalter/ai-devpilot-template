@@ -14,6 +14,7 @@ interface SpecReviewPanelProps {
   featureId: string;
   featureCode: string;
   featureTitle: string;
+  featureStatus?: string;
   onClose: () => void;
   onReviewComplete: () => void;
 }
@@ -48,6 +49,7 @@ export function SpecReviewPanel({
   featureId,
   featureCode,
   featureTitle,
+  featureStatus,
   onClose,
   onReviewComplete,
 }: SpecReviewPanelProps) {
@@ -73,6 +75,9 @@ export function SpecReviewPanel({
       </div>
     );
   }
+
+  // Proposal review gate: features must be reviewed before spec can proceed
+  const needsProposalReview = featureStatus === 'proposed';
 
   const grouped = groupItemsByType(spec.items);
 
@@ -112,6 +117,18 @@ export function SpecReviewPanel({
           </div>
           <p className="text-xs text-gray-500">Review spec artifacts, then start an AI review to enrich with suggestions.</p>
         </div>
+        {/* Proposal review gate banner */}
+        {needsProposalReview && (
+          <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
+            <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-amber-800">Proposal Review Required</p>
+              <p className="text-xs text-amber-700">This feature must pass the proposal quality gate before specification can begin. Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> in Claude Code.</p>
+            </div>
+          </div>
+        )}
         {/* AI Review action bar */}
         <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-3">
           {spec.isStarting ? (
@@ -223,6 +240,18 @@ export function SpecReviewPanel({
           </div>
         )}
       </div>
+
+      {/* Proposal review gate banner */}
+      {needsProposalReview && (
+        <div className="px-4 py-2.5 border-b bg-amber-50 border-amber-200 flex items-center gap-2">
+          <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <p className="text-xs text-amber-800">
+            <span className="font-semibold">Proposal not reviewed.</span> Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> before generating a spec.
+          </p>
+        </div>
+      )}
 
       {/* Error banner */}
       {anyError && (

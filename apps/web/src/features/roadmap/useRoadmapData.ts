@@ -21,6 +21,7 @@ export interface RoadmapStats {
   released: number;
   inDevelopment: number;
   approved: number;
+  reviewed: number;
   proposed: number;
 }
 
@@ -146,6 +147,7 @@ export function useRoadmapData(featureParam?: string) {
     released: filteredFeatures.filter((f) => f.status === 'released').length,
     inDevelopment: filteredFeatures.filter((f) => f.status === 'in_development' || f.status === 'in_testing').length,
     approved: filteredFeatures.filter((f) => f.status === 'approved').length,
+    reviewed: filteredFeatures.filter((f) => f.status === 'reviewed').length,
     proposed: filteredFeatures.filter((f) => f.status === 'proposed').length,
   };
 

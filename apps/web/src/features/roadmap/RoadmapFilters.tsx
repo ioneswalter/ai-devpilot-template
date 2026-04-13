@@ -84,6 +84,7 @@ export function RoadmapFilters({
             >
               <option value="all">All Statuses</option>
               <option value="proposed">Proposed</option>
+              <option value="reviewed">Reviewed</option>
               <option value="approved">Approved</option>
               <option value="in_development">In Development</option>
               <option value="released">Released</option>

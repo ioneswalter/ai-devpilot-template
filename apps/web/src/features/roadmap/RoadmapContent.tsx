@@ -206,6 +206,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             featureId={reviewingFeature.id}
             featureCode={reviewingFeature.feature_code}
             featureTitle={reviewingFeature.title}
+            featureStatus={reviewingFeature.status}
             onClose={() => setReviewingFeature(null)}
             onReviewComplete={() => {
               setReviewingFeature(null);
