@@ -4,6 +4,8 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { adminApi } from '@/lib/api/admin-api';
 import { useTestExecution } from './useTestExecution';
 import { TestCaseExecutionCard } from './TestCaseExecutionCard';
 import { TestCaseStatusCard } from './TestCaseStatusCard';
@@ -177,6 +179,27 @@ export function TestRunPanel({
   const notRunCount = testCases.filter((tc) => tc.passed == null).length - skippedCount;
   const allPassed = testCases.length > 0 && failedCount === 0 && notRunCount === 0 && skippedCount === 0;
 
+  // Check build task acceptance (only for in_development features)
+  const buildGateQuery = useQuery({
+    queryKey: ['build-gate', featureId],
+    queryFn: async () => {
+      try {
+        const res = await adminApi.getImplementation(featureId);
+        const tasks = res.data?.items ?? [];
+        const pending = tasks.filter((t: { decision: string }) => t.decision === 'pending').length;
+        const rejected = tasks.filter((t: { decision: string }) => t.decision === 'rejected').length;
+        return { hasTasks: tasks.length > 0, pending, rejected };
+      } catch {
+        return { hasTasks: false, pending: 0, rejected: 0 };
+      }
+    },
+    enabled: featureStatus === 'in_development',
+    staleTime: 5_000,
+  });
+  const buildPending = buildGateQuery.data?.pending ?? 0;
+  const buildRejected = buildGateQuery.data?.rejected ?? 0;
+  const buildNeedsReview = featureStatus === 'in_development' && (buildPending > 0 || buildRejected > 0);
+
   // Workflow gate: block test panel for features that haven't been built
   const needsBuild = featureStatus === 'proposed' || featureStatus === 'reviewed' || featureStatus === 'approved';
   if (needsBuild) {
@@ -200,6 +223,36 @@ export function TestRunPanel({
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-amber-800">Build Required</p>
             <p className="text-xs text-amber-700">{stepMsg}</p>
+          </div>
+        </div>
+        <div className="flex-1" />
+        <div className="border-t p-3 flex justify-end">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Workflow gate: block testing if build tasks are pending review or rejected
+  if (buildNeedsReview) {
+    const msg = buildRejected > 0
+      ? <>{buildRejected} build task(s) were rejected. Run <code className="font-mono bg-amber-100 px-1 rounded">\fix-build {featureCode}</code> to address feedback, then accept in the Build panel.</>
+      : <>{buildPending} build task(s) are pending review. Go to the Build panel to accept or reject each task before testing.</>;
+    return (
+      <div className="flex flex-col h-full">
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-2">
+            <code className="text-xs font-mono text-blue-600">{featureCode}</code>
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
+          </div>
+        </div>
+        <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
+          <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-800">Build Review Required</p>
+            <p className="text-xs text-amber-700">{msg}</p>
           </div>
         </div>
         <div className="flex-1" />
