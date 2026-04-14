@@ -76,8 +76,9 @@ export function SpecReviewPanel({
     );
   }
 
-  // Proposal review gate: features must be reviewed before spec can proceed
+  // Gate states: features must progress through reviewed → approved before AI Review
   const needsProposalReview = featureStatus === 'proposed';
+  const needsSpecGeneration = featureStatus === 'reviewed';
 
   const grouped = groupItemsByType(spec.items);
 
@@ -117,7 +118,7 @@ export function SpecReviewPanel({
           </div>
           <p className="text-xs text-gray-500">Review spec artifacts, then start an AI review to enrich with suggestions.</p>
         </div>
-        {/* Proposal review gate banner */}
+        {/* Gate banners — proposed needs review, reviewed needs spec */}
         {needsProposalReview && (
           <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
             <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -125,11 +126,22 @@ export function SpecReviewPanel({
             </svg>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-amber-800">Proposal Review Required</p>
-              <p className="text-xs text-amber-700">This feature must pass the proposal quality gate before specification can begin. Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> in Claude Code.</p>
+              <p className="text-xs text-amber-700">Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> first, then <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> to generate the specification.</p>
             </div>
           </div>
         )}
-        {/* AI Review action bar */}
+        {needsSpecGeneration && (
+          <div className="px-4 py-3 border-b bg-violet-50 border-violet-200 flex items-center gap-3">
+            <svg className="w-5 h-5 text-violet-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-violet-800">Specification Required</p>
+              <p className="text-xs text-violet-700">This feature has been reviewed. Run <code className="font-mono bg-violet-100 px-1 rounded">\spec {featureCode}</code> in Claude Code to generate the specification. AI Review becomes available after the spec is generated.</p>
+            </div>
+          </div>
+        )}
+        {/* AI Review action bar — only enabled when spec exists (approved or beyond) */}
         <div className="px-4 py-3 border-b bg-gray-50 flex items-center gap-3">
           {spec.isStarting ? (
             <>
@@ -143,11 +155,20 @@ export function SpecReviewPanel({
             <>
               <button
                 onClick={() => spec.startReview()}
-                className="px-4 py-2 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shrink-0"
+                disabled={needsProposalReview || needsSpecGeneration}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors shrink-0 ${
+                  needsProposalReview || needsSpecGeneration
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                }`}
               >
                 Start AI Review
               </button>
-              <p className="text-xs text-gray-500 flex-1">Enrich this proposal with AI-generated acceptance criteria, test cases, and edge cases.</p>
+              <p className="text-xs text-gray-500 flex-1">
+                {needsProposalReview || needsSpecGeneration
+                  ? 'AI Review is available after the spec is generated.'
+                  : 'Enrich this proposal with AI-generated acceptance criteria, test cases, and edge cases.'}
+              </p>
             </>
           )}
           {spec.startError && (
@@ -241,7 +262,7 @@ export function SpecReviewPanel({
         )}
       </div>
 
-      {/* Proposal review gate banner */}
+      {/* Gate banners for incomplete workflow steps */}
       {needsProposalReview && (
         <div className="px-4 py-2.5 border-b bg-amber-50 border-amber-200 flex items-center gap-2">
           <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,6 +270,16 @@ export function SpecReviewPanel({
           </svg>
           <p className="text-xs text-amber-800">
             <span className="font-semibold">Proposal not reviewed.</span> Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> before generating a spec.
+          </p>
+        </div>
+      )}
+      {needsSpecGeneration && (
+        <div className="px-4 py-2.5 border-b bg-violet-50 border-violet-200 flex items-center gap-2">
+          <svg className="w-4 h-4 text-violet-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-xs text-violet-800">
+            <span className="font-semibold">Spec not generated.</span> Run <code className="font-mono bg-violet-100 px-1 rounded">\spec {featureCode}</code> to generate the specification.
           </p>
         </div>
       )}
