@@ -41,6 +41,9 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       case 'spec': {
         // Only open spec panel if there's SpecKit data
         if (pipelineData?.spec?.status === 'not_started') return;
+        // Refresh features to get latest status before opening panel
+        roadmap.fetchFeatures();
+        pipeline.invalidate();
         setReviewingFeature(feature);
         break;
       }
@@ -69,8 +72,12 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
     if (feature) handlePipelineStageClick(feature, stage);
   }, [roadmap.features, handlePipelineStageClick]);
 
-  // Sync modal feature state when features list refreshes (e.g. after test submission)
+  // Sync modal feature state when features list refreshes (e.g. after status change)
   useEffect(() => {
+    if (reviewingFeature) {
+      const updated = roadmap.features.find((f) => f.id === reviewingFeature.id);
+      if (updated && updated !== reviewingFeature) setReviewingFeature(updated);
+    }
     if (testingFeature) {
       const updated = roadmap.features.find((f) => f.id === testingFeature.id);
       if (updated && updated !== testingFeature) setTestingFeature(updated);
