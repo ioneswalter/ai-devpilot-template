@@ -63,6 +63,41 @@ export function ImplementationPanel({
     );
   }
 
+  // Workflow gate: block build panel for features that haven't been specified
+  if (!impl.request && (featureStatus === 'proposed' || featureStatus === 'reviewed')) {
+    const isProposed = featureStatus === 'proposed';
+    return (
+      <div className="flex flex-col h-full">
+        <div className="p-4 border-b">
+          <div className="flex items-center gap-2 mb-1">
+            <code className="text-xs font-mono text-blue-600">{featureCode}</code>
+            <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
+          </div>
+        </div>
+        <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
+          <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-800">
+              {isProposed ? 'Proposal Review Required' : 'Specification Required'}
+            </p>
+            <p className="text-xs text-amber-700">
+              {isProposed
+                ? <>Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> then <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> before building.</>
+                : <>Run <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> to generate the specification before building.</>
+              }
+            </p>
+          </div>
+        </div>
+        <div className="flex-1" />
+        <div className="border-t p-3 flex justify-end">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
+        </div>
+      </div>
+    );
+  }
+
   // No request yet
   if (!impl.request) {
     // Feature already in_development but no AI request — implemented outside AI workflow
