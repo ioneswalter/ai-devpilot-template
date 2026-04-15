@@ -203,7 +203,7 @@ export function TestRunPanel({
     queryFn: async () => {
       try {
         const res = await adminApi.getImplementation(featureId);
-        const tasks = res.data?.items ?? [];
+        const tasks = res.data?.task_items ?? [];
         const pending = tasks.filter((t: { decision: string }) => t.decision === 'pending').length;
         const rejected = tasks.filter((t: { decision: string }) => t.decision === 'rejected').length;
         return { hasTasks: tasks.length > 0, pending, rejected };
