@@ -4,10 +4,19 @@
  * FR-140: AI Prototype Builder
  */
 
-import type { PrototypeVersion } from '@ownyourgig/types';
+interface VersionInfo {
+  id: string;
+  version_number: number;
+  prototype_type: string;
+  content: string;
+  feedback_prompt: string | null;
+  is_current: boolean;
+  confidence: number | null;
+  created_at: string;
+}
 
 interface PrototypeVersionHistoryProps {
-  versions: PrototypeVersion[];
+  versions: VersionInfo[];
   currentVersionNumber: number;
   onRevert: (versionId: string) => void;
   isReverting: boolean;

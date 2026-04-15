@@ -8,7 +8,19 @@
 import { useState, useCallback, useMemo } from 'react';
 import { devpilotApi } from '../../../lib/api/devpilot-api';
 import type { ConversationMessage } from '../types';
-import type { PrototypeType, PrototypeVersion } from '@ownyourgig/types';
+import type { PrototypeType } from '@ownyourgig/types';
+
+/** Version info returned by the prototype-versions API (subset of full PrototypeVersion) */
+interface VersionInfo {
+  id: string;
+  version_number: number;
+  prototype_type: string;
+  content: string;
+  feedback_prompt: string | null;
+  is_current: boolean;
+  confidence: number | null;
+  created_at: string;
+}
 
 interface PrototypeState {
   content: string | null;
@@ -18,7 +30,7 @@ interface PrototypeState {
   disambiguation: { detected_types: PrototypeType[]; confidence: number } | null;
   versionNumber: number;
   totalVersions: number;
-  versions: PrototypeVersion[];
+  versions: VersionInfo[];
 }
 
 export function usePrototype(conversationId: string | null) {
@@ -90,7 +102,7 @@ export function usePrototype(conversationId: string | null) {
       if (!data?.versions?.length) return;
 
       const current = data.versions.find(
-        (v: PrototypeVersion) => v.is_current,
+        (v: VersionInfo) => v.is_current,
       );
       setState((s) => ({
         ...s,

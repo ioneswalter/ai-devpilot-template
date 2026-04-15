@@ -5,7 +5,18 @@
  */
 
 import { useState } from 'react';
-import type { PrototypeType, PrototypeVersion } from '@ownyourgig/types';
+import type { PrototypeType } from '@ownyourgig/types';
+
+interface VersionInfo {
+  id: string;
+  version_number: number;
+  prototype_type: string;
+  content: string;
+  feedback_prompt: string | null;
+  is_current: boolean;
+  confidence: number | null;
+  created_at: string;
+}
 import { PrototypeVersionHistory } from './PrototypeVersionHistory';
 
 const TYPE_LABELS: Record<PrototypeType, string> = {
@@ -18,7 +29,7 @@ interface PrototypeToolbarProps {
   prototypeType: PrototypeType | null;
   versionNumber: number;
   totalVersions: number;
-  versions: PrototypeVersion[];
+  versions: VersionInfo[];
   onRevert: (versionId: string) => void;
   isReverting: boolean;
   onFinalise?: () => void;

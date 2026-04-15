@@ -5,7 +5,7 @@
  * FR-140: AI Prototype Builder
  */
 
-import type { PrototypeType, PrototypeVersion } from '@ownyourgig/types';
+import type { PrototypeType } from '@ownyourgig/types';
 import { PrototypeToolbar } from './PrototypeToolbar';
 
 interface PrototypePreviewProps {
@@ -18,7 +18,7 @@ interface PrototypePreviewProps {
   onRetry: () => void;
   versionNumber: number;
   totalVersions: number;
-  versions?: PrototypeVersion[];
+  versions?: Array<{ id: string; version_number: number; prototype_type: string; content: string; feedback_prompt: string | null; is_current: boolean; confidence: number | null; created_at: string }>;
   onRevert?: (versionId: string) => void;
   isReverting?: boolean;
   onFinalise?: () => void;
