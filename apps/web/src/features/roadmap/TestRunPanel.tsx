@@ -6,6 +6,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
+import { supabase } from '@/lib/supabase-client';
 import { useTestExecution } from './useTestExecution';
 import { TestCaseExecutionCard } from './TestCaseExecutionCard';
 import { TestCaseStatusCard } from './TestCaseStatusCard';
@@ -172,21 +173,41 @@ export function TestRunPanel({
     clearDraft(featureId);
      }, [testCases, results, notes, exec, featureId]);
 
-  // Check deploy gate — Release Feature requires a successful deploy
+  // Check deploy gate — Release Feature requires a successful deploy AFTER latest test execution
   const deployGateQuery = useQuery({
     queryKey: ['deploy-gate', featureId],
     queryFn: async () => {
       try {
+        // Get latest deploy timestamp
         const res = await adminApi.getPipelineRunStatus(featureId);
         const runs = [...(res.data?.history ?? [])];
         if (res.data?.active) runs.push(res.data.active);
-        const deployed = runs.some((r) => r.deploy_results?.overall_status === 'success');
+        const deployedRuns = runs.filter((r) => r.deploy_results?.overall_status === 'success');
+        if (deployedRuns.length === 0) return { deployed: false };
+        const latestDeployTime = Math.max(
+          ...deployedRuns.map((r) => new Date(r.completed_at || r.started_at).getTime()),
+        );
+
+        // Get latest test execution timestamp from automated scripts (updated on every run)
+        const [{ data: e2e }, { data: api }] = await Promise.all([
+          supabase.from('automated_test_scripts').select('last_run_at').eq('feature_id', featureId).not('last_run_at', 'is', null).order('last_run_at', { ascending: false }).limit(1),
+          supabase.from('api_verification_tests').select('last_run_at').eq('feature_id', featureId).not('last_run_at', 'is', null).order('last_run_at', { ascending: false }).limit(1),
+        ]);
+        const times = [
+          ...(e2e ?? []).map((r) => new Date(r.last_run_at).getTime()),
+          ...(api ?? []).map((r) => new Date(r.last_run_at).getTime()),
+        ];
+        const latestTestTime = times.length > 0 ? Math.max(...times) : 0;
+
+        // Deploy must exist and be more recent than the latest test execution
+        const deployed = latestTestTime > 0 && latestDeployTime > latestTestTime;
         return { deployed };
       } catch {
         return { deployed: false };
       }
     },
-    staleTime: 10_000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
   const isDeployed = deployGateQuery.data?.deployed ?? false;
 

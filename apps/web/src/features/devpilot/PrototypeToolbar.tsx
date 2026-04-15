@@ -52,6 +52,7 @@ export function PrototypeToolbar({
     <div className="relative">
       <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-b text-xs">
         <div className="flex items-center gap-2">
+          <span className="font-semibold text-gray-700">Prototype Preview</span>
           {prototypeType && (
             <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded font-medium">
               {TYPE_LABELS[prototypeType]}
