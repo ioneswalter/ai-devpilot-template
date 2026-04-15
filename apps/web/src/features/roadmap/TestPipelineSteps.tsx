@@ -52,13 +52,13 @@ export function TestPipelineSteps({
 
   // Step statuses
   const dataStatus: StepStatus = datasetsLoading ? 'loading' : hasData ? 'ready' : 'action-needed';
-  const scriptsStatus: StepStatus = automatedCount === testCaseCount && testCaseCount > 0
-    ? 'ready'
-    : automatedCount > 0
-      ? 'action-needed'
+  const scriptsStatus: StepStatus = !hasData
+    ? 'blocked'
+    : automatedCount === testCaseCount && testCaseCount > 0
+      ? 'ready'
       : 'action-needed';
   // Allow running tests when data is ready and at least some scripts exist
-  const canRun = dataStatus === 'ready' && automatedCount > 0;
+  const canRun = hasData && automatedCount > 0;
   const runStatus: StepStatus = canRun
     ? (passedCount === testCaseCount && testCaseCount > 0 ? 'ready' : 'action-needed')
     : 'blocked';
@@ -107,12 +107,14 @@ export function TestPipelineSteps({
         title="Test Scripts"
         status={scriptsStatus}
         detail={
-          automatedCount === 0
-            ? `No scripts — run \\generate-tests ${featureCode} in Claude Code`
-            : `${automatedCount}/${testCaseCount} test cases automated`
+          scriptsStatus === 'blocked'
+            ? 'Generate test data first (step 1)'
+            : automatedCount === 0
+              ? `No scripts — run \\generate-tests ${featureCode} in Claude Code`
+              : `${automatedCount}/${testCaseCount} test cases automated`
         }
         action={
-          onRefresh ? (
+          scriptsStatus !== 'blocked' && onRefresh ? (
             <button
               onClick={onRefresh}
               className="px-3 py-1 text-xs font-medium text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-100"
