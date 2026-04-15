@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { SendIcon, XIcon, LoaderIcon, CheckCircleIcon } from './icons';
 import { DeduplicationWarning } from './DeduplicationWarning';
+import type { DedupDecision } from './DeduplicationWarning';
 import { ProposalFormFields, initJourneyForm } from './ProposalFormFields';
 import type { ProposalFormState } from './ProposalFormFields';
 import { devpilotApi } from '@/lib/api-client';
@@ -192,7 +193,64 @@ export function ProposalPanel({
       {dedupResult && (
         <DeduplicationWarning
           matches={dedupResult.dedup_check.matches}
-          onSubmitAnyway={() => {
+          onSubmitAnyway={async (decisions: DedupDecision[]) => {
+            const useExisting = decisions.find((d) =>
+              d.action === 'use_existing' || d.action === 'enhance_existing' || d.action === 'converge'
+            );
+
+            if (useExisting) {
+              // User chose to update an existing feature — delete the new one, update the old one
+              const newFeatureId = dedupResult.feature.id;
+              const targetCode = useExisting.feature_code;
+
+              // Delete test cases and artifacts for the accidentally-created feature
+              await supabase.from('test_cases').delete().eq('feature_id', newFeatureId);
+              await supabase.from('feature_spec_artifacts').delete().eq('feature_id', newFeatureId);
+              // Unlink conversation before delete
+              await supabase.from('ideation_conversations')
+                .update({ submitted_feature_id: null })
+                .eq('submitted_feature_id', newFeatureId);
+              // Delete the new feature
+              await supabase.from('product_features').delete().eq('id', newFeatureId);
+
+              // Update the existing feature with the new proposal data
+              const form = forms[activeIndex];
+              const criteriaArray = form.journeys.length > 0
+                ? form.journeys.flatMap((j) =>
+                    j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean)
+                  )
+                : form.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
+
+              const { data: updated } = await supabase.from('product_features')
+                .update({
+                  title: form.title,
+                  description: form.description,
+                  acceptance_criteria: criteriaArray,
+                  priority: form.priority,
+                  status: 'proposed',
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('feature_code', targetCode)
+                .select('id, feature_code, title, status, priority, category')
+                .single();
+
+              if (updated) {
+                // Link the conversation to the existing feature
+                await supabase.from('ideation_conversations')
+                  .update({ submitted_feature_id: updated.id, status: 'submitted' })
+                  .eq('id', conversationId);
+
+                updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
+                setDedupResult(null);
+                onSubmitted([{
+                  ...dedupResult,
+                  feature: { ...updated, status: 'proposed' as const, category: updated.category ?? null },
+                }]);
+                return;
+              }
+            }
+
+            // No "use existing" chosen — keep the new feature as-is
             setDedupResult(null);
             onSubmitted([dedupResult]);
           }}

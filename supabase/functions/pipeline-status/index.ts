@@ -35,11 +35,16 @@ interface ImplRequestRow {
   code_applied: boolean | null;
 }
 
+interface DeployResultsRow {
+  overall_status: string;
+}
+
 interface PipelineRunRow {
   feature_id: string;
   status: string;
   completed_tasks: number;
   total_tasks: number;
+  deploy_results: DeployResultsRow | null;
 }
 
 interface TestCaseRow {
@@ -173,9 +178,17 @@ function computeTestStage(testCases: TestCaseRow[], featureId: string): StageSta
   return { status: 'in_progress', label: `${passed}/${total} passed` };
 }
 
-function computeDeployStage(featureStatus: string): StageStatus {
+function computeDeployStage(
+  pipelineRuns: PipelineRunRow[],
+  featureId: string,
+  featureStatus: string,
+): StageStatus {
   if (featureStatus === 'released') return { status: 'completed', label: 'Released' };
   if (featureStatus === 'deprecated') return { status: 'warning', label: 'Deprecated' };
+  const run = pipelineRuns.find((r) => r.feature_id === featureId && r.deploy_results);
+  if (run?.deploy_results?.overall_status === 'success') {
+    return { status: 'completed', label: 'Deployed' };
+  }
   return { status: 'not_started', label: 'Not Started' };
 }
 
@@ -249,7 +262,7 @@ Deno.serve(async (req) => {
         .in('feature_id', featureIds),
       supabase
         .from('pipeline_runs')
-        .select('feature_id, status, completed_tasks, total_tasks')
+        .select('feature_id, status, completed_tasks, total_tasks, deploy_results')
         .in('feature_id', featureIds)
         .order('created_at', { ascending: false }),
     ]);
@@ -269,7 +282,7 @@ Deno.serve(async (req) => {
       spec: computeSpecStage(allSpecs, allArtifacts, f.id, f.status),
       build: computeBuildStage(allImpls, allPipelineRuns, f.id, f.status),
       test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
-      deploy: computeDeployStage(f.status),
+      deploy: computeDeployStage(allPipelineRuns, f.id, f.status),
     }));
 
     return jsonResponse({ pipelines });

@@ -172,6 +172,24 @@ export function TestRunPanel({
     clearDraft(featureId);
      }, [testCases, results, notes, exec, featureId]);
 
+  // Check deploy gate — Release Feature requires a successful deploy
+  const deployGateQuery = useQuery({
+    queryKey: ['deploy-gate', featureId],
+    queryFn: async () => {
+      try {
+        const res = await adminApi.getPipelineRunStatus(featureId);
+        const runs = [...(res.data?.history ?? [])];
+        if (res.data?.active) runs.push(res.data.active);
+        const deployed = runs.some((r) => r.deploy_results?.overall_status === 'success');
+        return { deployed };
+      } catch {
+        return { deployed: false };
+      }
+    },
+    staleTime: 10_000,
+  });
+  const isDeployed = deployGateQuery.data?.deployed ?? false;
+
   // Compute test status from test case data + history
   const passedCount = testCases.filter((tc) => tc.passed === true).length;
   const failedCount = testCases.filter((tc) => tc.passed === false).length;
@@ -317,9 +335,14 @@ export function TestRunPanel({
           <span className="text-xs text-gray-400">
             {passedCount} passed, {failedCount} failed{skippedCount > 0 ? `, ${skippedCount} skipped` : ''}, {notRunCount} not run
           </span>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-            {allPassed && featureStatus !== 'released' && (
+            {allPassed && featureStatus !== 'released' && !isDeployed && (
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                Run <code className="font-mono bg-amber-100 px-0.5 rounded">\deploy</code> before releasing
+              </span>
+            )}
+            {allPassed && featureStatus !== 'released' && isDeployed && (
               <button
                 onClick={onComplete}
                 className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"

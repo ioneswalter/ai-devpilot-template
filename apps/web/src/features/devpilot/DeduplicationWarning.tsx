@@ -7,9 +7,14 @@ import { useState } from 'react';
 import { AlertTriangleIcon, XIcon } from './icons';
 import type { DedupMatch } from './types';
 
+export interface DedupDecision {
+  feature_code: string;
+  action: 'use_existing' | 'enhance_existing' | 'converge' | 'different';
+}
+
 interface DeduplicationWarningProps {
   matches: DedupMatch[];
-  onSubmitAnyway: () => void;
+  onSubmitAnyway: (decisions: DedupDecision[]) => void;
   onCancel: () => void;
 }
 
@@ -32,12 +37,23 @@ const recommendationLabels: Record<string, string> = {
 };
 
 export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: DeduplicationWarningProps) {
-  const [reviewedMatches, setReviewedMatches] = useState<Record<string, boolean>>({});
+  const [decisions, setDecisions] = useState<Record<string, DedupDecision['action'] | null>>({});
   const hasHighSimilarity = matches.some((m) => m.similarity === 'high');
-  const allReviewed = matches.length > 0 && matches.every((m) => reviewedMatches[m.feature_code]);
+  const allReviewed = matches.length > 0 && matches.every((m) => decisions[m.feature_code] != null);
 
-  const toggleMatch = (featureCode: string) => {
-    setReviewedMatches((prev) => ({ ...prev, [featureCode]: !prev[featureCode] }));
+  const setDecision = (featureCode: string, action: DedupDecision['action']) => {
+    setDecisions((prev) => ({
+      ...prev,
+      [featureCode]: prev[featureCode] === action ? null : action,
+    }));
+  };
+
+  const handleSubmit = () => {
+    const result: DedupDecision[] = matches.map((m) => ({
+      feature_code: m.feature_code,
+      action: decisions[m.feature_code] ?? 'different',
+    }));
+    onSubmitAnyway(result);
   };
 
   return (
@@ -63,11 +79,13 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
           </p>
 
           {matches.map((match) => {
-            const isChecked = !!reviewedMatches[match.feature_code];
+            const chosen = decisions[match.feature_code];
+            const isAccepted = chosen === match.recommendation;
+            const isDifferent = chosen === 'different';
             return (
               <div
                 key={match.feature_code}
-                className={`border rounded-lg p-3 space-y-2 transition-colors ${isChecked ? 'border-emerald-300 bg-emerald-50/50' : ''}`}
+                className={`border rounded-lg p-3 space-y-2 transition-colors ${isAccepted ? 'border-blue-300 bg-blue-50/50' : isDifferent ? 'border-emerald-300 bg-emerald-50/50' : ''}`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
@@ -88,19 +106,34 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                 {match.description_excerpt && (
                   <p className="text-xs text-gray-500">{match.description_excerpt}</p>
                 )}
-                <label className="flex items-center gap-2 cursor-pointer select-none pt-1 border-t border-dashed">
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleMatch(match.feature_code)}
-                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <span className="text-xs font-medium text-amber-700">
-                    {recommendationLabels[match.recommendation] ?? match.recommendation}
-                    {' — '}
-                    <span className="text-gray-500 font-normal">I've reviewed this and my idea is different</span>
-                  </span>
-                </label>
+                <div className="flex flex-col gap-1.5 pt-1 border-t border-dashed">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name={`dedup-${match.feature_code}`}
+                      checked={isAccepted}
+                      onChange={() => setDecision(match.feature_code, match.recommendation)}
+                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-medium text-blue-700">
+                      {recommendationLabels[match.recommendation] ?? match.recommendation}
+                      <span className="text-gray-500 font-normal"> — update {match.feature_code} with this proposal</span>
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name={`dedup-${match.feature_code}`}
+                      checked={isDifferent}
+                      onChange={() => setDecision(match.feature_code, 'different')}
+                      className="h-4 w-4 border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-medium text-emerald-700">
+                      My idea is different
+                      <span className="text-gray-500 font-normal"> — create a new feature</span>
+                    </span>
+                  </label>
+                </div>
               </div>
             );
           })}
@@ -122,7 +155,7 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                 Edit Idea
               </button>
               <button
-                onClick={onSubmitAnyway}
+                onClick={handleSubmit}
                 disabled={!allReviewed}
                 className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed"
               >

@@ -267,6 +267,11 @@ export async function handleExecuteApiTest(
       failure_count: failureCount,
     }).eq('id', test_id);
 
+    // Sync test_cases.passed so the status view reflects the API result
+    await supabase.from('test_cases')
+      .update({ passed: result === 'passed' })
+      .eq('id', test.test_case_id);
+
     return jsonResponse({
       data: {
         test_id,
