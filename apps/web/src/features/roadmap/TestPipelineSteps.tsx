@@ -121,7 +121,7 @@ export function TestPipelineSteps({
               : `${automatedCount}/${testCaseCount} test cases automated`
         }
         action={
-          scriptsStatus !== 'blocked' && onRefresh ? (
+          scriptsStatus !== 'blocked' && automatedCount > 0 && onRefresh ? (
             <button
               onClick={onRefresh}
               className="px-3 py-1 text-xs font-medium text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-100"
