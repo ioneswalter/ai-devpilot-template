@@ -44,14 +44,15 @@ export function TestPipelineSteps({
   const datasets: TestDataSet[] = datasetsRes?.data ?? [];
   const activeDatasets = datasets.filter((d) => d.status === 'active').length;
   const hasData = activeDatasets > 0;
-  // Track if generation ran but created 0 records (API-only features don't need seed data)
-  const generatedZeroRecords = generateMut.isSuccess && generateMut.data.data.records_created === 0;
-  const dataReady = hasData || generatedZeroRecords;
 
   const generateMut = useMutation({
     mutationFn: () => testDataApi.generate(featureId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['test-datasets', featureId] }),
   });
+
+  // Track if generation ran but created 0 records (API-only features don't need seed data)
+  const generatedZeroRecords = generateMut.isSuccess && generateMut.data.data.records_created === 0;
+  const dataReady = hasData || generatedZeroRecords;
 
   // Step statuses
   const dataStatus: StepStatus = datasetsLoading ? 'loading' : dataReady ? 'ready' : 'action-needed';
