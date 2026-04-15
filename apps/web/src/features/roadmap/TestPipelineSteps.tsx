@@ -7,6 +7,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { testDataApi, type TestDataSet } from '@/lib/api/test-data-api';
+import { supabase } from '@/lib/supabase-client';
 
 interface TestPipelineStepsProps {
   featureId: string;
@@ -48,6 +49,25 @@ export function TestPipelineSteps({
   const generationRanBefore = datasets.length > 0;
   const noDataNeeded = generationRanBefore && activeDatasets === 0;
 
+  // Step 2: Poll for test scripts (auto-detects when \generate-tests writes to DB)
+  const { data: scriptCountRes } = useQuery({
+    queryKey: ['test-script-count', featureId],
+    queryFn: async () => {
+      const { count: apiCount } = await supabase
+        .from('api_verification_tests')
+        .select('id', { count: 'exact', head: true })
+        .eq('feature_id', featureId);
+      const { count: e2eCount } = await supabase
+        .from('automated_test_scripts')
+        .select('id', { count: 'exact', head: true })
+        .eq('feature_id', featureId);
+      return (apiCount ?? 0) + (e2eCount ?? 0);
+    },
+    refetchInterval: 10_000, // Poll every 10s to detect new scripts
+    staleTime: 5_000,
+  });
+  const liveAutomatedCount = scriptCountRes ?? automatedCount;
+
   const generateMut = useMutation({
     mutationFn: () => testDataApi.generate(featureId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['test-datasets', featureId] }),
@@ -61,11 +81,11 @@ export function TestPipelineSteps({
   const dataStatus: StepStatus = datasetsLoading ? 'loading' : dataReady ? 'ready' : 'action-needed';
   const scriptsStatus: StepStatus = !dataReady
     ? 'blocked'
-    : automatedCount === testCaseCount && testCaseCount > 0
+    : liveAutomatedCount === testCaseCount && testCaseCount > 0
       ? 'ready'
       : 'action-needed';
   // Allow running tests when data is ready and at least some scripts exist
-  const canRun = dataReady && automatedCount > 0;
+  const canRun = dataReady && liveAutomatedCount > 0;
   const runStatus: StepStatus = canRun
     ? (passedCount === testCaseCount && testCaseCount > 0 ? 'ready' : 'action-needed')
     : 'blocked';
@@ -117,12 +137,12 @@ export function TestPipelineSteps({
         detail={
           scriptsStatus === 'blocked'
             ? 'Generate test data first (step 1)'
-            : automatedCount === 0
+            : liveAutomatedCount === 0
               ? `No scripts — run \\generate-tests ${featureCode} in Claude Code`
-              : `${automatedCount}/${testCaseCount} test cases automated`
+              : `${liveAutomatedCount}/${testCaseCount} test cases automated`
         }
         action={
-          scriptsStatus !== 'blocked' && automatedCount > 0 && onRefresh ? (
+          scriptsStatus !== 'blocked' && liveAutomatedCount > 0 && onRefresh ? (
             <button
               onClick={onRefresh}
               className="px-3 py-1 text-xs font-medium text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-100"
