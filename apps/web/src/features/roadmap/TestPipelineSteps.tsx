@@ -44,16 +44,18 @@ export function TestPipelineSteps({
   const datasets: TestDataSet[] = datasetsRes?.data ?? [];
   const activeDatasets = datasets.filter((d) => d.status === 'active').length;
   const hasData = activeDatasets > 0;
+  // Any dataset record means generation was run (persists across panel close/reopen)
+  const generationRanBefore = datasets.length > 0;
+  const noDataNeeded = generationRanBefore && activeDatasets === 0;
 
   const generateMut = useMutation({
     mutationFn: () => testDataApi.generate(featureId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['test-datasets', featureId] }),
   });
 
-  // Generation succeeded = data step is complete (regardless of record count)
-  const generationDone = generateMut.isSuccess;
-  const generatedRecords = generationDone ? generateMut.data.data.records_created : 0;
-  const dataReady = hasData || generationDone;
+  // Data step is complete if: has active data, OR generation ran (even with 0 records)
+  const justGenerated = generateMut.isSuccess;
+  const dataReady = hasData || noDataNeeded || justGenerated;
 
   // Step statuses
   const dataStatus: StepStatus = datasetsLoading ? 'loading' : dataReady ? 'ready' : 'action-needed';
@@ -79,13 +81,12 @@ export function TestPipelineSteps({
         status={dataStatus}
         detail={
           datasetsLoading ? 'Checking...'
-            : generationDone && generatedRecords === 0 ? 'No database records needed — this feature uses API-level testing'
-              : generationDone ? `${generatedRecords} record${generatedRecords !== 1 ? 's' : ''} created — ready for testing`
-                : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
-                  : 'Not checked yet — click Generate to check what data this feature needs'
+            : noDataNeeded ? 'No database records needed — this feature uses API-level testing'
+              : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
+                : 'Not checked yet — click Generate to check what data this feature needs'
         }
         action={
-          !datasetsLoading ? (
+          !datasetsLoading && !noDataNeeded ? (
             <button
               onClick={() => generateMut.mutate()}
               disabled={generateMut.isPending}
