@@ -50,9 +50,10 @@ export function TestPipelineSteps({
     onSuccess: () => qc.invalidateQueries({ queryKey: ['test-datasets', featureId] }),
   });
 
-  // Track if generation ran but created 0 records (API-only features don't need seed data)
-  const generatedZeroRecords = generateMut.isSuccess && generateMut.data.data.records_created === 0;
-  const dataReady = hasData || generatedZeroRecords;
+  // Generation succeeded = data step is complete (regardless of record count)
+  const generationDone = generateMut.isSuccess;
+  const generatedRecords = generationDone ? generateMut.data.data.records_created : 0;
+  const dataReady = hasData || generationDone;
 
   // Step statuses
   const dataStatus: StepStatus = datasetsLoading ? 'loading' : dataReady ? 'ready' : 'action-needed';
@@ -78,9 +79,10 @@ export function TestPipelineSteps({
         status={dataStatus}
         detail={
           datasetsLoading ? 'Checking...'
-            : generatedZeroRecords ? 'No database records needed — this feature uses API-level testing'
-              : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
-                : 'Not checked yet — click Generate to check what data this feature needs'
+            : generationDone && generatedRecords === 0 ? 'No database records needed — this feature uses API-level testing'
+              : generationDone ? `${generatedRecords} record${generatedRecords !== 1 ? 's' : ''} created — ready for testing`
+                : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
+                  : 'Not checked yet — click Generate to check what data this feature needs'
         }
         action={
           !datasetsLoading ? (
@@ -103,11 +105,7 @@ export function TestPipelineSteps({
           ) : undefined
         }
         error={generateMut.isError ? (generateMut.error instanceof Error ? generateMut.error.message : 'Failed') : undefined}
-        success={generateMut.isSuccess
-          ? generateMut.data.data.records_created > 0
-            ? `Created ${generateMut.data.data.records_created} records`
-            : 'No database records needed — proceed to step 2'
-          : undefined}
+        success={undefined}
       />
 
       {/* Step 2: Test Scripts */}
