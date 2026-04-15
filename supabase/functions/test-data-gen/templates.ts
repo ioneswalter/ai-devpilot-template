@@ -21,6 +21,7 @@ const TEMPLATES: Record<string, TemplateFn> = {
   'FR-104': () => buildFR104(),
   'FR-122': () => buildFR122(),
   'FR-123': (uid) => buildFR123(uid),
+  'FR-140': (uid) => buildFR140(uid),
 };
 
 /** Look up a pre-built template by feature code. Returns null if none exists. */
@@ -209,5 +210,57 @@ function buildFR123(adminUserId: string): string[] {
     `INSERT INTO course_payments (id, user_id, course_id, stripe_session_id, stripe_payment_intent, amount_cents, status, created_at, completed_at)
      VALUES ('dd000123-0006-0000-0000-000000000001', '${userId2}', '${solarCourse}', 'cs_test_td123_david_solar', 'pi_test_td123_david_solar', 4900, 'completed', '2026-02-14', '2026-02-14')
      ON CONFLICT (stripe_session_id) DO NOTHING`,
+  ];
+}
+
+/** FR-140: AI Prototype Builder — ideation conversation with prototype versions for testing */
+function buildFR140(adminUserId: string): string[] {
+  const convId = 'dd000140-0000-0000-0000-000000000001';
+  const protoV1 = 'dd000140-0001-0000-0000-000000000001';
+  const protoV2 = 'dd000140-0001-0000-0000-000000000002';
+  const msgUser = 'dd000140-0002-0000-0000-000000000001';
+  const msgAsst = 'dd000140-0002-0000-0000-000000000002';
+  const msgFeedback = 'dd000140-0002-0000-0000-000000000003';
+  const msgAsst2 = 'dd000140-0002-0000-0000-000000000004';
+
+  const sampleUiHtml = '<html><head><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-gray-50 p-6"><div class="max-w-4xl mx-auto"><h1 class="text-2xl font-bold mb-4">Weekly Earnings Dashboard</h1><div class="grid grid-cols-3 gap-4"><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">This Week</p><p class="text-3xl font-bold text-green-600">$1,200</p></div><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">Jobs</p><p class="text-3xl font-bold">5</p></div><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">Rating</p><p class="text-3xl font-bold">4.8</p></div></div></div></body></html>';
+
+  const sampleUiHtmlV2 = sampleUiHtml.replace('This Week', 'Week of 14 Apr').replace('$1,200', '$1,450');
+
+  return [
+    // Ideation conversation owned by admin
+    `INSERT INTO ideation_conversations (id, title, status, created_by, created_at, updated_at)
+     VALUES ('${convId}', 'Dashboard with earnings and reviews', 'draft', '${adminUserId}', '2026-04-15', '2026-04-15')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // User message (feature description)
+    `INSERT INTO conversation_messages (id, conversation_id, role, content, created_at)
+     VALUES ('${msgUser}', '${convId}', 'user', 'I need a dashboard that shows my weekly earnings, upcoming jobs, and client reviews with star ratings', '2026-04-15 10:00:00')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // Assistant message with prototype metadata
+    `INSERT INTO conversation_messages (id, conversation_id, role, content, metadata, created_at)
+     VALUES ('${msgAsst}', '${convId}', 'assistant', 'I have generated an interactive UI prototype for your earnings dashboard. You can see it in the preview panel.', '{"type": "prototype_generated", "prototype_type": "ui", "version_id": "${protoV1}", "version_number": 1, "confidence": 0.92, "cost": 0.04, "model": "claude-sonnet-4-6"}', '2026-04-15 10:00:15')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // Prototype version 1 (initial generation)
+    `INSERT INTO prototype_versions (id, conversation_id, message_id, prototype_type, content, version_number, is_current, confidence, created_at)
+     VALUES ('${protoV1}', '${convId}', '${msgAsst}', 'ui', '${sampleUiHtml.replace(/'/g, "''")}', 1, false, 0.92, '2026-04-15 10:00:15')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // Feedback message
+    `INSERT INTO conversation_messages (id, conversation_id, role, content, created_at)
+     VALUES ('${msgFeedback}', '${convId}', 'user', 'Change the earnings to show the week date and update the amount to $1,450', '2026-04-15 10:01:00')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // Assistant iteration response
+    `INSERT INTO conversation_messages (id, conversation_id, role, content, metadata, created_at)
+     VALUES ('${msgAsst2}', '${convId}', 'assistant', 'I have updated the earnings section with the week date and new amount. The rest of the dashboard is unchanged.', '{"type": "prototype_generated", "prototype_type": "ui", "version_id": "${protoV2}", "version_number": 2, "confidence": 1.0, "cost": 0.04, "model": "claude-sonnet-4-6"}', '2026-04-15 10:01:20')
+     ON CONFLICT (id) DO NOTHING`,
+
+    // Prototype version 2 (iteration — current)
+    `INSERT INTO prototype_versions (id, conversation_id, message_id, prototype_type, content, version_number, feedback_prompt, is_current, confidence, created_at)
+     VALUES ('${protoV2}', '${convId}', '${msgAsst2}', 'ui', '${sampleUiHtmlV2.replace(/'/g, "''")}', 2, 'Change the earnings to show the week date and update the amount to $1,450', true, 1.0, '2026-04-15 10:01:20')
+     ON CONFLICT (id) DO NOTHING`,
   ];
 }

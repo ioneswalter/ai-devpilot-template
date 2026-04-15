@@ -45,9 +45,12 @@ export function TestPipelineSteps({
   const datasets: TestDataSet[] = datasetsRes?.data ?? [];
   const activeDatasets = datasets.filter((d) => d.status === 'active').length;
   const hasData = activeDatasets > 0;
-  // Any dataset record means generation was run (persists across panel close/reopen)
-  const generationRanBefore = datasets.length > 0;
-  const noDataNeeded = generationRanBefore && activeDatasets === 0;
+  // "No data needed" only if a previous run completed successfully with zero records.
+  // A 'partial' or 'error' status means generation FAILED — the feature still needs data.
+  // A 'cleaned' status means data existed but was cleaned up — may need regeneration.
+  const noDataNeeded = datasets.some(
+    (d) => d.status === 'active' && d.records_created === 0,
+  );
 
   // Step 2: Poll for test scripts (auto-detects when \generate-tests writes to DB)
   const { data: scriptCountRes } = useQuery({
@@ -103,7 +106,8 @@ export function TestPipelineSteps({
           datasetsLoading ? 'Checking...'
             : noDataNeeded ? 'No database records needed — this feature uses API-level testing'
               : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
-                : 'Not checked yet — click Generate to check what data this feature needs'
+                : datasets.some((d) => d.status === 'partial') ? 'Previous generation had errors — click Generate to retry'
+                  : 'Generate test data for this feature'
         }
         action={
           !datasetsLoading && !noDataNeeded ? (

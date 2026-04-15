@@ -12,6 +12,7 @@ import { buildSystemPrompt } from '../_shared/devpilot-prompt.ts';
 import type { FeatureContext } from '../_shared/devpilot-prompt.ts';
 import { buildKnowledgeContext, formatFeatureContext } from '../_shared/knowledge-context.ts';
 import { logAIUsage, calculateCost } from '../_shared/usage-logger.ts';
+import { handlePrototypeGeneration } from './prototype-handler.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +42,8 @@ const requestSchema = z.object({
   conversation_id: z.string().min(1, 'Conversation ID required'),
   message: z.string().min(1, 'Message is required').max(10000, 'Message too long'),
   model: z.string().optional(),
+  generate_prototype: z.boolean().optional(),
+  prototype_type: z.enum(['ui', 'flowchart', 'process']).optional(),
 });
 
 /** Call Claude API via fetch instead of the heavy SDK to save memory */
@@ -241,6 +244,21 @@ Deno.serve(async (req) => {
 
     await supabase.from('ideation_conversations').update(updates).eq('id', conversation_id);
 
+    // FR-140: Prototype generation (when explicitly requested)
+    if (validation.data.generate_prototype) {
+      const protoMeta = await handlePrototypeGeneration(
+        supabase, conversation_id, message,
+        validation.data.prototype_type, assistantMsg.id,
+      );
+      if (protoMeta) {
+        // Update assistant message metadata with prototype info
+        const merged = { ...metadata, ...protoMeta };
+        await supabase.from('conversation_messages')
+          .update({ metadata: merged }).eq('id', assistantMsg.id);
+        assistantMsg.metadata = merged;
+      }
+    }
+
     return jsonResponse({
       data: {
         user_message: userMsg,
@@ -254,3 +272,4 @@ Deno.serve(async (req) => {
     return errorResponse('INTERNAL_ERROR', 'An unexpected error occurred', 500);
   }
 });
+

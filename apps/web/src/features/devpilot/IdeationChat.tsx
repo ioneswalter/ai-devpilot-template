@@ -125,6 +125,7 @@ export function IdeationChat({ messages, isLoading, streamingText, error, onSend
               placeholder="Describe your idea or request changes to the proposal...&#10;&#10;Click Send when ready"
               className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               disabled={isLoading}
+              data-testid="ideation-chat-input"
             />
             <button
               type="submit"

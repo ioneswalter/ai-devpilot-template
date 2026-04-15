@@ -278,12 +278,42 @@ Deno.serve(async (req) => {
       .update(updateData)
       .eq('id', conversation_id);
 
+    // FR-140: Attach prototype if one exists for this conversation
+    let prototypeAttachment = null;
+    const { data: currentProto } = await supabase
+      .from('prototype_versions')
+      .select('id, prototype_type, version_number')
+      .eq('conversation_id', conversation_id)
+      .eq('is_current', true)
+      .maybeSingle();
+
+    if (currentProto) {
+      const { count: totalVersions } = await supabase
+        .from('prototype_versions')
+        .select('id', { count: 'exact', head: true })
+        .eq('conversation_id', conversation_id);
+
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+      const renderUrl = `${supabaseUrl}/functions/v1/render-prototype?id=${currentProto.id}`;
+
+      const { data: attachment } = await supabase.from('prototype_attachments').insert({
+        feature_id: feature.id,
+        prototype_version_id: currentProto.id,
+        prototype_type: currentProto.prototype_type,
+        render_url: renderUrl,
+        total_versions: totalVersions ?? 1,
+      }).select('id, prototype_type, render_url, total_versions').single();
+
+      if (attachment) prototypeAttachment = attachment;
+    }
+
     return jsonResponse({
       data: {
         feature,
         dedup_check: dedupResult,
         speckit_spec: specMarkdown,
         speckit_research: researchMarkdown,
+        prototype_attachment: prototypeAttachment,
       },
     }, 201);
   } catch (error) {
