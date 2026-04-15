@@ -44,6 +44,9 @@ export function TestPipelineSteps({
   const datasets: TestDataSet[] = datasetsRes?.data ?? [];
   const activeDatasets = datasets.filter((d) => d.status === 'active').length;
   const hasData = activeDatasets > 0;
+  // Track if generation ran but created 0 records (API-only features don't need seed data)
+  const generatedZeroRecords = generateMut.isSuccess && generateMut.data.data.records_created === 0;
+  const dataReady = hasData || generatedZeroRecords;
 
   const generateMut = useMutation({
     mutationFn: () => testDataApi.generate(featureId),
@@ -51,14 +54,14 @@ export function TestPipelineSteps({
   });
 
   // Step statuses
-  const dataStatus: StepStatus = datasetsLoading ? 'loading' : hasData ? 'ready' : 'action-needed';
-  const scriptsStatus: StepStatus = !hasData
+  const dataStatus: StepStatus = datasetsLoading ? 'loading' : dataReady ? 'ready' : 'action-needed';
+  const scriptsStatus: StepStatus = !dataReady
     ? 'blocked'
     : automatedCount === testCaseCount && testCaseCount > 0
       ? 'ready'
       : 'action-needed';
   // Allow running tests when data is ready and at least some scripts exist
-  const canRun = hasData && automatedCount > 0;
+  const canRun = dataReady && automatedCount > 0;
   const runStatus: StepStatus = canRun
     ? (passedCount === testCaseCount && testCaseCount > 0 ? 'ready' : 'action-needed')
     : 'blocked';
@@ -74,8 +77,9 @@ export function TestPipelineSteps({
         status={dataStatus}
         detail={
           datasetsLoading ? 'Checking...'
-            : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
-              : 'No test data — generate before running tests'
+            : generatedZeroRecords ? 'No database records needed — this feature uses API-level testing'
+              : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
+                : 'Not checked yet — click Generate to check what data this feature needs'
         }
         action={
           !datasetsLoading ? (
@@ -98,7 +102,11 @@ export function TestPipelineSteps({
           ) : undefined
         }
         error={generateMut.isError ? (generateMut.error instanceof Error ? generateMut.error.message : 'Failed') : undefined}
-        success={generateMut.isSuccess ? `Created ${generateMut.data.data.records_created} records` : undefined}
+        success={generateMut.isSuccess
+          ? generateMut.data.data.records_created > 0
+            ? `Created ${generateMut.data.data.records_created} records`
+            : 'No database records needed — proceed to step 2'
+          : undefined}
       />
 
       {/* Step 2: Test Scripts */}
