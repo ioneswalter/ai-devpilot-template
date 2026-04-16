@@ -20,6 +20,8 @@ import { runTestReadiness } from './test-readiness.ts';
 import { getQueueStatus, cancelQueueEntry } from './queue-manager.ts';
 import { getDeployLockStatus } from './deploy-lock.ts';
 import { createAndStartPipeline } from './start.ts';
+import { getDeployProgress } from './deploy-progress.ts';
+import { handleAcknowledgeEscalation, handleResolveEscalation } from './escalation.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -101,6 +103,14 @@ Deno.serve(async (req) => {
           lockDisplay = { held_by_pipeline: lockStatus.pipeline_id ?? null, feature_title: f?.title ?? null, acquired_at: lockStatus.acquired_at ?? null };
         }
         return jsonResponse({ data: { ...queueData, deploy_lock: lockDisplay } });
+      }
+      // FR-142: Deploy progress
+      if (url.searchParams.get('action') === 'deploy-progress') {
+        const pid = url.searchParams.get('pipeline_id');
+        if (!pid) return errorResponse('VALIDATION_ERROR', 'pipeline_id required', 400);
+        const progress = await getDeployProgress(supabase, pid);
+        if (!progress) return errorResponse('NOT_FOUND', 'Pipeline run not found', 404);
+        return jsonResponse({ data: progress });
       }
       // FR-119: Conflict report
       if (url.searchParams.get('action') === 'conflict-report') {
@@ -270,6 +280,24 @@ Deno.serve(async (req) => {
           const { count: tc } = await supabase.from('implementation_task_items')
             .select('id', { count: 'exact', head: true }).eq('request_id', sfqRid).in('decision', ['accepted', 'modified']).eq('implementation_status', 'pending');
           return createAndStartPipeline(ctx, sfqFid, sfqRid, tc ?? 0, sfqQid);
+        }
+
+        case 'acknowledge-escalation': {
+          const aeId = body.escalation_id as string;
+          if (!aeId) return errorResponse('VALIDATION_ERROR', 'escalation_id required', 400);
+          const aeResult = await handleAcknowledgeEscalation(supabase, aeId, ctx.user.id ?? 'system');
+          if (aeResult.error) return errorResponse(aeResult.error.code, aeResult.error.message, 400);
+          return jsonResponse({ data: aeResult.data });
+        }
+
+        case 'resolve-escalation': {
+          const reId = body.escalation_id as string;
+          const reNotes = body.resolution_notes as string;
+          if (!reId) return errorResponse('VALIDATION_ERROR', 'escalation_id required', 400);
+          if (!reNotes) return errorResponse('VALIDATION_ERROR', 'resolution_notes required', 400);
+          const reResult = await handleResolveEscalation(supabase, reId, reNotes);
+          if (reResult.error) return errorResponse(reResult.error.code, reResult.error.message, 400);
+          return jsonResponse({ data: reResult.data });
         }
 
         case 'health-check':

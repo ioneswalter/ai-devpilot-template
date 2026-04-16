@@ -42,6 +42,7 @@ interface DeployResultsRow {
 interface PipelineRunRow {
   feature_id: string;
   status: string;
+  current_stage: string;
   completed_tasks: number;
   total_tasks: number;
   deploy_results: DeployResultsRow | null;
@@ -187,7 +188,21 @@ function computeDeployStage(
   if (featureStatus === 'deprecated') return { status: 'warning', label: 'Deprecated' };
   const run = pipelineRuns.find((r) => r.feature_id === featureId && r.deploy_results);
   if (run?.deploy_results?.overall_status === 'success') {
+    // Distinguish: "Functions Deployed" (build step) vs "Deployed" (production deploy)
+    if (featureStatus === 'in_testing') {
+      return { status: 'in_progress', label: 'Ready to Deploy' };
+    }
     return { status: 'completed', label: 'Deployed' };
+  }
+  // FR-142: Show escalated state when pipeline is paused for SE intervention
+  if (run?.current_stage === 'escalated') {
+    return { status: 'escalated', label: 'Escalated' };
+  }
+  if (run?.current_stage === 'deploying') {
+    return { status: 'in_progress', label: 'Deploying' };
+  }
+  if (run?.current_stage === 'deploy_failed') {
+    return { status: 'warning', label: 'Failed' };
   }
   return { status: 'not_started', label: 'Not Started' };
 }
@@ -269,7 +284,7 @@ Deno.serve(async (req) => {
         .in('feature_id', featureIds),
       supabase
         .from('pipeline_runs')
-        .select('feature_id, status, completed_tasks, total_tasks, deploy_results')
+        .select('feature_id, status, current_stage, completed_tasks, total_tasks, deploy_results')
         .in('feature_id', featureIds)
         .order('created_at', { ascending: false }),
     ]);

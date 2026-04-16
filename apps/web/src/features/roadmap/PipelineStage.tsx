@@ -42,6 +42,11 @@ const STATUS_STYLES = {
     text: 'text-amber-600',
     border: 'border-amber-200',
   },
+  escalated: {
+    bg: 'bg-red-50',
+    text: 'text-red-600',
+    border: 'border-red-300',
+  },
 } as const;
 
 /** Circle icon — not started */

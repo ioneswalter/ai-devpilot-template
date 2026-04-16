@@ -10,6 +10,7 @@ const STAGE_LABELS: Record<string, string> = {
   implementing: 'Implementing', build_check: 'CI Check', build_passed: 'CI Passed',
   deploying: 'Deploying', deployed: 'Deployed', readying: 'Testing',
   waiting_for_deploy: 'Waiting for Deploy', build_failed: 'CI Failed', deploy_failed: 'Deploy Failed',
+  escalated: 'Escalated',
 };
 
 const STATUS_COLORS: Record<string, string> = {

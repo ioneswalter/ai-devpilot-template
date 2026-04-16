@@ -1,11 +1,13 @@
 /**
  * PipelineStatusSection - Pipeline progress, CI, and deploy status display
  * Extracted from ImplementationPanel to stay under 300-line constitution limit.
+ * FR-142: Integrates DeployProgressPanel with real-time step visualization.
  */
 
 import { CIResultsPanel } from './CIResultsPanel';
-import { DeployStatusPanel } from './DeployStatusPanel';
+import { DeployProgressPanel } from './DeployProgressPanel';
 import { ReadinessStatusPanel } from './ReadinessStatusPanel';
+import { useDeployProgress } from './useDeployProgress';
 import type { PipelineRun, CIResults, DeployResults, ReadinessResults } from '@/lib/api/admin-api';
 
 interface PipelineStatusSectionProps {
@@ -49,6 +51,16 @@ export function PipelineStatusSection({
   isRerunningReadiness,
   pipeline,
 }: PipelineStatusSectionProps) {
+  // FR-142: Use deploy progress hook for real-time step data
+  const showDeployPanel = isDeploying || !!deployResults || pipeline?.current_stage === 'escalated';
+  const deployProgress = useDeployProgress(
+    pipeline?.id ?? null,
+    showDeployPanel,
+  );
+
+  const currentStage = deployProgress.data?.current_stage ?? pipeline?.current_stage ?? '';
+  const escalations = deployProgress.data?.escalations ?? [];
+
   return (
     <>
       {/* Pipeline progress (FR-113) */}
@@ -102,20 +114,21 @@ export function PipelineStatusSection({
         <CIResultsPanel ciResults={ciResults} onRerun={onRerunCI} isRerunning={isRerunningCI} />
       )}
 
-      {/* Deployment in progress (FR-115) */}
-      {isDeploying && (
-        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />
-            <h4 className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Deploying</h4>
-          </div>
-          <p className="text-xs text-emerald-600">Applying migrations and deploying Edge Functions...</p>
-        </div>
-      )}
-
-      {/* Deploy results (FR-115) */}
-      {deployResults && !isDeploying && (
-        <DeployStatusPanel deployResults={deployResults} onRedeploy={onRedeploy} isRedeploying={isRedeploying} />
+      {/* FR-142: Deploy progress panel (replaces old spinner + DeployStatusPanel) */}
+      {showDeployPanel && (
+        <DeployProgressPanel
+          deployResults={deployProgress.data?.deploy_results ?? deployResults}
+          escalations={escalations}
+          isDeploying={isDeploying}
+          currentStage={currentStage}
+          lastHeartbeat={deployProgress.data?.last_heartbeat ?? null}
+          onRedeploy={onRedeploy}
+          isRedeploying={isRedeploying}
+          onAcknowledge={deployProgress.acknowledge}
+          onResolve={deployProgress.resolve}
+          isAcknowledging={deployProgress.isAcknowledging}
+          isResolving={deployProgress.isResolving}
+        />
       )}
 
       {/* Readying in progress (FR-116) */}

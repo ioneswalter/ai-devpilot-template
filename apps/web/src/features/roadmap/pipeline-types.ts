@@ -4,7 +4,7 @@
  */
 
 /** Visual status of a single pipeline stage */
-export type StageStatusValue = 'not_started' | 'in_progress' | 'completed' | 'warning';
+export type StageStatusValue = 'not_started' | 'in_progress' | 'completed' | 'warning' | 'escalated';
 
 /** Status object for one pipeline stage */
 export interface StageStatus {

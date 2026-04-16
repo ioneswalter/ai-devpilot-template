@@ -7,7 +7,8 @@ import { waitForDeployLock, releaseDeployLock, detectFileConflicts } from './dep
 
 const MAX_RETRIES = 3;
 
-interface DeployStepResult { artifact: string; action: 'execute_sql' | 'deploy_function'; status: 'success' | 'failed' | 'skipped'; duration_ms: number; error: string | null; details: string | null; }
+interface FixAttemptRecord { description: string; status: 'success' | 'failed'; error: string | null; timestamp: string; }
+interface DeployStepResult { artifact: string; action: 'execute_sql' | 'deploy_function'; status: 'success' | 'failed' | 'skipped' | 'manual_override'; duration_ms: number; error: string | null; details: string | null; started_at: string | null; completed_at: string | null; retry_count: number; fix_attempts: FixAttemptRecord[]; }
 interface DeployResults { migrations: DeployStepResult[]; functions: DeployStepResult[]; started_at: string; completed_at: string; overall_status: 'success' | 'partial' | 'failed'; }
 interface GeneratedFile { file_path: string; code: string; }
 
@@ -133,7 +134,9 @@ async function executeMigration(
   supabase: ReturnType<typeof createClient>,
 ): Promise<DeployStepResult> {
   const start = Date.now();
+  const startedAt = new Date().toISOString();
   const dbUrl = Deno.env.get('SUPABASE_DB_URL') ?? buildDbUrl();
+  const fixAttempts: FixAttemptRecord[] = [];
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -141,18 +144,20 @@ async function executeMigration(
       await client.connect();
       await client.query(mig.code);
       await client.end();
-      return { artifact: mig.file_path, action: 'execute_sql', status: 'success', duration_ms: Date.now() - start, error: null, details: null };
+      return { artifact: mig.file_path, action: 'execute_sql', status: 'success', duration_ms: Date.now() - start, error: null, details: null, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: attempt, fix_attempts: fixAttempts };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (attempt < MAX_RETRIES - 1 && isTransient(msg)) {
+        fixAttempts.push({ description: `Transient retry ${attempt + 1}`, status: 'failed', error: msg, timestamp: new Date().toISOString() });
         await appendLog(supabase, pipelineId, 'warn', `Migration retry ${attempt + 1}: ${msg}`);
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
         continue;
       }
-      return { artifact: mig.file_path, action: 'execute_sql', status: 'failed', duration_ms: Date.now() - start, error: msg, details: null };
+      fixAttempts.push({ description: `Final attempt ${attempt + 1}`, status: 'failed', error: msg, timestamp: new Date().toISOString() });
+      return { artifact: mig.file_path, action: 'execute_sql', status: 'failed', duration_ms: Date.now() - start, error: msg, details: null, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: attempt + 1, fix_attempts: fixAttempts };
     }
   }
-  return { artifact: mig.file_path, action: 'execute_sql', status: 'failed', duration_ms: Date.now() - start, error: 'Max retries exceeded', details: null };
+  return { artifact: mig.file_path, action: 'execute_sql', status: 'failed', duration_ms: Date.now() - start, error: 'Max retries exceeded', details: null, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: MAX_RETRIES, fix_attempts: fixAttempts };
 }
 
 async function deployFunction(
@@ -162,9 +167,11 @@ async function deployFunction(
   supabase: ReturnType<typeof createClient>,
 ): Promise<DeployStepResult> {
   const start = Date.now();
+  const startedAt = new Date().toISOString();
+  const fixAttempts: FixAttemptRecord[] = [];
   const accessToken = Deno.env.get('SB_ACCESS_TOKEN');
   if (!accessToken) {
-    return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: 'SB_ACCESS_TOKEN not set', details: null };
+    return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: 'SB_ACCESS_TOKEN not set', details: null, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: 0, fix_attempts: [] };
   }
 
   const projectRef = extractProjectRef();
@@ -188,26 +195,30 @@ async function deployFunction(
       });
 
       if (resp.ok) {
-        return { artifact: slug, action: 'deploy_function', status: 'success', duration_ms: Date.now() - start, error: null, details: `Deployed ${files.length} file(s)` };
+        return { artifact: slug, action: 'deploy_function', status: 'success', duration_ms: Date.now() - start, error: null, details: `Deployed ${files.length} file(s)`, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: attempt, fix_attempts: fixAttempts };
       }
 
       const body = await resp.text();
       if (attempt < MAX_RETRIES - 1 && (resp.status >= 500 || resp.status === 429)) {
+        fixAttempts.push({ description: `Transient retry ${attempt + 1} (HTTP ${resp.status})`, status: 'failed', error: body, timestamp: new Date().toISOString() });
         await appendLog(supabase, pipelineId, 'warn', `Function deploy retry ${attempt + 1}: ${resp.status}`);
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
         continue;
       }
-      return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: `${resp.status}: ${body}`, details: null };
+      fixAttempts.push({ description: `Final attempt ${attempt + 1}`, status: 'failed', error: `${resp.status}: ${body}`, timestamp: new Date().toISOString() });
+      return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: `${resp.status}: ${body}`, details: null, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: attempt + 1, fix_attempts: fixAttempts };
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       if (attempt < MAX_RETRIES - 1 && isTransient(msg)) {
+        fixAttempts.push({ description: `Network retry ${attempt + 1}`, status: 'failed', error: msg, timestamp: new Date().toISOString() });
         await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
         continue;
       }
-      return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: msg, details: null };
+      fixAttempts.push({ description: `Final attempt ${attempt + 1}`, status: 'failed', error: msg, timestamp: new Date().toISOString() });
+      return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: msg, details: null, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: attempt + 1, fix_attempts: fixAttempts };
     }
   }
-  return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: 'Max retries exceeded', details: null };
+  return { artifact: slug, action: 'deploy_function', status: 'failed', duration_ms: Date.now() - start, error: 'Max retries exceeded', details: null, started_at: startedAt, completed_at: new Date().toISOString(), retry_count: MAX_RETRIES, fix_attempts: fixAttempts };
 }
 
 function extractFunctionSlugs(files: GeneratedFile[]): string[] {
@@ -278,6 +289,21 @@ async function failDeploy(
   results: DeployResults,
 ): Promise<void> {
   results.completed_at = new Date().toISOString();
+
+  // FR-142: Create escalation for the failed step
+  const failedStep = [...results.migrations, ...results.functions].find(s => s.status === 'failed');
+  if (failedStep && failedStep.retry_count >= MAX_RETRIES) {
+    await supabase.from('deploy_escalations').insert({
+      pipeline_id: pipelineId,
+      step_type: failedStep.action === 'execute_sql' ? 'migration' : 'function',
+      step_artifact: failedStep.artifact,
+      error_message: failedStep.error ?? 'Unknown error',
+      fix_attempts_count: failedStep.fix_attempts.length,
+      fix_attempts_detail: failedStep.fix_attempts,
+      status: 'open',
+    });
+    await appendLog(supabase, pipelineId, 'error', `SE Escalation created for ${failedStep.artifact}`);
+  }
 
   // FR-119: Release deploy lock on failure
   await releaseDeployLock(supabase, pipelineId);
