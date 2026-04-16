@@ -84,7 +84,7 @@ export function useAutomatedTests(featureId: string) {
         .from('automated_test_scripts')
         .select(`
           id, test_case_id, generation_source, is_stale, is_custom_modified,
-          last_run_result, last_run_at, created_at, script_steps,
+          last_run_result, last_run_at, created_at, script_steps, generation_notes,
           test_cases!inner(title)
         `)
         .eq('feature_id', featureId)
@@ -107,6 +107,7 @@ export function useAutomatedTests(featureId: string) {
           is_custom_modified: s.is_custom_modified,
           last_run_result: s.last_run_result as ScriptListItem['last_run_result'],
           last_run_at: s.last_run_at,
+          generation_notes: (s as Record<string, unknown>).generation_notes as string | null ?? null,
           created_at: s.created_at,
         };
       });
@@ -135,6 +136,7 @@ export function useAutomatedTests(featureId: string) {
           is_custom_modified: false,
           last_run_result: s.last_run_result as ScriptListItem['last_run_result'],
           last_run_at: s.last_run_at,
+          generation_notes: s.generation_notes ?? null,
           created_at: s.created_at,
         };
       });

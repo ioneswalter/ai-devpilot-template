@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAutomatedTests } from './useAutomatedTests';
 import { useExtensionBridge } from './useExtensionBridge';
 import { VisualCheckpointViewer } from './VisualCheckpointViewer';
-import { parseGateWarnings, hasGateWarnings, dismissGateWarning, isWarningDismissed } from './gate-warning-utils';
+import { parseGateWarnings, dismissGateWarning, isWarningDismissed } from './gate-warning-utils';
 import type { ScriptListItem } from './automation-types';
 import type { GateWarning } from './automation-types';
 import type { BrowserSuiteResult, BrowserScriptResult } from './useAutomatedTests';
