@@ -95,7 +95,9 @@ export function TestDataActions({ featureId, featureCode }: TestDataActionsProps
 
       {generateMut.isSuccess && (
         <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded p-2">
-          Generated {generateMut.data.data.records_created} records for {featureCode}
+          {generateMut.data.data.records_created === 0 && 'skipped_reason' in generateMut.data.data
+            ? String(generateMut.data.data.skipped_reason)
+            : `Generated ${generateMut.data.data.records_created} records for ${featureCode}`}
           {generateMut.data.data.errors.length > 0 && (
             <span className="text-amber-600"> ({generateMut.data.data.errors.length} errors)</span>
           )}
@@ -137,11 +139,21 @@ function DatasetRow({ dataset }: { dataset: TestDataSet }) {
     failed: 'text-red-700 bg-red-50',
   };
 
+  const sourceLabels: Record<string, { label: string; color: string }> = {
+    manual: { label: 'Manual', color: 'text-gray-500 bg-gray-50' },
+    copilot: { label: 'AI Copilot', color: 'text-purple-600 bg-purple-50' },
+    pipeline: { label: 'AI DevPilot', color: 'text-indigo-600 bg-indigo-50' },
+  };
+  const source = sourceLabels[dataset.trigger_source] ?? sourceLabels.manual;
+
   return (
     <div className="flex items-center justify-between px-3 py-2 text-xs">
       <div className="flex items-center gap-2">
         <span className={`px-1.5 py-0.5 rounded font-medium ${statusColors[dataset.status]}`}>
           {dataset.status}
+        </span>
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${source.color}`}>
+          {source.label}
         </span>
         <span className="text-gray-600">{dataset.records_created} records</span>
       </div>

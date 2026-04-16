@@ -4,11 +4,13 @@
  * Uses browser extension for real test execution.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAutomatedTests } from './useAutomatedTests';
 import { useExtensionBridge } from './useExtensionBridge';
 import { VisualCheckpointViewer } from './VisualCheckpointViewer';
+import { parseGateWarnings, hasGateWarnings, dismissGateWarning, isWarningDismissed } from './gate-warning-utils';
 import type { ScriptListItem } from './automation-types';
+import type { GateWarning } from './automation-types';
 import type { BrowserSuiteResult, BrowserScriptResult } from './useAutomatedTests';
 
 interface AutomatedTestPanelProps {
@@ -30,8 +32,25 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
   const [showPanel, setShowPanel] = useState(false);
   const [lastCheckpoints] = useState<Record<string, CheckpointData[]>>({});
   const [suiteResult, setSuiteResult] = useState<BrowserSuiteResult | null>(null);
+  const [dismissedWarnings, setDismissedWarnings] = useState<Set<string>>(new Set());
 
   useEffect(() => { auto.loadScripts(); }, [auto.loadScripts]);
+
+  // Initialize dismissed state from sessionStorage
+  useEffect(() => {
+    const dismissed = new Set<string>();
+    for (const script of auto.scripts) {
+      if (isWarningDismissed(featureId, script.id)) {
+        dismissed.add(script.id);
+      }
+    }
+    setDismissedWarnings(dismissed);
+  }, [auto.scripts, featureId]);
+
+  const handleDismissWarning = useCallback((scriptId: string) => {
+    dismissGateWarning(featureId, scriptId);
+    setDismissedWarnings((prev) => new Set([...prev, scriptId]));
+  }, [featureId]);
 
   if (!showPanel) {
     return (
@@ -182,6 +201,9 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
               extensionAvailable={ext.isAvailable}
               checkpoints={lastCheckpoints[script.id]}
               scriptResult={scriptResult}
+              gateWarnings={parseGateWarnings(script.generation_notes ?? null)}
+              warningDismissed={dismissedWarnings.has(script.id)}
+              onDismissWarning={() => handleDismissWarning(script.id)}
             />
           );
         })}
@@ -220,6 +242,9 @@ function ScriptRow({
   extensionAvailable,
   checkpoints,
   scriptResult,
+  gateWarnings,
+  warningDismissed,
+  onDismissWarning,
 }: {
   script: ScriptListItem;
   expanded: boolean;
@@ -230,13 +255,25 @@ function ScriptRow({
   extensionAvailable: boolean;
   checkpoints?: CheckpointData[];
   scriptResult?: BrowserScriptResult;
+  gateWarnings: GateWarning[];
+  warningDismissed: boolean;
+  onDismissWarning: () => void;
 }) {
+  const activeWarnings = gateWarnings.filter((w) => w.level === 'WARN');
+  const showWarningBadge = activeWarnings.length > 0 && !warningDismissed;
+
   return (
     <div className="px-3 py-2">
       <div className="flex items-center gap-2">
         <button onClick={onToggle} className="flex-1 min-w-0 text-left flex items-center gap-2">
           <StatusBadge result={scriptResult?.result ?? script.last_run_result} stale={script.is_stale} />
           <TierBadge tier={script.tier} />
+          {showWarningBadge && (
+            <GateWarningBadge
+              warnings={activeWarnings}
+              onDismiss={onDismissWarning}
+            />
+          )}
           <span className="text-xs font-medium text-gray-800 truncate">
             {script.test_case_title}
           </span>
@@ -272,6 +309,40 @@ function ScriptRow({
         </div>
       )}
     </div>
+  );
+}
+
+function GateWarningBadge({
+  warnings,
+  onDismiss,
+}: {
+  warnings: GateWarning[];
+  onDismiss: () => void;
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const summary = warnings.map((w) => `[${w.type}] ${w.message}`).join('\n');
+
+  return (
+    <span className="relative flex-shrink-0">
+      <button
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+        className="w-4 h-4 text-amber-500 hover:text-amber-600"
+        title="Gate warning — click to dismiss"
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {showTooltip && (
+        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-1 w-64 p-2 bg-amber-50 border border-amber-200 rounded shadow-lg text-[10px] text-amber-800 whitespace-pre-wrap">
+          <div className="font-semibold mb-1">Gate Warnings ({warnings.length})</div>
+          {summary}
+          <div className="mt-1 text-amber-500 italic">Click to dismiss</div>
+        </div>
+      )}
+    </span>
   );
 }
 

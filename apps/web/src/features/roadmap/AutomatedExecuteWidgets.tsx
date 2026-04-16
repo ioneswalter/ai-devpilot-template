@@ -82,6 +82,14 @@ export function ScriptList({
               {script.is_stale && (
                 <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">stale</span>
               )}
+              {script.generation_notes?.includes('[GATE:WARN:') && (
+                <span
+                  className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0"
+                  title={script.generation_notes.split('\n').filter(l => l.includes('[GATE:WARN:')).join('; ')}
+                >
+                  gate warning
+                </span>
+              )}
               {onRunSingle && !isRunning && !script.is_stale && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onRunSingle(script); }}

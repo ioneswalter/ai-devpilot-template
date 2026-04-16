@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logAIUsage } from '../_shared/usage-logger.ts';
+import { getDataModelContext, buildSpecContext, GENERATE_PROMPT } from './helpers.ts';
 
 // Use Haiku for speed — test data generation is simple SQL, doesn't need Sonnet
 const AI_MODEL = 'claude-haiku-4-5-20251001';
@@ -97,11 +98,40 @@ export async function handleGenerate(req: Request): Promise<Response> {
   // Get feature context
   const { data: feature } = await supabase
     .from('product_features')
-    .select('id, feature_code, title, description, acceptance_criteria')
+    .select('id, feature_code, title, description, acceptance_criteria, category')
     .eq('id', featureId)
     .single();
 
   if (!feature) return error('NOT_FOUND', 'Feature not found', 404);
+
+  // Skip test data generation for toolkit/infrastructure features — they have no data model
+  if (feature.category === 'toolkit') {
+    const datasetId = crypto.randomUUID();
+    await supabase.from('test_data_sets').upsert({
+      id: datasetId,
+      feature_id: featureId,
+      generated_by: userId,
+      sql_statements: '-- Toolkit feature: no test data needed',
+      records_created: 0,
+      status: 'active',
+      trigger_source: triggerSource,
+      pipeline_run_id: pipelineRunId,
+      created_at: new Date().toISOString(),
+    });
+    return json({
+      data: {
+        dataset_id: datasetId,
+        feature_code: feature.feature_code,
+        records_created: 0,
+        total_statements: 0,
+        errors: [],
+        status: 'success',
+        trigger_source: triggerSource,
+        pipeline_run_id: pipelineRunId,
+        skipped_reason: 'Toolkit feature — no data model to seed',
+      },
+    });
+  }
 
   try {
     // Check for a pre-built template first (reliable, no AI guessing)
@@ -120,7 +150,10 @@ export async function handleGenerate(req: Request): Promise<Response> {
       // Fall back to AI generation for features without templates
       const criteria = (feature.acceptance_criteria as string[]) || [];
       const specContext = buildSpecContext(feature.title, feature.description, criteria);
-      const schemaHint = await getSchemaHint();
+
+      // Try to load data-model.md for targeted schema context instead of full DB dump
+      const dataModelContext = await getDataModelContext(featureId, supabase);
+      const schemaHint = dataModelContext || await getSchemaHint();
 
       const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
       if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
@@ -205,7 +238,7 @@ export async function handleList(req: Request): Promise<Response> {
 
   const { data: datasets } = await supabase
     .from('test_data_sets')
-    .select('id, feature_id, generated_by, records_created, status, created_at')
+    .select('id, feature_id, generated_by, records_created, status, trigger_source, created_at')
     .eq('feature_id', featureId)
     .order('created_at', { ascending: false })
     .limit(20);
@@ -215,14 +248,7 @@ export async function handleList(req: Request): Promise<Response> {
 
 // ── Helpers ──
 
-function buildSpecContext(title: string, description: string | null, criteria: string[]): string {
-  const parts = [`Feature: ${title}`];
-  if (description) parts.push(`Description: ${description}`);
-  if (criteria.length > 0) {
-    parts.push('Acceptance Criteria:\n' + criteria.map((c, i) => `${i + 1}. ${c}`).join('\n'));
-  }
-  return parts.join('\n\n');
-}
+// buildSpecContext, getDataModelContext, GENERATE_PROMPT imported from helpers.ts
 
 async function getSchemaHint(): Promise<string> {
   try {
@@ -285,18 +311,4 @@ async function executeSql(input: string | string[], featureId: string) {
   return { inserted, total: statements.length, errors };
 }
 
-const GENERATE_PROMPT = `You are a test data generator for a gig economy platform (OwnYourGig). Generate realistic SQL INSERT statements for testing the described feature.
-
-Rules:
-- Return ONLY valid PostgreSQL SQL — no markdown fences, no explanations
-- Use gen_random_uuid() for UUID primary keys
-- Use ON CONFLICT DO NOTHING for idempotent inserts
-- Generate 5-10 realistic records relevant to the feature
-- Include realistic Australian names, addresses, phone numbers, ABNs
-- Never use real PII — all data must be fictional but realistic
-- Maintain referential integrity across related tables
-- Include diverse data: different states, amounts, dates, categories
-- Each statement on its own line ending with semicolon
-- ONLY use tables and columns that appear in the provided schema
-- For columns marked DEFAULT, you may omit them from INSERT (they auto-fill)
-- Do NOT guess column names — use exactly the names from the schema`;
+// GENERATE_PROMPT imported from helpers.ts

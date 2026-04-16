@@ -346,6 +346,7 @@ export interface ScriptListItem {
   is_custom_modified: boolean;
   last_run_result: ScriptRunResult | null;
   last_run_at: string | null;
+  generation_notes: string | null;
   created_at: string;
 }
 
@@ -359,6 +360,24 @@ export interface GuidanceListResult {
 export interface RecommendationListResult {
   recommendations: ImprovementRecommendation[];
 }
+
+// --- Gate Warning Types (FR-145) ---
+
+export type GateType = 'schema' | 'selector' | 'infrastructure' | 'state' | 'smoke';
+export type GateLevel = 'PASS' | 'WARN' | 'FAIL' | 'FIX';
+
+export interface GateWarning {
+  level: GateLevel;
+  type: GateType;
+  message: string;
+}
+
+export interface GateWarningDismissal {
+  dismissed: boolean;
+  dismissedAt: string;
+}
+
+export type GateWarningState = Record<string, GateWarningDismissal>;
 
 // --- v1 Compat Types (kept for existing components, will be removed) ---
 
