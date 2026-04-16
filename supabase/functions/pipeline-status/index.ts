@@ -241,7 +241,8 @@ Deno.serve(async (req) => {
     const featureIds = (features as FeatureRow[]).map((f) => f.id);
 
     // Batch fetch all stage data in parallel (includes SpecKit artifacts + pipeline runs)
-    const [specResult, implResult, testResult, artifactResult, pipelineResult] = await Promise.all([
+    // Test cases may exceed Supabase's 1000-row default — fetch in two batches
+    const [specResult, implResult, testBatch1, testBatch2, artifactResult, pipelineResult] = await Promise.all([
       supabase
         .from('spec_reviews')
         .select('feature_id, status')
@@ -255,7 +256,13 @@ Deno.serve(async (req) => {
       supabase
         .from('test_cases')
         .select('feature_id, passed')
-        .in('feature_id', featureIds),
+        .in('feature_id', featureIds)
+        .range(0, 999),
+      supabase
+        .from('test_cases')
+        .select('feature_id, passed')
+        .in('feature_id', featureIds)
+        .range(1000, 2999),
       supabase
         .from('feature_spec_artifacts')
         .select('feature_id, artifact_type')
@@ -266,6 +273,10 @@ Deno.serve(async (req) => {
         .in('feature_id', featureIds)
         .order('created_at', { ascending: false }),
     ]);
+    const testResult = {
+      data: [...(testBatch1.data ?? []), ...(testBatch2.data ?? [])],
+      error: testBatch1.error || testBatch2.error,
+    };
 
     if (specResult.error) return errorResponse('DB_ERROR', specResult.error.message, 500);
     if (implResult.error) return errorResponse('DB_ERROR', implResult.error.message, 500);
