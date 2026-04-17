@@ -78,7 +78,7 @@ export function SpecReviewPanel({
 
   // Gate states: features must progress through reviewed → approved before AI Review
   const needsProposalReview = featureStatus === 'proposed';
-  const needsSpecGeneration = featureStatus === 'reviewed';
+  const needsSpecGeneration = featureStatus === 'reviewed' && !spec.review;
 
   const grouped = groupItemsByType(spec.items);
 

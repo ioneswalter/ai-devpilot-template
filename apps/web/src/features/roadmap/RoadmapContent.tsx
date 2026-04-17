@@ -56,12 +56,9 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         setTestingFeature(feature);
         break;
       case 'deploy':
+        // FR-146: Open implementation panel to show deploy progress + release button
         if (feature.status === 'released') return;
-        roadmap.handleTransitionRequest({
-          featureId: feature.id,
-          fromStatus: feature.status,
-          toStatus: 'released',
-        });
+        setImplementingFeature(feature);
         break;
     }
   }, [roadmap.isAdmin, roadmap.handleTransitionRequest, pipeline]);
@@ -202,7 +199,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       {/* Spec Review Modal */}
       <Modal
         isOpen={!!reviewingFeature}
-        onClose={() => setReviewingFeature(null)}
+        onClose={() => { setReviewingFeature(null); pipeline.invalidate(); }}
         size="xl"
         showCloseButton={false}
         flush
@@ -214,7 +211,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             featureCode={reviewingFeature.feature_code}
             featureTitle={reviewingFeature.title}
             featureStatus={reviewingFeature.status}
-            onClose={() => setReviewingFeature(null)}
+            onClose={() => { setReviewingFeature(null); pipeline.invalidate(); }}
             onReviewComplete={() => {
               setReviewingFeature(null);
               roadmap.fetchFeatures();
@@ -227,7 +224,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       {/* Implementation Modal */}
       <Modal
         isOpen={!!implementingFeature}
-        onClose={() => setImplementingFeature(null)}
+        onClose={() => { setImplementingFeature(null); pipeline.invalidate(); }}
         size="xl"
         showCloseButton={false}
         flush
@@ -240,7 +237,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             featureCode={implementingFeature.feature_code}
             featureTitle={implementingFeature.title}
             featureStatus={implementingFeature.status}
-            onClose={() => setImplementingFeature(null)}
+            onClose={() => { setImplementingFeature(null); pipeline.invalidate(); }}
             onComplete={() => {
               setImplementingFeature(null);
               roadmap.fetchFeatures();
@@ -267,7 +264,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
             featureTitle={testingFeature.title}
             featureStatus={testingFeature.status}
             testCases={testingFeature.test_cases ?? []}
-            onClose={() => setTestingFeature(null)}
+            onClose={() => { setTestingFeature(null); pipeline.invalidate(); }}
             onComplete={async () => {
               await apiClient('roadmap-admin-features', {
                 method: 'PATCH',

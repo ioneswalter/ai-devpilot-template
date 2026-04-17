@@ -4,10 +4,13 @@
  * FR-142: Integrates DeployProgressPanel with real-time step visualization.
  */
 
+import { useQuery } from '@tanstack/react-query';
 import { CIResultsPanel } from './CIResultsPanel';
 import { DeployProgressPanel } from './DeployProgressPanel';
 import { ReadinessStatusPanel } from './ReadinessStatusPanel';
 import { useDeployProgress } from './useDeployProgress';
+import { useReleaseFeature } from './useReleaseFeature';
+import { supabase } from '@/lib/supabase-client';
 import type { PipelineRun, CIResults, DeployResults, ReadinessResults } from '@/lib/api/admin-api';
 
 interface PipelineStatusSectionProps {
@@ -29,6 +32,10 @@ interface PipelineStatusSectionProps {
   onRerunReadiness: () => void;
   isRerunningReadiness: boolean;
   pipeline: PipelineRun | null;
+  // FR-146: Release feature props
+  featureId?: string;
+  featureStatus?: string;
+  featureUpdatedAt?: string | null;
 }
 
 export function PipelineStatusSection({
@@ -50,9 +57,30 @@ export function PipelineStatusSection({
   onRerunReadiness,
   isRerunningReadiness,
   pipeline,
+  featureId,
+  featureStatus,
+  featureUpdatedAt,
 }: PipelineStatusSectionProps) {
+  // FR-146: Release feature hook + test counts
+  const releaseFeature = useReleaseFeature();
+  const testCountsQuery = useQuery({
+    queryKey: ['test-counts', featureId],
+    queryFn: async () => {
+      if (!featureId) return { total: 0, passed: 0, failed: 0 };
+      const { data } = await supabase.from('test_cases').select('passed').eq('feature_id', featureId);
+      const total = data?.length ?? 0;
+      const passed = data?.filter(t => t.passed === true).length ?? 0;
+      const failed = data?.filter(t => t.passed === false).length ?? 0;
+      return { total, passed, failed };
+    },
+    enabled: !!featureId && (featureStatus === 'in_testing' || featureStatus === 'released'),
+    staleTime: 10_000,
+  });
+  const testCounts = testCountsQuery.data ?? { total: 0, passed: 0, failed: 0 };
+
   // FR-142: Use deploy progress hook for real-time step data
-  const showDeployPanel = isDeploying || !!deployResults || pipeline?.current_stage === 'escalated';
+  const showDeployPanel = isDeploying || !!deployResults || pipeline?.current_stage === 'escalated'
+    || featureStatus === 'in_testing' || featureStatus === 'released';
   const deployProgress = useDeployProgress(
     pipeline?.id ?? null,
     showDeployPanel,
@@ -60,6 +88,7 @@ export function PipelineStatusSection({
 
   const currentStage = deployProgress.data?.current_stage ?? pipeline?.current_stage ?? '';
   const escalations = deployProgress.data?.escalations ?? [];
+  const hasDeployResults = !!deployResults || deployProgress.data?.deploy_results?.overall_status === 'success';
 
   return (
     <>
@@ -128,6 +157,17 @@ export function PipelineStatusSection({
           onResolve={deployProgress.resolve}
           isAcknowledging={deployProgress.isAcknowledging}
           isResolving={deployProgress.isResolving}
+          releaseGating={featureId && featureStatus ? {
+            featureStatus,
+            totalTests: testCounts?.total ?? 0,
+            passedTests: testCounts?.passed ?? 0,
+            failedTests: testCounts?.failed ?? 0,
+            hasDeployResults,
+            onRelease: () => releaseFeature.release(featureId),
+            isReleasing: releaseFeature.isReleasing,
+            releaseError: releaseFeature.error,
+            featureUpdatedAt: featureUpdatedAt ?? null,
+          } : undefined}
         />
       )}
 

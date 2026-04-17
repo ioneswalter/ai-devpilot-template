@@ -7,6 +7,18 @@ import { DeployStepRow } from './DeployStepRow';
 import { EscalationBanner } from './EscalationBanner';
 import type { DeployResults, DeployStepResult, DeployEscalation } from '@/lib/api/admin-api';
 
+interface ReleaseGating {
+  featureStatus: string;
+  totalTests: number;
+  passedTests: number;
+  failedTests: number;
+  hasDeployResults: boolean;
+  onRelease: () => void;
+  isReleasing: boolean;
+  releaseError: Error | null;
+  featureUpdatedAt: string | null;
+}
+
 interface DeployProgressPanelProps {
   deployResults: DeployResults | null;
   escalations: DeployEscalation[];
@@ -19,6 +31,7 @@ interface DeployProgressPanelProps {
   onResolve: (escalationId: string, notes: string) => void;
   isAcknowledging: boolean;
   isResolving: boolean;
+  releaseGating?: ReleaseGating;
 }
 
 function formatTotalDuration(startedAt: string, completedAt: string): string {
@@ -54,6 +67,66 @@ function SuccessSummary({ results }: { results: DeployResults }) {
   );
 }
 
+function ReleaseSection({ gating }: { gating: ReleaseGating }) {
+  const { featureStatus, totalTests, passedTests, failedTests, hasDeployResults, onRelease, isReleasing, releaseError, featureUpdatedAt } = gating;
+
+  // Already released — show timestamp
+  if (featureStatus === 'released') {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded p-2.5 flex items-center gap-2">
+        <span className="text-green-600 text-sm">&#10003;</span>
+        <div>
+          <p className="text-xs font-semibold text-green-800">Released</p>
+          {featureUpdatedAt && (
+            <p className="text-xs text-green-600">{new Date(featureUpdatedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Not in_testing or not deployed — don't show
+  if (featureStatus !== 'in_testing' || !hasDeployResults) return null;
+
+  const allTestsPass = totalTests > 0 && failedTests === 0;
+  const noTests = totalTests === 0;
+  const isDisabled = failedTests > 0 || isReleasing;
+
+  return (
+    <div className="border-t border-gray-200 pt-2 mt-1 space-y-1.5">
+      {releaseError && (
+        <div className="text-xs bg-red-50 border border-red-200 rounded p-2 text-red-700">
+          Release failed: {releaseError.message}
+        </div>
+      )}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {noTests && (
+            <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">No tests run</span>
+          )}
+          {failedTests > 0 && (
+            <span className="text-xs text-red-600">{failedTests} test(s) failing — fix before releasing</span>
+          )}
+          {allTestsPass && (
+            <span className="text-xs text-green-600">{passedTests}/{totalTests} tests passing</span>
+          )}
+        </div>
+        <button
+          onClick={onRelease}
+          disabled={isDisabled}
+          className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+            isDisabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-green-600 text-white hover:bg-green-700'
+          }`}
+        >
+          {isReleasing ? 'Releasing...' : 'Release Feature'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function DeployProgressPanel({
   deployResults,
   escalations,
@@ -66,6 +139,7 @@ export function DeployProgressPanel({
   onResolve,
   isAcknowledging,
   isResolving,
+  releaseGating,
 }: DeployProgressPanelProps) {
   const migrations: DeployStepResult[] = deployResults?.migrations
     ? (Array.isArray(deployResults.migrations) ? deployResults.migrations : []) : [];
@@ -174,6 +248,9 @@ export function DeployProgressPanel({
 
       {/* Success summary */}
       {isComplete && deployResults && <SuccessSummary results={deployResults} />}
+
+      {/* FR-146: Release Feature action */}
+      {releaseGating && <ReleaseSection gating={releaseGating} />}
     </div>
   );
 }

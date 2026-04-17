@@ -338,6 +338,8 @@ export function ImplementationPanel({
           onRerunReadiness={impl.rerunReadiness}
           isRerunningReadiness={impl.isRerunningReadiness}
           pipeline={impl.pipeline}
+          featureId={featureId}
+          featureStatus={featureStatus}
         />
 
         <PipelineDashboard />

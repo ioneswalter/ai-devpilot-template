@@ -87,6 +87,7 @@ export function useTestExecution(featureId: string | null) {
         queryKey: [...READINESS_KEY, featureId],
       });
       queryClient.invalidateQueries({ queryKey: ['product-features'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline-status'] });
     },
   });
 
