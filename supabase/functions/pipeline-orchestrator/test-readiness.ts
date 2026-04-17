@@ -3,41 +3,24 @@
  * After deploy succeeds, seeds test data, generates test cases, updates
  * feature status, and creates a notification. Non-blocking: failures
  * in any step don't prevent other steps from running.
+ *
+ * Logic is split across:
+ * - test-readiness-seed.ts  (Step 1: seed data generation)
+ * - test-readiness-cases.ts (Step 2: test case generation)
+ * - test-readiness-automation.ts (Steps 2.5-4: automated tests, status, notification)
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
-import Anthropic from 'npm:@anthropic-ai/sdk@0.39.0';
-import { logAIUsageFromEnv } from '../_shared/usage-logger.ts';
-import pg from 'npm:pg@8.13.1';
 import { appendLog } from './shared.ts';
-
-interface ReadinessStepResult {
-  status: 'success' | 'failed' | 'skipped';
-  duration_ms: number;
-  errors: string[];
-}
-
-interface SeedDataResult extends ReadinessStepResult {
-  records: number;
-}
-
-interface TestCaseResult extends ReadinessStepResult {
-  created: number;
-  skipped: number;
-}
-
-interface StatusUpdateResult {
-  status: 'success' | 'failed';
-  from: string;
-  to: string;
-}
-
-interface AutomatedTestsResult extends ReadinessStepResult {
-  total: number;
-  passed: number;
-  failed: number;
-  is_release_ready: boolean;
-}
+import { seedTestData, type SeedDataResult } from './test-readiness-seed.ts';
+import { generateTestCases, type TestCaseResult } from './test-readiness-cases.ts';
+import {
+  runAutomatedTests,
+  updateFeatureStatus,
+  createNotification,
+  type AutomatedTestsResult,
+  type StatusUpdateResult,
+} from './test-readiness-automation.ts';
 
 interface ReadinessResults {
   seed_data: SeedDataResult;
@@ -117,13 +100,17 @@ export async function runTestReadiness(
   // Step 3: Update feature status
   results.status_update = await updateFeatureStatus(supabase, pipelineId, featureId, feature?.status ?? '');
 
-  // Step 4: Create notification (J2 — included here for pipeline completeness)
-  await createNotification(supabase, pipelineId, featureId, feature, results);
+  // Step 4: Create notification
+  await createNotification(
+    supabase, pipelineId, featureId, feature,
+    results.status_update.status,
+    results.test_cases.created,
+    results.seed_data.records,
+  );
 
   // Finalize
   results.completed_at = new Date().toISOString();
   const stepStatuses = [results.seed_data.status, results.test_cases.status, results.status_update.status];
-  // Include automated tests only if they actually ran
   if (results.automated_tests.status !== 'skipped') {
     stepStatuses.push(results.automated_tests.status);
   }
@@ -167,350 +154,6 @@ function buildSpecContext(
   if (implRequest?.implementation_notes) parts.push(`Notes: ${implRequest.implementation_notes}`);
   return parts.join('\n\n');
 }
-
-// ── Step 1: Seed Test Data ──
-
-async function seedTestData(
-  supabase: ReturnType<typeof createClient>,
-  pipelineId: string,
-  featureId: string,
-  specContext: string,
-): Promise<SeedDataResult> {
-  const start = Date.now();
-  if (!specContext || specContext.length < 20) {
-    await appendLog(supabase, pipelineId, 'warn', 'No spec context for seed data — skipping');
-    return { status: 'skipped', duration_ms: Date.now() - start, errors: [], records: 0 };
-  }
-
-  try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) {
-      return { status: 'skipped', duration_ms: Date.now() - start, errors: ['ANTHROPIC_API_KEY not set'], records: 0 };
-    }
-
-    const anthropic = new Anthropic({ apiKey });
-    const msg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: `Given this feature context, generate realistic test data as a series of SQL INSERT statements that would help test the feature. Only generate INSERTs for tables that likely exist in a Supabase PostgreSQL database for a gig platform (service providers, customers, jobs, etc). Each INSERT must be idempotent (use ON CONFLICT DO NOTHING where possible). Return ONLY valid SQL, no markdown fences or explanation.
-
-Feature context:
-${specContext}
-
-Requirements:
-- Generate 3-8 realistic test records
-- Use UUIDs for IDs (use gen_random_uuid())
-- Include realistic data (names, descriptions, amounts)
-- Target tables: product_features, test_cases, or domain tables mentioned in context
-- Each statement on its own line, ending with semicolon`
-      }],
-    });
-
-    logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
-      operationType: 'test_readiness', inputTokens: msg.usage?.input_tokens ?? 0,
-      outputTokens: msg.usage?.output_tokens ?? 0,
-    });
-    const sqlText = (msg.content[0] as { text: string }).text.trim();
-    if (!sqlText || sqlText.length < 10) {
-      return { status: 'skipped', duration_ms: Date.now() - start, errors: ['AI returned empty SQL'], records: 0 };
-    }
-
-    // Execute via npm:pg
-    const dbUrl = buildDbUrl();
-    const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-    await client.connect();
-
-    const statements = sqlText.split(';').map((s: string) => s.trim()).filter((s: string) => s.length > 5);
-    let inserted = 0;
-    const errors: string[] = [];
-
-    for (const stmt of statements) {
-      try {
-        await client.query(stmt);
-        inserted++;
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(msg.substring(0, 200));
-      }
-    }
-
-    await client.end();
-    await appendLog(supabase, pipelineId, 'info', `Seed data: ${inserted}/${statements.length} records inserted`);
-
-    return {
-      status: errors.length === 0 ? 'success' : (inserted > 0 ? 'success' : 'failed'),
-      duration_ms: Date.now() - start,
-      errors,
-      records: inserted,
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    await appendLog(supabase, pipelineId, 'warn', `Seed data failed: ${msg}`);
-    return { status: 'failed', duration_ms: Date.now() - start, errors: [msg], records: 0 };
-  }
-}
-
-function buildDbUrl(): string {
-  const ref = (Deno.env.get('SUPABASE_URL') ?? '').replace('https://', '').split('.')[0];
-  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  return `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
-}
-
-// ── Step 2: Generate Test Cases ──
-
-async function generateTestCases(
-  supabase: ReturnType<typeof createClient>,
-  pipelineId: string,
-  featureId: string,
-  feature: Record<string, unknown> | null,
-  specContext: string,
-): Promise<TestCaseResult> {
-  const start = Date.now();
-  if (!specContext || specContext.length < 20) {
-    await appendLog(supabase, pipelineId, 'warn', 'No spec context for test cases — skipping');
-    return { status: 'skipped', duration_ms: Date.now() - start, errors: [], created: 0, skipped: 0 };
-  }
-
-  try {
-    const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!apiKey) {
-      return { status: 'skipped', duration_ms: Date.now() - start, errors: ['ANTHROPIC_API_KEY not set'], created: 0, skipped: 0 };
-    }
-
-    const anthropic = new Anthropic({ apiKey });
-    const featureCode = (feature?.feature_code ?? 'FR-XXX') as string;
-
-    const msg = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: `Given this feature context, generate test cases as a JSON array. Each test case should cover a user journey or acceptance scenario.
-
-Feature context:
-${specContext}
-
-Return a JSON array (no markdown fences) where each object has:
-- "title": short test case title (max 80 chars)
-- "description": what to test
-- "test_type": "e2e"
-- "priority": "high" or "medium"
-- "expected_result": what success looks like
-
-Generate 4-10 test cases covering the main user journeys and edge cases.`
-      }],
-    });
-
-    logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
-      operationType: 'test_readiness', inputTokens: msg.usage?.input_tokens ?? 0,
-      outputTokens: msg.usage?.output_tokens ?? 0,
-    });
-    const rawJson = (msg.content[0] as { text: string }).text.trim();
-    let testCases: Array<{ title: string; description: string; test_type: string; priority: string; expected_result: string }>;
-
-    try {
-      testCases = JSON.parse(rawJson);
-    } catch {
-      // Try extracting JSON from markdown
-      const match = rawJson.match(/\[[\s\S]*\]/);
-      if (!match) throw new Error('AI did not return valid JSON array');
-      testCases = JSON.parse(match[0]);
-    }
-
-    // Check for existing test cases to avoid duplicates
-    const { data: existing } = await supabase
-      .from('test_cases')
-      .select('title')
-      .eq('feature_id', featureId);
-
-    const existingTitles = new Set((existing ?? []).map((t: { title: string }) => t.title.toLowerCase()));
-
-    let created = 0;
-    let skippedCount = 0;
-    const errors: string[] = [];
-
-    for (let i = 0; i < testCases.length; i++) {
-      const tc = testCases[i];
-      if (existingTitles.has(tc.title.toLowerCase())) {
-        skippedCount++;
-        continue;
-      }
-
-      const testCode = `${featureCode}-TC${String(i + 1).padStart(2, '0')}`;
-      const { error } = await supabase.from('test_cases').insert({
-        test_code: testCode,
-        feature_id: featureId,
-        title: tc.title,
-        description: tc.description,
-        test_type: tc.test_type || 'e2e',
-        priority: tc.priority || 'medium',
-        expected_result: tc.expected_result,
-        status: 'draft',
-        created_by: 'ai-pipeline',
-      });
-
-      if (error) {
-        // Handle duplicate test_code
-        if (error.message?.includes('duplicate')) {
-          skippedCount++;
-        } else {
-          errors.push(`${tc.title}: ${error.message}`);
-        }
-      } else {
-        created++;
-      }
-    }
-
-    await appendLog(supabase, pipelineId, 'info',
-      `Test cases: ${created} created, ${skippedCount} skipped (existing)`);
-
-    return {
-      status: created > 0 || skippedCount > 0 ? 'success' : (errors.length > 0 ? 'failed' : 'skipped'),
-      duration_ms: Date.now() - start,
-      errors,
-      created,
-      skipped: skippedCount,
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    await appendLog(supabase, pipelineId, 'warn', `Test case generation failed: ${msg}`);
-    return { status: 'failed', duration_ms: Date.now() - start, errors: [msg], created: 0, skipped: 0 };
-  }
-}
-
-// ── Step 3: Update Feature Status ──
-
-async function updateFeatureStatus(
-  supabase: ReturnType<typeof createClient>,
-  pipelineId: string,
-  featureId: string,
-  currentStatus: string,
-): Promise<StatusUpdateResult> {
-  try {
-    if (currentStatus === 'testing' || currentStatus === 'released') {
-      await appendLog(supabase, pipelineId, 'info',
-        `Feature already "${currentStatus}" — skipping status update`);
-      return { status: 'success', from: currentStatus, to: currentStatus };
-    }
-
-    const { error } = await supabase.from('product_features').update({
-      status: 'testing',
-      updated_at: new Date().toISOString(),
-    }).eq('id', featureId);
-
-    if (error) throw new Error(error.message);
-
-    await appendLog(supabase, pipelineId, 'info',
-      `Feature status: ${currentStatus} → testing`);
-
-    return { status: 'success', from: currentStatus, to: 'testing' };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { status: 'failed', from: currentStatus, to: 'testing' };
-  }
-}
-
-// ── Step 4: Create Notification ──
-
-async function createNotification(
-  supabase: ReturnType<typeof createClient>,
-  pipelineId: string,
-  featureId: string,
-  feature: Record<string, unknown> | null,
-  results: ReadinessResults,
-): Promise<void> {
-  try {
-    const featureTitle = (feature?.feature_code ?? '') + ' ' + (feature?.title ?? 'Feature');
-    const type = results.status_update.status === 'success' ? 'test_ready' : 'readiness_failed';
-    const details = [
-      results.test_cases.created > 0 ? `${results.test_cases.created} test cases generated` : '',
-      results.seed_data.records > 0 ? `${results.seed_data.records} seed records created` : '',
-    ].filter(Boolean).join(', ');
-
-    await supabase.from('pipeline_notifications').insert({
-      feature_id: featureId,
-      pipeline_id: pipelineId,
-      type,
-      title: `${featureTitle} ready for testing`,
-      message: details || 'Feature is ready for testing',
-    });
-  } catch (err: unknown) {
-    // Non-blocking — just log
-    await appendLog(supabase, pipelineId, 'warn',
-      `Notification creation failed: ${err instanceof Error ? err.message : String(err)}`);
-  }
-}
-
-// ── Step 2.5: Run Automated Tests (FR-109 J4) ──
-
-async function runAutomatedTests(
-  supabase: ReturnType<typeof createClient>,
-  pipelineId: string,
-  featureId: string,
-): Promise<AutomatedTestsResult> {
-  const start = Date.now();
-  try {
-    // Check if any automated scripts exist for this feature
-    const { data: scripts, error: queryErr } = await supabase
-      .from('automated_test_scripts')
-      .select('id')
-      .eq('feature_id', featureId)
-      .eq('is_stale', false);
-
-    if (queryErr || !scripts?.length) {
-      await appendLog(supabase, pipelineId, 'info', 'No automated scripts — skipping');
-      return { status: 'skipped', duration_ms: Date.now() - start, errors: [], total: 0, passed: 0, failed: 0, is_release_ready: false };
-    }
-
-    // Call the test-automation Edge Function execute-suite
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/test-automation?action=execute-suite`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${serviceKey}`,
-      },
-      body: JSON.stringify({
-        feature_id: featureId,
-        environment: 'development',
-        pipeline_run_id: pipelineId,
-      }),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Suite execution failed: ${errText.substring(0, 200)}`);
-    }
-
-    const result = await response.json();
-    const data = result.data;
-
-    await appendLog(supabase, pipelineId, 'info',
-      `Automated tests: ${data.passed}/${data.total_scripts} passed, ${data.failed} failed`);
-
-    return {
-      status: data.failed > 0 ? 'failed' : 'success',
-      duration_ms: Date.now() - start,
-      errors: data.failed > 0 ? [`${data.failed} automated test(s) failed`] : [],
-      total: data.total_scripts,
-      passed: data.passed,
-      failed: data.failed,
-      is_release_ready: data.is_release_ready,
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    await appendLog(supabase, pipelineId, 'warn', `Automated tests failed: ${msg}`);
-    return { status: 'failed', duration_ms: Date.now() - start, errors: [msg], total: 0, passed: 0, failed: 0, is_release_ready: false };
-  }
-}
-
-// ── Failure handler ──
 
 async function failReadiness(
   supabase: ReturnType<typeof createClient>,
