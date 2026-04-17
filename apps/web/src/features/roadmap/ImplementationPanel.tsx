@@ -1,5 +1,5 @@
 /** ImplementationPanel - AI implementation workflow UI (FR-105) */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
 import { useImplementation } from './useImplementation';
@@ -14,6 +14,7 @@ import { PipelineStatusSection } from './PipelineStatusSection';
 import { ComplexityScorePanel } from './ComplexityScorePanel';
 import { LearningInsightsPanel } from './LearningInsightsPanel';
 import { PipelineDashboard } from './PipelineDashboard';
+import { CompliancePanel } from './CompliancePanel';
 import { SpecRequiredGate, ReviewBlockingGate, ManualImplGate } from './ImplementationGates';
 import { SessionVersionWarning } from '@/features/constitution/components/SessionVersionWarning';
 import { useConstitutionVersions } from '@/features/constitution/hooks/useConstitutionVersions';
@@ -36,6 +37,10 @@ export function ImplementationPanel({
   const [isWritingCode, setIsWritingCode] = useState(false);
   const [ready, setReady] = useState(false);
   const [isAcceptingAll, setIsAcceptingAll] = useState(false);
+  const [complianceBlocked, setComplianceBlocked] = useState(false);
+  const handleComplianceBlocked = useCallback((blocked: boolean) => {
+    setComplianceBlocked(blocked);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 800);
@@ -172,6 +177,8 @@ export function ImplementationPanel({
           </div>
         )}
 
+        <CompliancePanel featureId={featureId} taskItems={impl.taskItems} onBlockedChange={handleComplianceBlocked} />
+
         <PipelineStatusSection isPipelineRunning={impl.isPipelineRunning} pipelineProgress={impl.pipelineProgress} pipelineCurrentTask={impl.pipelineCurrentTask} isCancellingPipeline={impl.isCancellingPipeline} onCancelPipeline={() => impl.cancelPipeline().catch(() => {})} isCIRunning={impl.isCIRunning} ciResults={impl.ciResults} onRerunCI={impl.rerunCI} isRerunningCI={impl.isRerunningCI} isDeploying={impl.isDeploying} deployResults={impl.deployResults} onRedeploy={impl.redeploy} isRedeploying={impl.isRedeploying} isReadying={impl.isReadying} readinessResults={impl.readinessResults} onRerunReadiness={impl.rerunReadiness} isRerunningReadiness={impl.isRerunningReadiness} pipeline={impl.pipeline} featureId={featureId} featureStatus={featureStatus} />
         <PipelineDashboard />
         <LearningInsightsPanel />
@@ -195,6 +202,7 @@ export function ImplementationPanel({
         isImplementing={impl.isImplementing} canImplement={impl.canImplement}
         isComplete={!impl.canImplement && impl.implementedCount > 0 && !isWritingCode}
         codeApplied={impl.request?.code_applied ?? false}
+        complianceBlocked={complianceBlocked}
         taskCount={impl.taskItems.length} pendingCount={impl.pendingCount}
         acceptedCount={impl.acceptedCount} rejectedCount={impl.rejectedCount}
         implementedCount={impl.implementedCount} failedImplCount={impl.failedImplCount}

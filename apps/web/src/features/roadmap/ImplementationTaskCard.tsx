@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import type { ImplementationTaskItem } from '@/lib/api/admin-api';
+import { TaskAuditTrail } from './TaskAuditTrail';
 
 interface ImplementationTaskCardProps {
   item: ImplementationTaskItem;
@@ -233,6 +234,11 @@ export function ImplementationTaskCard({
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Fix audit trail (FR-134) */}
+          {item.fix_audit_trail && item.fix_audit_trail.length > 0 && (
+            <TaskAuditTrail auditTrail={item.fix_audit_trail} />
           )}
         </div>
       </div>

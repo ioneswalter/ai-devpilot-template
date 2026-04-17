@@ -8,6 +8,8 @@ interface ImplementationFooterProps {
   /** True when all accepted tasks have been processed (none remaining) */
   isComplete: boolean;
   codeApplied: boolean;
+  /** True when constitution compliance check has failed (FR-139) */
+  complianceBlocked?: boolean;
   taskCount: number;
   pendingCount: number;
   acceptedCount: number;
@@ -24,6 +26,7 @@ export function ImplementationFooter({
   canImplement,
   isComplete,
   codeApplied,
+  complianceBlocked = false,
   taskCount,
   pendingCount,
   acceptedCount,
@@ -55,6 +58,14 @@ export function ImplementationFooter({
               style={{ width: `${progressPct}%` }}
             />
           </div>
+        </div>
+      )}
+      {complianceBlocked && (
+        <div className="px-4 py-2 bg-red-50 border-b border-red-100 flex items-center gap-2">
+          <span className="text-red-500 text-xs" aria-hidden="true">{'\u26D4'}</span>
+          <span className="text-xs text-red-700 font-medium">
+            Constitution violations must be resolved before approving. Run Re-scan after fixing.
+          </span>
         </div>
       )}
       <div className="p-3 bg-gray-50 flex items-center justify-between">
@@ -91,7 +102,9 @@ export function ImplementationFooter({
           {isComplete && !codeApplied && !isImplementing && (
             <button
               onClick={onWriteCode}
-              className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+              disabled={complianceBlocked}
+              title={complianceBlocked ? 'Resolve constitution violations before proceeding' : undefined}
+              className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 ${complianceBlocked ? 'bg-gray-400 text-white cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />

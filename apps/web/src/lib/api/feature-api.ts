@@ -12,6 +12,7 @@ import type {
   AdminOverviewData, AdminUsersData, AdminFeedData, AdminVerificationsData,
   LmsOverviewData, LmsCourseDetailData, LmsUserProgressData,
 } from '@/features/admin/types';
+import type { FixAuditRecord } from '@/lib/schemas/fix-audit';
 
 export const featureApiMethods = {
   getOverview: () =>
@@ -287,6 +288,7 @@ export interface ImplementationTaskItem {
   generated_code: string | null;
   ai_log: string | null;
   complexity_score: ComplexityScore | null;
+  fix_audit_trail: FixAuditRecord[] | null;
 }
 
 export interface ImplementationRequestWithItems {
