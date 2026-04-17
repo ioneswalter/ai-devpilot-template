@@ -14,6 +14,7 @@ import { PipelineStatusSection } from './PipelineStatusSection';
 import { ComplexityScorePanel } from './ComplexityScorePanel';
 import { LearningInsightsPanel } from './LearningInsightsPanel';
 import { PipelineDashboard } from './PipelineDashboard';
+import { SpecRequiredGate, ReviewBlockingGate, ManualImplGate } from './ImplementationGates';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -25,12 +26,7 @@ interface ImplementationPanelProps {
 }
 
 export function ImplementationPanel({
-  featureId,
-  featureCode,
-  featureTitle,
-  featureStatus,
-  onClose,
-  onComplete,
+  featureId, featureCode, featureTitle, featureStatus, onClose, onComplete,
 }: ImplementationPanelProps) {
   const logRef = useRef<HTMLDivElement>(null);
   const hasScrolledToLog = useRef(false);
@@ -46,16 +42,11 @@ export function ImplementationPanel({
 
   const impl = useImplementation(featureId);
 
-  // Check spec review status (only matters for approved features about to start first build)
   const specReviewQuery = useQuery({
     queryKey: ['spec-review-gate', featureId],
     queryFn: async () => {
-      try {
-        const res = await adminApi.getReview(featureId);
-        return res.data.review;
-      } catch {
-        return null; // No review exists — AI Review was skipped, acceptable
-      }
+      try { return (await adminApi.getReview(featureId)).data.review; }
+      catch { return null; }
     },
     enabled: featureStatus === 'approved',
     staleTime: 5_000,
@@ -64,8 +55,6 @@ export function ImplementationPanel({
   const specReviewBlocking = featureStatus === 'approved' && specReviewStatus === 'in_review';
   const specReviewSentBack = featureStatus === 'approved' && specReviewStatus === 'sent_back';
 
-  // Auto-scroll to log when panel opens with an active implementation
-  // NOTE: must be before any early returns to satisfy React hooks rules
   useEffect(() => {
     if (!hasScrolledToLog.current && impl.isImplementing && logRef.current) {
       hasScrolledToLog.current = true;
@@ -74,6 +63,7 @@ export function ImplementationPanel({
       });
     }
   }, [impl.isImplementing]);
+
   if (!ready || impl.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -83,120 +73,22 @@ export function ImplementationPanel({
     );
   }
 
-  // Workflow gate: block build panel for features that haven't been specified
   if (!impl.request && (featureStatus === 'proposed' || featureStatus === 'reviewed')) {
-    const isProposed = featureStatus === 'proposed';
-    return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-2 mb-1">
-            <code className="text-xs font-mono text-blue-600">{featureCode}</code>
-            <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
-          </div>
-        </div>
-        <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
-          <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-amber-800">
-              {isProposed ? 'Proposal Review Required' : 'Specification Required'}
-            </p>
-            <p className="text-xs text-amber-700">
-              {isProposed
-                ? <>Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> then <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> before building.</>
-                : <>Run <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> to generate the specification before building.</>
-              }
-            </p>
-          </div>
-        </div>
-        <div className="flex-1" />
-        <div className="border-t p-3 flex justify-end">
-          <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-        </div>
-      </div>
-    );
+    return <SpecRequiredGate featureCode={featureCode} featureTitle={featureTitle} featureStatus={featureStatus} onClose={onClose} />;
   }
 
-  // Workflow gate: block build if spec review is still in progress or sent back
   if (!impl.request && (specReviewBlocking || specReviewSentBack)) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b">
-          <div className="flex items-center gap-2 mb-1">
-            <code className="text-xs font-mono text-blue-600">{featureCode}</code>
-            <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
-          </div>
-        </div>
-        <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
-          <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-amber-800">
-              {specReviewSentBack ? 'Spec Review Sent Back' : 'Spec Review In Progress'}
-            </p>
-            <p className="text-xs text-amber-700">
-              {specReviewSentBack
-                ? 'The spec review was sent back for revision. Address the feedback in the Spec panel before building.'
-                : 'The AI Spec Review is still in progress. Accept the review items and Approve in the Spec panel before building.'}
-            </p>
-          </div>
-        </div>
-        <div className="flex-1" />
-        <div className="border-t p-3 flex justify-end">
-          <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-        </div>
-      </div>
-    );
+    return <ReviewBlockingGate featureCode={featureCode} featureTitle={featureTitle} isSentBack={specReviewSentBack} onClose={onClose} />;
   }
 
-  // No request yet
   if (!impl.request) {
-    // Feature already in_development but no AI request — implemented outside AI workflow
     if (featureStatus === 'in_development') {
-      return (
-        <div className="flex flex-col h-full">
-          <div className="p-4 border-b">
-            <div className="flex items-center gap-2 mb-1">
-              <code className="text-xs font-mono text-blue-600">{featureCode}</code>
-              <h3 className="text-sm font-semibold text-gray-900 truncate">{featureTitle}</h3>
-            </div>
-          </div>
-          <div className="flex-1 p-4 flex items-center justify-center">
-            <div className="text-center max-w-xs space-y-3">
-              <div className="w-12 h-12 mx-auto bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                </svg>
-              </div>
-              <h4 className="text-sm font-semibold text-gray-900">Implemented manually</h4>
-              <p className="text-xs text-gray-500">
-                This feature was implemented outside the AI workflow. You can still start an AI implementation to generate additional code or review tasks.
-              </p>
-              <button
-                onClick={() => impl.requestImplementation().catch(() => {})}
-                disabled={impl.isRequesting}
-                className="px-4 py-2 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
-              >
-                {impl.isRequesting ? 'Starting...' : 'Start AI Implementation Anyway'}
-              </button>
-            </div>
-          </div>
-          <div className="border-t p-3 flex justify-end">
-            <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
-          </div>
-        </div>
-      );
+      return <ManualImplGate featureCode={featureCode} featureTitle={featureTitle} isRequesting={impl.isRequesting} onStartAnyway={() => impl.requestImplementation().catch(() => {})} onClose={onClose} />;
     }
-
-    // Approved feature, no request yet — show start form
     return (
       <ImplementationStartForm
-        featureCode={featureCode}
-        featureTitle={featureTitle}
-        isRequesting={impl.isRequesting}
-        requestError={impl.requestError as Error | null}
+        featureCode={featureCode} featureTitle={featureTitle}
+        isRequesting={impl.isRequesting} requestError={impl.requestError as Error | null}
         onStart={(notes) => impl.requestImplementation(notes).catch(() => {})}
         onClose={onClose}
       />
@@ -208,17 +100,13 @@ export function ImplementationPanel({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-4 border-b bg-white">
         <div className="flex items-center gap-2 mb-1">
           <code className="text-xs font-mono text-blue-600">{featureCode}</code>
           <h3 className="text-sm font-semibold text-gray-900 truncate flex-1">{featureTitle}</h3>
           {impl.pendingCount > 0 && !impl.isImplementing && (
             <button
-              onClick={() => {
-                setIsAcceptingAll(true);
-                impl.acceptAllTasks().finally(() => setIsAcceptingAll(false));
-              }}
+              onClick={() => { setIsAcceptingAll(true); impl.acceptAllTasks().finally(() => setIsAcceptingAll(false)); }}
               disabled={isAcceptingAll || impl.isUpdating}
               className="px-2.5 py-1 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shrink-0"
             >
@@ -239,14 +127,10 @@ export function ImplementationPanel({
         </div>
       </div>
 
-      {/* Error banner */}
       {impl.request?.error_message && (
-        <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
-          {impl.request.error_message}
-        </div>
+        <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">{impl.request.error_message}</div>
       )}
 
-      {/* Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {aiPlan?.summary && (
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
@@ -254,7 +138,6 @@ export function ImplementationPanel({
             <p className="text-sm text-blue-900">{aiPlan.summary}</p>
           </div>
         )}
-
         {aiPlan?.architecture_notes && (
           <div className="bg-gray-50 border rounded-lg p-3">
             <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Architecture Notes</h4>
@@ -262,137 +145,58 @@ export function ImplementationPanel({
           </div>
         )}
 
-        {/* Task Items */}
         <div>
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Implementation Tasks ({impl.taskItems.length})
-          </h4>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Implementation Tasks ({impl.taskItems.length})</h4>
           <div className="space-y-2">
             {impl.taskItems.map((item, i) => (
               <div key={item.id} className="space-y-1">
-                <ImplementationTaskCard
-                  item={item}
-                  index={i}
-                  onDecision={(itemId, data) => impl.updateTaskItem(itemId, data)}
-                  onComment={(itemId, comment) => impl.updateTaskItem(itemId, { comment })}
-                  isUpdating={impl.isUpdating}
-                  isImplementing={impl.isImplementing}
-                />
-                {item.complexity_score && (
-                  <ComplexityScorePanel
-                    score={item.complexity_score}
-                    taskItems={impl.taskItems}
-                    parentTaskId={item.id}
-                  />
-                )}
+                <ImplementationTaskCard item={item} index={i} onDecision={(id, data) => impl.updateTaskItem(id, data)} onComment={(id, comment) => impl.updateTaskItem(id, { comment })} isUpdating={impl.isUpdating} isImplementing={impl.isImplementing} />
+                {item.complexity_score && <ComplexityScorePanel score={item.complexity_score} taskItems={impl.taskItems} parentTaskId={item.id} />}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Add manual task */}
         {showAddForm ? (
-          <AddTaskForm
-            isAdding={impl.isAdding}
-            onAdd={(task) => impl.addTaskItem(task).then(() => setShowAddForm(false))}
-            onCancel={() => setShowAddForm(false)}
-          />
+          <AddTaskForm isAdding={impl.isAdding} onAdd={(task) => impl.addTaskItem(task).then(() => setShowAddForm(false))} onCancel={() => setShowAddForm(false)} />
         ) : !impl.isImplementing ? (
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="w-full py-2 text-xs font-medium text-gray-500 border border-dashed rounded-lg hover:bg-gray-50 hover:text-gray-700 transition-colors"
-          >
-            + Add task manually
-          </button>
+          <button onClick={() => setShowAddForm(true)} className="w-full py-2 text-xs font-medium text-gray-500 border border-dashed rounded-lg hover:bg-gray-50 hover:text-gray-700 transition-colors">+ Add task manually</button>
         ) : null}
 
-        {/* Implementation prompt fallback */}
         {!aiPlan && impl.request?.implementation_prompt && (
           <div className="border-t pt-4">
-            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              Implementation Prompt
-            </h4>
-            <pre className="text-xs text-gray-700 bg-gray-50 border rounded-lg p-3 whitespace-pre-wrap overflow-x-auto">
-              {impl.request.implementation_prompt}
-            </pre>
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Implementation Prompt</h4>
+            <pre className="text-xs text-gray-700 bg-gray-50 border rounded-lg p-3 whitespace-pre-wrap overflow-x-auto">{impl.request.implementation_prompt}</pre>
           </div>
         )}
 
-        {/* Pipeline progress, CI, and deploy status (FR-113/114/115) */}
-        <PipelineStatusSection
-          isPipelineRunning={impl.isPipelineRunning}
-          pipelineProgress={impl.pipelineProgress}
-          pipelineCurrentTask={impl.pipelineCurrentTask}
-          isCancellingPipeline={impl.isCancellingPipeline}
-          onCancelPipeline={() => impl.cancelPipeline().catch(() => {})}
-          isCIRunning={impl.isCIRunning}
-          ciResults={impl.ciResults}
-          onRerunCI={impl.rerunCI}
-          isRerunningCI={impl.isRerunningCI}
-          isDeploying={impl.isDeploying}
-          deployResults={impl.deployResults}
-          onRedeploy={impl.redeploy}
-          isRedeploying={impl.isRedeploying}
-          isReadying={impl.isReadying}
-          readinessResults={impl.readinessResults}
-          onRerunReadiness={impl.rerunReadiness}
-          isRerunningReadiness={impl.isRerunningReadiness}
-          pipeline={impl.pipeline}
-          featureId={featureId}
-          featureStatus={featureStatus}
-        />
-
+        <PipelineStatusSection isPipelineRunning={impl.isPipelineRunning} pipelineProgress={impl.pipelineProgress} pipelineCurrentTask={impl.pipelineCurrentTask} isCancellingPipeline={impl.isCancellingPipeline} onCancelPipeline={() => impl.cancelPipeline().catch(() => {})} isCIRunning={impl.isCIRunning} ciResults={impl.ciResults} onRerunCI={impl.rerunCI} isRerunningCI={impl.isRerunningCI} isDeploying={impl.isDeploying} deployResults={impl.deployResults} onRedeploy={impl.redeploy} isRedeploying={impl.isRedeploying} isReadying={impl.isReadying} readinessResults={impl.readinessResults} onRerunReadiness={impl.rerunReadiness} isRerunningReadiness={impl.isRerunningReadiness} pipeline={impl.pipeline} featureId={featureId} featureStatus={featureStatus} />
         <PipelineDashboard />
         <LearningInsightsPanel />
 
-        {showLog && (
-          <ImplementationLog
-            ref={logRef}
-            taskItems={impl.taskItems}
-            isImplementing={impl.isImplementing}
-            pipelineLogs={impl.pipelineLogs}
-          />
-        )}
+        {showLog && <ImplementationLog ref={logRef} taskItems={impl.taskItems} isImplementing={impl.isImplementing} pipelineLogs={impl.pipelineLogs} />}
 
-        {/* Write code flow: review → backup → write → build check → rollback */}
         {isWritingCode && (
           <WriteCodeFlow
-            files={impl.taskItems
-              .filter(t => t.implementation_status === 'completed' && t.generated_code)
-              .map(t => ({ title: t.title, filePath: t.file_path, code: t.generated_code! }))}
-            onComplete={() => {
-              setIsWritingCode(false);
-              impl.markCodeApplied();
-            }}
+            files={impl.taskItems.filter(t => t.implementation_status === 'completed' && t.generated_code).map(t => ({ title: t.title, filePath: t.file_path, code: t.generated_code! }))}
+            onComplete={() => { setIsWritingCode(false); impl.markCodeApplied(); }}
             onCancel={() => setIsWritingCode(false)}
           />
         )}
 
-        {/* Completion summary — shown when all tasks processed, not currently running */}
         {!isWritingCode && !impl.isImplementing && !impl.canImplement && (impl.implementedCount > 0 || impl.failedImplCount > 0) && (
-          <ImplementationSummary
-            implementedCount={impl.implementedCount}
-            failedCount={impl.failedImplCount}
-            totalAccepted={impl.acceptedCount}
-            featureCode={featureCode}
-            codeApplied={impl.request?.code_applied ?? false}
-          />
+          <ImplementationSummary implementedCount={impl.implementedCount} failedCount={impl.failedImplCount} totalAccepted={impl.acceptedCount} featureCode={featureCode} codeApplied={impl.request?.code_applied ?? false} />
         )}
       </div>
 
       <ImplementationFooter
-        isImplementing={impl.isImplementing}
-        canImplement={impl.canImplement}
+        isImplementing={impl.isImplementing} canImplement={impl.canImplement}
         isComplete={!impl.canImplement && impl.implementedCount > 0 && !isWritingCode}
         codeApplied={impl.request?.code_applied ?? false}
-        taskCount={impl.taskItems.length}
-        pendingCount={impl.pendingCount}
-        acceptedCount={impl.acceptedCount}
-        rejectedCount={impl.rejectedCount}
-        implementedCount={impl.implementedCount}
-        failedImplCount={impl.failedImplCount}
-        onImplement={() => impl.startImplementation()}
-        onWriteCode={() => setIsWritingCode(true)}
+        taskCount={impl.taskItems.length} pendingCount={impl.pendingCount}
+        acceptedCount={impl.acceptedCount} rejectedCount={impl.rejectedCount}
+        implementedCount={impl.implementedCount} failedImplCount={impl.failedImplCount}
+        onImplement={() => impl.startImplementation()} onWriteCode={() => setIsWritingCode(true)}
         onClose={onComplete}
       />
     </div>

@@ -5,11 +5,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import { SendIcon, XIcon, LoaderIcon, CheckCircleIcon } from './icons';
+import { SendIcon, XIcon, LoaderIcon } from './icons';
 import { DeduplicationWarning } from './DeduplicationWarning';
 import type { DedupDecision } from './DeduplicationWarning';
 import { ProposalFormFields, initJourneyForm } from './ProposalFormFields';
 import type { ProposalFormState } from './ProposalFormFields';
+import { ProposalPanelTabs } from './ProposalPanelTabs';
 import { devpilotApi } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase-client';
 import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
@@ -17,15 +18,9 @@ import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './ty
 function useAvailableSections() {
   const [sections, setSections] = useState<string[]>([]);
   useEffect(() => {
-    supabase
-      .from('product_features')
-      .select('spec_section')
-      .not('spec_section', 'is', null)
+    supabase.from('product_features').select('spec_section').not('spec_section', 'is', null)
       .then(({ data }) => {
-        if (data) {
-          const unique = [...new Set(data.map((r: { spec_section: string }) => r.spec_section))].sort();
-          setSections(unique);
-        }
+        if (data) setSections([...new Set(data.map((r: { spec_section: string }) => r.spec_section))].sort());
       });
   }, []);
   return sections;
@@ -42,26 +37,19 @@ interface ProposalPanelProps {
 
 function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
   return {
-    title: p.title,
-    description: p.description,
+    title: p.title, description: p.description,
     criteria: (p.acceptance_criteria ?? []).join('\n'),
     priority: 'priority' in p ? p.priority : 'P3',
     category: 'category' in p ? (p.category ? p.category : '') : '',
     specSection: 'spec_section' in p ? p.spec_section : 'Community Proposals',
-    submitted: false,
-    submittedCode: null,
+    submitted: false, submittedCode: null,
     journeys: p.journeys ? p.journeys.map(initJourneyForm) : [],
     testCases: p.test_cases ?? [],
   };
 }
 
 export function ProposalPanel({
-  proposal,
-  proposals: proposalsProp,
-  conversationId,
-  isAdmin,
-  onClose,
-  onSubmitted,
+  proposal, proposals: proposalsProp, conversationId, isAdmin, onClose, onSubmitted,
 }: ProposalPanelProps) {
   const allProposals = proposalsProp && proposalsProp.length > 0 ? proposalsProp : [proposal];
   const isMulti = allProposals.length > 1;
@@ -75,25 +63,16 @@ export function ProposalPanel({
 
   useEffect(() => {
     const newProposals = proposalsProp && proposalsProp.length > 0 ? proposalsProp : [proposal];
-    const newForms = newProposals.map(initFormState);
-    setForms(newForms);
+    setForms(newProposals.map(initFormState));
     setActiveIndex(0);
-
     if (conversationId && conversationId !== 'pending') {
-      supabase
-        .from('product_features')
-        .select('feature_code, title')
-        .eq('ideation_conversation_id', conversationId)
+      supabase.from('product_features').select('feature_code, title').eq('ideation_conversation_id', conversationId)
         .then(({ data: features }) => {
-          if (features && features.length > 0) {
-            setForms((prev) =>
-              prev.map((f) => {
-                const match = features.find((feat) => feat.title === f.title);
-                return match
-                  ? { ...f, submitted: true, submittedCode: match.feature_code }
-                  : f;
-              })
-            );
+          if (features?.length) {
+            setForms((prev) => prev.map((f) => {
+              const match = features.find((feat) => feat.title === f.title);
+              return match ? { ...f, submitted: true, submittedCode: match.feature_code } : f;
+            }));
           }
         });
     }
@@ -104,12 +83,7 @@ export function ProposalPanel({
   };
 
   const moveForm = (from: number, to: number) => {
-    setForms((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
-    });
+    setForms((prev) => { const next = [...prev]; const [moved] = next.splice(from, 1); next.splice(to, 0, moved); return next; });
     setActiveIndex(to);
   };
 
@@ -120,56 +94,32 @@ export function ProposalPanel({
   const handleSubmitAll = async () => {
     setIsSubmitting(true);
     setError(null);
-
-    const unsubmittedForms = forms.map((f, i) => ({ form: f, index: i })).filter(({ form: f }) => !f.submitted);
+    const unsubmitted = forms.map((f, i) => ({ form: f, index: i })).filter(({ form: f }) => !f.submitted);
     const allResults: SubmitProposalResponse[] = [];
     let firstDedupResult: SubmitProposalResponse | null = null;
 
-    for (const { form: f, index } of unsubmittedForms) {
-      // Build criteria from journeys if available, else from flat criteria
+    for (const { form: f, index } of unsubmitted) {
       const hasJourneys = f.journeys.length > 0;
       const criteriaArray = hasJourneys
-        ? f.journeys.flatMap((j) =>
-            j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean)
-          )
+        ? f.journeys.flatMap((j) => j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean))
         : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
-
-      const proposalData: Record<string, unknown> = {
-        title: f.title,
-        description: f.description,
-        acceptance_criteria: criteriaArray,
-      };
-
-      // Include SpecKit journey data for spec.md generation
+      const proposalData: Record<string, unknown> = { title: f.title, description: f.description, acceptance_criteria: criteriaArray };
       if (hasJourneys) {
         proposalData.journeys = f.journeys.map((j) => ({
-          title: j.title,
-          priority: j.priority,
-          description: j.description,
-          why_priority: j.why_priority,
+          title: j.title, priority: j.priority, description: j.description, why_priority: j.why_priority,
           independent_test: j.independent_test,
           acceptance_scenarios: j.acceptance_scenarios.split('\n').map((s: string) => s.trim()).filter(Boolean),
         }));
       }
-
-      // Pass AI-generated test cases with type classification
-      if (f.testCases.length > 0) {
-        proposalData.test_cases = f.testCases;
-      }
-
+      if (f.testCases.length > 0) proposalData.test_cases = f.testCases;
       if (isAdmin) {
         proposalData.priority = f.priority;
         proposalData.category = (f.category && f.category !== 'null') ? f.category : null;
         proposalData.spec_section = f.specSection;
       }
-
       try {
-        const response = await devpilotApi.submitProposal(conversationId, proposalData);
-        const result = response.data as SubmitProposalResponse;
-
-        if (!result.dedup_check.passed && !firstDedupResult) {
-          firstDedupResult = result;
-        }
+        const result = (await devpilotApi.submitProposal(conversationId, proposalData)).data as SubmitProposalResponse;
+        if (!result.dedup_check.passed && !firstDedupResult) firstDedupResult = result;
         updateForm(index, { submitted: true, submittedCode: result.feature.feature_code });
         allResults.push(result);
       } catch (err) {
@@ -178,175 +128,59 @@ export function ProposalPanel({
         return;
       }
     }
-
     setIsSubmitting(false);
+    if (firstDedupResult) setDedupResult(firstDedupResult);
+    else if (allResults.length > 0) onSubmitted(allResults);
+  };
 
-    if (firstDedupResult) {
-      setDedupResult(firstDedupResult);
-    } else if (allResults.length > 0) {
-      onSubmitted(allResults);
+  const handleDedupDecision = async (decisions: DedupDecision[]) => {
+    if (!dedupResult) return;
+    const useExisting = decisions.find((d) => d.action === 'use_existing' || d.action === 'enhance_existing' || d.action === 'converge');
+    if (useExisting) {
+      const newFeatureId = dedupResult.feature.id;
+      const targetCode = useExisting.feature_code;
+      await supabase.from('test_cases').delete().eq('feature_id', newFeatureId);
+      await supabase.from('feature_spec_artifacts').delete().eq('feature_id', newFeatureId);
+      await supabase.from('ideation_conversations').update({ submitted_feature_id: null }).eq('submitted_feature_id', newFeatureId);
+      await supabase.from('product_features').delete().eq('id', newFeatureId);
+      const f = forms[activeIndex];
+      const criteriaArray = f.journeys.length > 0
+        ? f.journeys.flatMap((j) => j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean))
+        : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
+      const { data: updated } = await supabase.from('product_features')
+        .update({ title: f.title, description: f.description, acceptance_criteria: criteriaArray, priority: f.priority, status: 'proposed', updated_at: new Date().toISOString() })
+        .eq('feature_code', targetCode).select('id, feature_code, title, status, priority, category').single();
+      if (updated) {
+        await supabase.from('ideation_conversations').update({ submitted_feature_id: updated.id, status: 'submitted' }).eq('id', conversationId);
+        updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
+        setDedupResult(null);
+        onSubmitted([{ ...dedupResult, feature: { ...updated, status: 'proposed' as const, category: updated.category ?? null } }]);
+        return;
+      }
     }
+    setDedupResult(null);
+    onSubmitted([dedupResult]);
   };
 
   return (
     <div className="flex flex-col h-full bg-white border-l">
       {dedupResult && (
-        <DeduplicationWarning
-          matches={dedupResult.dedup_check.matches}
-          onSubmitAnyway={async (decisions: DedupDecision[]) => {
-            const useExisting = decisions.find((d) =>
-              d.action === 'use_existing' || d.action === 'enhance_existing' || d.action === 'converge'
-            );
-
-            if (useExisting) {
-              // User chose to update an existing feature — delete the new one, update the old one
-              const newFeatureId = dedupResult.feature.id;
-              const targetCode = useExisting.feature_code;
-
-              // Delete test cases and artifacts for the accidentally-created feature
-              await supabase.from('test_cases').delete().eq('feature_id', newFeatureId);
-              await supabase.from('feature_spec_artifacts').delete().eq('feature_id', newFeatureId);
-              // Unlink conversation before delete
-              await supabase.from('ideation_conversations')
-                .update({ submitted_feature_id: null })
-                .eq('submitted_feature_id', newFeatureId);
-              // Delete the new feature
-              await supabase.from('product_features').delete().eq('id', newFeatureId);
-
-              // Update the existing feature with the new proposal data
-              const form = forms[activeIndex];
-              const criteriaArray = form.journeys.length > 0
-                ? form.journeys.flatMap((j) =>
-                    j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean)
-                  )
-                : form.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
-
-              const { data: updated } = await supabase.from('product_features')
-                .update({
-                  title: form.title,
-                  description: form.description,
-                  acceptance_criteria: criteriaArray,
-                  priority: form.priority,
-                  status: 'proposed',
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('feature_code', targetCode)
-                .select('id, feature_code, title, status, priority, category')
-                .single();
-
-              if (updated) {
-                // Link the conversation to the existing feature
-                await supabase.from('ideation_conversations')
-                  .update({ submitted_feature_id: updated.id, status: 'submitted' })
-                  .eq('id', conversationId);
-
-                updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
-                setDedupResult(null);
-                onSubmitted([{
-                  ...dedupResult,
-                  feature: { ...updated, status: 'proposed' as const, category: updated.category ?? null },
-                }]);
-                return;
-              }
-            }
-
-            // No "use existing" chosen — keep the new feature as-is
-            setDedupResult(null);
-            onSubmitted([dedupResult]);
-          }}
-          onCancel={() => setDedupResult(null)}
-        />
+        <DeduplicationWarning matches={dedupResult.dedup_check.matches} onSubmitAnyway={handleDedupDecision} onCancel={() => setDedupResult(null)} />
       )}
-
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h3 className="font-semibold text-gray-900">
-          {isMulti ? `Proposals (${submittedCount}/${forms.length})` : 'Proposal'}
-        </h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-          <XIcon className="h-5 w-5" />
-        </button>
+        <h3 className="font-semibold text-gray-900">{isMulti ? `Proposals (${submittedCount}/${forms.length})` : 'Proposal'}</h3>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XIcon className="h-5 w-5" /></button>
       </div>
-
-      {/* Tabs for multiple proposals */}
-      {isMulti && (
-        <div className="flex border-b px-2 pt-2 gap-1 overflow-x-auto items-end">
-          {forms.map((f, i) => (
-            <div key={i} className="flex items-center">
-              {i === activeIndex && i > 0 && !f.submitted && (
-                <button
-                  onClick={() => moveForm(i, i - 1)}
-                  className="px-1 py-1 text-gray-400 hover:text-gray-700 text-xs"
-                  title="Move left"
-                >
-                  &larr;
-                </button>
-              )}
-              <button
-                onClick={() => setActiveIndex(i)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-t-lg border border-b-0 whitespace-nowrap transition-colors ${
-                  i === activeIndex
-                    ? 'bg-white text-gray-900 border-gray-300'
-                    : 'bg-gray-50 text-gray-500 border-transparent hover:text-gray-700'
-                }`}
-              >
-                {f.submitted && <CheckCircleIcon className="h-3.5 w-3.5 text-emerald-500" />}
-                <span className="truncate max-w-[120px]">{f.title || `Feature ${i + 1}`}</span>
-                {f.submittedCode && (
-                  <span className="font-mono text-[10px] text-emerald-600">{f.submittedCode}</span>
-                )}
-              </button>
-              {i === activeIndex && i < forms.length - 1 && !f.submitted && (
-                <button
-                  onClick={() => moveForm(i, i + 1)}
-                  className="px-1 py-1 text-gray-400 hover:text-gray-700 text-xs"
-                  title="Move right"
-                >
-                  &rarr;
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Form */}
+      {isMulti && <ProposalPanelTabs forms={forms} activeIndex={activeIndex} onSelect={setActiveIndex} onMove={moveForm} />}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        <ProposalFormFields
-          form={form}
-          isAdmin={isAdmin}
-          onUpdate={(updates) => updateForm(activeIndex, updates)}
-          availableSections={availableSections}
-        />
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        <ProposalFormFields form={form} isAdmin={isAdmin} onUpdate={(updates) => updateForm(activeIndex, updates)} availableSections={availableSections} />
+        {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{error}</div>}
       </div>
-
-      {/* Submit button */}
       {!allSubmitted && (
         <div className="border-t px-4 py-3">
-          <button
-            onClick={handleSubmitAll}
-            disabled={isSubmitting || forms.some((f) => !f.submitted && (!f.title.trim() || !f.description.trim()))}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm"
-          >
-            {isSubmitting ? (
-              <>
-                <LoaderIcon className="h-4 w-4 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                <SendIcon className="h-4 w-4" />
-                {isMulti
-                  ? `Submit All ${forms.length - submittedCount} Features`
-                  : 'Submit Proposal'}
-              </>
-            )}
+          <button onClick={handleSubmitAll} disabled={isSubmitting || forms.some((f) => !f.submitted && (!f.title.trim() || !f.description.trim()))}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm">
+            {isSubmitting ? (<><LoaderIcon className="h-4 w-4 animate-spin" />Submitting...</>) : (<><SendIcon className="h-4 w-4" />{isMulti ? `Submit All ${forms.length - submittedCount} Features` : 'Submit Proposal'}</>)}
           </button>
         </div>
       )}

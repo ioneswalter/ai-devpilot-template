@@ -11,17 +11,12 @@ import { RoadmapHeader } from './RoadmapHeader';
 import { RoadmapFilters } from './RoadmapFilters';
 import { FeatureListView } from './FeatureListView';
 import { AdminModals } from './AdminModals';
-import { Modal } from '../../components/ui/Modal';
-import { SpecReviewPanel } from './SpecReviewPanel';
-import { ImplementationPanel } from './ImplementationPanel';
-import { TestRunPanel } from './TestRunPanel';
-import { ReleasePanel } from './ReleasePanel';
+import { PipelineModals } from './PipelineModals';
 import { usePipelineStatus } from './usePipelineStatus';
 import { useFeatureAICosts } from './useFeatureAICosts';
 import { NotificationBanner } from './NotificationBanner';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
-import { apiClient } from '../../lib/supabase-client';
 
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
@@ -48,7 +43,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         break;
       }
       case 'build': {
-        // Always allow opening build panel — handles both new and existing implementations
+        // Always allow opening build panel
         setImplementingFeature(feature);
         break;
       }
@@ -69,7 +64,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
     if (feature) handlePipelineStageClick(feature, stage);
   }, [roadmap.features, handlePipelineStageClick]);
 
-  // Sync modal feature state when features list refreshes (e.g. after status change)
+  // Sync modal feature state when features list refreshes
   useEffect(() => {
     if (reviewingFeature) {
       const updated = roadmap.features.find((f) => f.id === reviewingFeature.id);
@@ -196,90 +191,18 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           selectedFeature={roadmap.selectedFeatureForCopilot} onFeatureUpdated={roadmap.handleFeatureUpdated} />
       )}
 
-      {/* Spec Review Modal */}
-      <Modal
-        isOpen={!!reviewingFeature}
-        onClose={() => { setReviewingFeature(null); pipeline.invalidate(); }}
-        size="xl"
-        showCloseButton={false}
-        flush
-        className="h-[92vh]"
-      >
-        {reviewingFeature && (
-          <SpecReviewPanel
-            featureId={reviewingFeature.id}
-            featureCode={reviewingFeature.feature_code}
-            featureTitle={reviewingFeature.title}
-            featureStatus={reviewingFeature.status}
-            onClose={() => { setReviewingFeature(null); pipeline.invalidate(); }}
-            onReviewComplete={() => {
-              setReviewingFeature(null);
-              roadmap.fetchFeatures();
-              pipeline.invalidate();
-            }}
-          />
-        )}
-      </Modal>
-
-      {/* Implementation Modal */}
-      <Modal
-        isOpen={!!implementingFeature}
-        onClose={() => { setImplementingFeature(null); pipeline.invalidate(); }}
-        size="xl"
-        showCloseButton={false}
-        flush
-        className="h-[92vh]"
-      >
-        {implementingFeature && (
-          <ImplementationPanel
-            key={implementingFeature.id}
-            featureId={implementingFeature.id}
-            featureCode={implementingFeature.feature_code}
-            featureTitle={implementingFeature.title}
-            featureStatus={implementingFeature.status}
-            onClose={() => { setImplementingFeature(null); pipeline.invalidate(); }}
-            onComplete={() => {
-              setImplementingFeature(null);
-              roadmap.fetchFeatures();
-              pipeline.invalidate();
-            }}
-          />
-        )}
-      </Modal>
-
-      {/* Test Run Modal */}
-      <Modal
-        isOpen={!!testingFeature}
-        onClose={() => setTestingFeature(null)}
-        size="xl"
-        showCloseButton={false}
-        flush
-        className="h-[92vh]"
-      >
-        {testingFeature && (
-          <TestRunPanel
-            key={testingFeature.id}
-            featureId={testingFeature.id}
-            featureCode={testingFeature.feature_code}
-            featureTitle={testingFeature.title}
-            featureStatus={testingFeature.status}
-            testCases={testingFeature.test_cases ?? []}
-            onClose={() => { setTestingFeature(null); pipeline.invalidate(); }}
-            onComplete={async () => {
-              await apiClient('roadmap-admin-features', {
-                method: 'PATCH',
-                body: JSON.stringify({ feature_id: testingFeature.id, status: 'released' }),
-              });
-              setTestingFeature(null);
-              roadmap.fetchFeatures();
-              pipeline.invalidate();
-            }}
-            onRefresh={() => { roadmap.fetchFeatures(); pipeline.invalidate(); }}
-          />
-        )}
-      </Modal>
-
-      <ReleasePanel isOpen={showReleases} onClose={() => setShowReleases(false)} />
+      <PipelineModals
+        reviewingFeature={reviewingFeature}
+        setReviewingFeature={setReviewingFeature}
+        implementingFeature={implementingFeature}
+        setImplementingFeature={setImplementingFeature}
+        testingFeature={testingFeature}
+        setTestingFeature={setTestingFeature}
+        showReleases={showReleases}
+        setShowReleases={setShowReleases}
+        onFetchFeatures={roadmap.fetchFeatures}
+        onPipelineInvalidate={pipeline.invalidate}
+      />
       <AdminModals
         features={roadmap.features}
         editingFeature={roadmap.editingFeature}
