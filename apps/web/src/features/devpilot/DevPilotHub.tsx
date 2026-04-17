@@ -15,6 +15,7 @@ interface DevPilotHubProps {
   onSelectConversation: (id: string) => void;
   onArchive: (id: string) => void;
   onBack?: () => void;
+  onNavigateIntegrations?: () => void;
 }
 
 export function DevPilotHub({
@@ -25,6 +26,7 @@ export function DevPilotHub({
   onSelectConversation,
   onArchive,
   onBack,
+  onNavigateIntegrations,
 }: DevPilotHubProps) {
   const draftCount = conversations.filter((c) => c.status === 'draft' && c.message_count > 0).length;
   const submittedCount = conversations.filter((c) => c.status === 'submitted').length;
@@ -48,14 +50,24 @@ export function DevPilotHub({
               <p className="text-gray-400 text-xs mt-0.5">AI-powered feature ideation</p>
             </div>
           </div>
-          <button
-            onClick={onNewIdeation}
-            disabled={isCreating}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium text-sm shadow-sm"
-          >
-            <PlusIcon className="h-4 w-4" />
-            New Ideation
-          </button>
+          <div className="flex items-center gap-2">
+            {onNavigateIntegrations && (
+              <button
+                onClick={onNavigateIntegrations}
+                className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm"
+              >
+                Integrations
+              </button>
+            )}
+            <button
+              onClick={onNewIdeation}
+              disabled={isCreating}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 font-medium text-sm shadow-sm"
+            >
+              <PlusIcon className="h-4 w-4" />
+              New Ideation
+            </button>
+          </div>
         </div>
 
         {/* Quick stats */}

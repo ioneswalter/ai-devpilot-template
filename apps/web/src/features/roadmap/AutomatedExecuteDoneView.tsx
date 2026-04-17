@@ -5,12 +5,15 @@
 import { PhaseIndicator, TestCaseResultRow } from './AutomatedExecuteWidgets';
 import { BrowserSuiteResultSummary, FailureDetail } from './AutomatedExecuteSubViews';
 import { ImprovementPanel } from './ImprovementPanel';
+import { FailureGuidancePanel } from './FailureGuidancePanel';
 import type { BrowserSuiteResult } from './useAutomatedTests';
 import type { TestCase } from './roadmap-helpers';
 import type { TestRunResult } from './test-execution-types';
 import type { ImprovementRecommendation } from './automation-types';
 
 interface AutomatedExecuteDoneViewProps {
+  featureId: string;
+  featureCode: string;
   suiteResult: BrowserSuiteResult;
   testCases: TestCase[];
   results: Record<string, TestRunResult | null>;
@@ -21,6 +24,8 @@ interface AutomatedExecuteDoneViewProps {
 }
 
 export function AutomatedExecuteDoneView({
+  featureId,
+  featureCode,
   suiteResult,
   testCases,
   results,
@@ -65,6 +70,13 @@ export function AutomatedExecuteDoneView({
                 <FailureDetail key={r.script_id} scriptResult={r} />
               ))}
           </div>
+        </div>
+      )}
+
+      {/* Failure Guidance (FR-137) — only when there are failures */}
+      {suiteResult.results.some((r) => r.failures.length > 0) && (
+        <div className="mt-4">
+          <FailureGuidancePanel featureId={featureId} featureCode={featureCode} />
         </div>
       )}
 

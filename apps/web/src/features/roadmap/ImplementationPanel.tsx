@@ -15,6 +15,8 @@ import { ComplexityScorePanel } from './ComplexityScorePanel';
 import { LearningInsightsPanel } from './LearningInsightsPanel';
 import { PipelineDashboard } from './PipelineDashboard';
 import { SpecRequiredGate, ReviewBlockingGate, ManualImplGate } from './ImplementationGates';
+import { SessionVersionWarning } from '@/features/constitution/components/SessionVersionWarning';
+import { useConstitutionVersions } from '@/features/constitution/hooks/useConstitutionVersions';
 
 interface ImplementationPanelProps {
   featureId: string;

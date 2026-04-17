@@ -218,7 +218,8 @@ export function AutomatedExecuteView({
         {phase === 'running' && <RunningProgress progress={auto.executingProgress} scripts={auto.scripts} liveResults={auto.liveResults} />}
 
         {phase === 'done' && suiteResult && (
-          <AutomatedExecuteDoneView suiteResult={suiteResult} testCases={testCases} results={results}
+          <AutomatedExecuteDoneView featureId={featureId} featureCode={featureCode}
+            suiteResult={suiteResult} testCases={testCases} results={results}
             markedCount={markedCount} loadingRecs={loadingRecs} recommendations={recommendations}
             onUpdateRecommendation={handleUpdateRecommendation} />
         )}
