@@ -10,6 +10,7 @@ import { z } from 'https://esm.sh/zod@3.22.4';
 import { performDedupCheck } from '../_shared/dedup-check.ts';
 import { generateSpecMarkdown, extractResearchNotes } from '../_shared/speckit-generator.ts';
 import type { SpecKitProposal } from '../_shared/speckit-generator.ts';
+import { buildTestCases, attachPrototype } from './proposal-helpers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,7 +47,6 @@ const proposalSchema = z.object({
     priority: z.enum(['P1', 'P2', 'P3', 'P4']).optional(),
     category: z.enum(['toolkit', 'business_module']).nullable().optional(),
     spec_section: z.string().optional(),
-    // SpecKit journey data (optional — backward compatible)
     journeys: z.array(journeySchema).optional(),
     test_cases: z.array(z.object({
       title: z.string().min(1),
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const isAdmin = !!adminRow;
 
-    // Validate request — sanitise category before validation
+    // Validate request
     const body = await req.json();
     if (body?.proposal?.category === 'null' || body?.proposal?.category === '') {
       body.proposal.category = null;
@@ -112,13 +112,10 @@ Deno.serve(async (req) => {
     if (conv.created_by !== user.id && !isAdmin) {
       return errorResponse('FORBIDDEN', 'You do not have access to this conversation', 403);
     }
-    // Allow multiple proposals from the same conversation (multi-proposal flow)
-    // Only block if conversation was explicitly cancelled
     if (conv.status === 'cancelled') {
       return errorResponse('VALIDATION_ERROR', 'Conversation has been cancelled', 400);
     }
 
-    // Apply defaults for member proposals
     const priority = proposal.priority ?? 'P3';
     const category = proposal.category ?? null;
     const specSection = proposal.spec_section ?? 'Community Proposals';
@@ -151,10 +148,9 @@ Deno.serve(async (req) => {
       anthropicApiKey
     );
 
-    // Generate SpecKit artifacts from proposal + conversation
+    // Generate SpecKit artifacts
     const specMarkdown = generateSpecMarkdown(proposal as SpecKitProposal, featureCode);
 
-    // Fetch conversation messages for research notes
     const { data: convMessages } = await supabase
       .from('conversation_messages')
       .select('role, content')
@@ -175,8 +171,7 @@ Deno.serve(async (req) => {
         title: proposal.title,
         description: proposal.description,
         acceptance_criteria: proposal.acceptance_criteria,
-        priority,
-        category,
+        priority, category,
         status: 'proposed',
         feature_type: 'functional_requirement',
         spec_section: specSection,
@@ -192,120 +187,33 @@ Deno.serve(async (req) => {
       return errorResponse('INTERNAL_ERROR', 'Failed to create feature', 500);
     }
 
-    // Store SpecKit artifacts (spec.md + research.md) in feature_spec_artifacts
+    // Store SpecKit artifacts
     const now = new Date().toISOString();
-    const artifacts = [
-      {
-        feature_id: feature.id,
-        artifact_type: 'spec',
-        file_name: 'spec.md',
-        content: specMarkdown,
-        synced_at: now,
-      },
-      {
-        feature_id: feature.id,
-        artifact_type: 'research',
-        file_name: 'research.md',
-        content: researchMarkdown,
-        synced_at: now,
-      },
-    ];
-
     const { error: artifactErr } = await supabase
       .from('feature_spec_artifacts')
-      .insert(artifacts);
+      .insert([
+        { feature_id: feature.id, artifact_type: 'spec', file_name: 'spec.md', content: specMarkdown, synced_at: now },
+        { feature_id: feature.id, artifact_type: 'research', file_name: 'research.md', content: researchMarkdown, synced_at: now },
+      ]);
+    if (artifactErr) console.error('Failed to save SpecKit artifacts:', artifactErr);
 
-    if (artifactErr) {
-      // Non-blocking: log but don't fail the submission
-      console.error('Failed to save SpecKit artifacts:', artifactErr);
-    }
-
-    // Generate test cases — prefer AI-generated, fall back to mechanical
-    const testCasePrefix = featureCode.replace('FR-', 'TC-');
-    const testCases = proposal.test_cases && proposal.test_cases.length > 0
-      ? proposal.test_cases.map((tc, i) => {
-          const num = String(i + 1).padStart(2, '0');
-          const isHighPriority = /auth|payment|secur|block|restrict/i.test(tc.scenario);
-          return {
-            test_code: `${testCasePrefix}-${num}`,
-            feature_id: feature.id,
-            title: tc.title.length > 100 ? tc.title.substring(0, 97) + '...' : tc.title,
-            description: tc.scenario,
-            test_type: tc.type === 'api' ? 'integration' : 'e2e',
-            priority: isHighPriority ? 'high' : 'medium',
-            status: 'draft',
-            automated: false,
-            automation_status: 'manual',
-          };
-        })
-      : proposal.acceptance_criteria.map((criterion, i) => {
-          const num = String(i + 1).padStart(2, '0');
-          let title = criterion;
-          const thenMatch = title.match(/Then\s+(.+)/i);
-          if (thenMatch) title = thenMatch[1];
-          if (title.length > 100) title = title.substring(0, 97) + '...';
-          const isEdgeCase = /unavailable|fail|error|invalid|no modules|no content|expires|malformed|blocked/i.test(criterion);
-          const isHighPriority = /moderat|block|restrict|revok|auth|payment|secur/i.test(criterion);
-          return {
-            test_code: `${testCasePrefix}-${num}`,
-            feature_id: feature.id,
-            title,
-            description: criterion,
-            test_type: isEdgeCase ? 'edge_case' : 'e2e',
-            priority: isHighPriority ? 'high' : (isEdgeCase ? 'medium' : 'high'),
-            status: 'draft',
-            automated: false,
-            automation_status: 'manual',
-          };
-        });
-
+    // Generate and insert test cases
+    const testCases = buildTestCases(proposal, featureCode, feature.id);
     if (testCases.length > 0) {
       const { error: tcErr } = await supabase.from('test_cases').insert(testCases);
       if (tcErr) console.error('Failed to create test cases:', tcErr);
     }
 
-    // Update conversation — keep first submitted feature as the primary link
-    // Status stays 'draft' to allow multi-proposal flow; set to 'submitted' only on first submission
-    const updateData: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
+    // Update conversation
+    const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (!conv.submitted_feature_id) {
       updateData.status = 'submitted';
       updateData.submitted_feature_id = feature.id;
     }
-    await supabase
-      .from('ideation_conversations')
-      .update(updateData)
-      .eq('id', conversation_id);
+    await supabase.from('ideation_conversations').update(updateData).eq('id', conversation_id);
 
-    // FR-140: Attach prototype if one exists for this conversation
-    let prototypeAttachment = null;
-    const { data: currentProto } = await supabase
-      .from('prototype_versions')
-      .select('id, prototype_type, version_number')
-      .eq('conversation_id', conversation_id)
-      .eq('is_current', true)
-      .maybeSingle();
-
-    if (currentProto) {
-      const { count: totalVersions } = await supabase
-        .from('prototype_versions')
-        .select('id', { count: 'exact', head: true })
-        .eq('conversation_id', conversation_id);
-
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-      const renderUrl = `${supabaseUrl}/functions/v1/render-prototype?id=${currentProto.id}`;
-
-      const { data: attachment } = await supabase.from('prototype_attachments').insert({
-        feature_id: feature.id,
-        prototype_version_id: currentProto.id,
-        prototype_type: currentProto.prototype_type,
-        render_url: renderUrl,
-        total_versions: totalVersions ?? 1,
-      }).select('id, prototype_type, render_url, total_versions').single();
-
-      if (attachment) prototypeAttachment = attachment;
-    }
+    // FR-140: Attach prototype
+    const prototypeAttachment = await attachPrototype(supabase, conversation_id, feature.id);
 
     return jsonResponse({
       data: {
