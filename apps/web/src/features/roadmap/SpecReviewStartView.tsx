@@ -87,9 +87,9 @@ export function SpecReviewStartView({
             </p>
           </>
         )}
-        {startError && (
-          <p className="text-xs text-red-500">{(startError as Error).message}</p>
-        )}
+        {startError ? (
+          <p className="text-xs text-red-500">{startError instanceof Error ? startError.message : String(startError)}</p>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto">

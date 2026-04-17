@@ -2,7 +2,7 @@
  * API response types, gate warning types, and v1 compat types for test automation (FR-109 v2)
  */
 
-import type { ScriptRunResult, ScriptStep } from './automation-script-types';
+import type { ScriptRunResult } from './automation-script-types';
 
 // --- API Response Types (v2: two-tier) ---
 

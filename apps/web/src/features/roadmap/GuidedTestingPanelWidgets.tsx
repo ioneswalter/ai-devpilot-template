@@ -72,7 +72,7 @@ interface ValidationWarningProps {
 
 export function ValidationWarningPanel({
   validationWarning,
-  pendingVerdict,
+  pendingVerdict: _pendingVerdict,
   onOverride,
   onCancel,
 }: ValidationWarningProps) {

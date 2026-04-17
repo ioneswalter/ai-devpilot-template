@@ -3,19 +3,12 @@
  * Generates scripts one test case at a time to avoid Edge Function compute limits.
  */
 
-import { useCallback } from 'react';
 import { supabase } from '@/lib/supabase-client';
 import { testAutomationApi } from '@/lib/api/test-automation-api';
 import type { GenerateScriptsResult } from './automation-types';
 
-interface GenerationState {
-  generating: boolean;
-  generatingProgress: string | null;
-  error: string | null;
-  lastGeneration: GenerateScriptsResult | null;
-}
-
-type SetState = (updater: (s: GenerationState) => GenerationState) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SetState = (updater: (s: any) => any) => void;
 
 export function createGenerateScripts(
   featureId: string,

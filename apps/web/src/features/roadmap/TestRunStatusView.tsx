@@ -8,6 +8,8 @@ import { TestPipelineSteps } from './TestPipelineSteps';
 import { CriteriaCoverageBar } from './CriteriaCoverageBar';
 import type { TestCase } from './roadmap-helpers';
 import type { TestRunResult } from './test-execution-types';
+import type { CoverageSummary } from './guided-testing-types';
+import type { TestExecutionEntry } from './test-execution-types';
 
 interface TestRunStatusViewProps {
   featureId: string;
@@ -16,9 +18,9 @@ interface TestRunStatusViewProps {
   featureStatus: string;
   testCases: TestCase[];
   acceptanceCriteria?: string[];
-  coverage: { total: number; covered: number; uncovered: string[] };
+  coverage: CoverageSummary;
   lastRunResults: Record<string, TestRunResult>;
-  history: Array<{ test_case_id: string; result: TestRunResult; executed_at: string; evidence?: unknown }>;
+  history: TestExecutionEntry[];
   isLoading: boolean;
   passedCount: number;
   failedCount: number;
