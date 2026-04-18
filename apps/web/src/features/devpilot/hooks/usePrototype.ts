@@ -126,6 +126,10 @@ export function usePrototype(conversationId: string | null) {
     setState((s) => ({ ...s, error: null }));
   }, []);
 
+  const setError = useCallback((error: { code: string; message: string }) => {
+    setState((s) => ({ ...s, error, isGenerating: false }));
+  }, []);
+
   /** Revert to a specific version */
   const [isReverting, setIsReverting] = useState(false);
   const revertToVersion = useCallback(async (versionId: string) => {
@@ -174,5 +178,6 @@ export function usePrototype(conversationId: string | null) {
     finalise,
     clearDisambiguation,
     clearError,
+    setError,
   };
 }
