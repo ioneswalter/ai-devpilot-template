@@ -21,6 +21,7 @@ interface FeatureListViewProps {
   getPipeline?: (featureId: string) => FeaturePipelineState | undefined;
   onPipelineStageClick?: (feature: ProductFeature, stage: PipelineStageName) => void;
   getFeatureCost?: (featureId: string) => number | null;
+  canAccessPanel?: (stage: PipelineStageName) => boolean;
 }
 
 export function FeatureListView({
@@ -39,6 +40,7 @@ export function FeatureListView({
   getPipeline,
   onPipelineStageClick,
   getFeatureCost,
+  canAccessPanel,
 }: FeatureListViewProps) {
   return (
     <section className="py-8">
@@ -92,6 +94,7 @@ export function FeatureListView({
                       pipeline={getPipeline?.(feature.id)}
                       onPipelineStageClick={onPipelineStageClick ? (stage) => onPipelineStageClick(feature, stage) : undefined}
                       aiCost={getFeatureCost?.(feature.id) ?? null}
+                      canAccessPanel={canAccessPanel}
                     />
 
                     {/* Expanded Detail */}

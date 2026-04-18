@@ -15,6 +15,7 @@ export interface FeatureRowProps {
   pipeline?: FeaturePipelineState;
   onPipelineStageClick?: (stage: PipelineStageName) => void;
   aiCost?: number | null;
+  canAccessPanel?: (stage: PipelineStageName) => boolean;
 }
 
 export function FeatureRow({
@@ -28,6 +29,7 @@ export function FeatureRow({
   pipeline,
   onPipelineStageClick,
   aiCost,
+  canAccessPanel,
 }: FeatureRowProps) {
   const chevronClass = `transition-transform ${isExpanded ? 'rotate-180' : ''}`;
 
@@ -106,6 +108,7 @@ export function FeatureRow({
             pipeline={pipeline}
             isAdmin={isAdmin}
             onStageClick={onPipelineStageClick}
+            canAccessPanel={canAccessPanel}
           />
           {/* Related User Stories - shown inline for FRs */}
           {feature.related_user_stories && feature.related_user_stories.length > 0 && (

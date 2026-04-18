@@ -17,17 +17,20 @@ import { useFeatureAICosts } from './useFeatureAICosts';
 import { NotificationBanner } from './NotificationBanner';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
   const pipeline = usePipelineStatus();
   const { getFeatureCost } = useFeatureAICosts();
+  const { canAccessPanel, isUnrestricted } = useUserRoles();
   const [reviewingFeature, setReviewingFeature] = useState<ProductFeature | null>(null);
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
   const [showReleases, setShowReleases] = useState(false);
   const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
     if (!roadmap.isAdmin) return;
+    if (!canAccessPanel(stage)) return;
 
     // For released features, only open panels if there's actual SpecKit data
     const pipelineData = pipeline.getPipeline(feature.id);
@@ -89,6 +92,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         isAdmin={roadmap.isAdmin}
         isMember={isMember}
         onOpenReleases={() => setShowReleases(true)}
+        isUnrestricted={isUnrestricted}
       />
 
       {roadmap.isLoading && (
@@ -182,6 +186,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           getPipeline={pipeline.getPipeline}
           onPipelineStageClick={roadmap.isAdmin ? handlePipelineStageClick : undefined}
           getFeatureCost={roadmap.isAdmin ? getFeatureCost : undefined}
+          canAccessPanel={canAccessPanel}
         />
       )}
 

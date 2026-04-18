@@ -11,9 +11,10 @@ interface RoadmapHeaderProps {
   isAdmin: boolean;
   isMember: boolean;
   onOpenReleases?: () => void;
+  isUnrestricted?: boolean;
 }
 
-export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenReleases }: RoadmapHeaderProps) {
+export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenReleases, isUnrestricted }: RoadmapHeaderProps) {
   const navigate = useNavigate();
 
   return (
@@ -173,6 +174,14 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
           </div>
         </div>
       </div>
+      {isUnrestricted && isAdmin && (
+        <div className="container mx-auto px-4 max-w-6xl mt-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-400/20 border border-amber-300/30 rounded-lg text-xs text-amber-100">
+            <span>{'\u26A0'}</span>
+            <span>No delivery team roles configured yet. All panels are visible. Go to Admin → Delivery Team to assign roles.</span>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
