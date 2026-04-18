@@ -81,44 +81,49 @@ export function CompliancePanel({
           type="button"
           onClick={refetch}
           disabled={isLoading}
-          className="px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-50 transition-colors"
+          className="px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-50 transition-colors flex items-center gap-1.5"
         >
-          {isLoading ? 'Scanning...' : 'Re-scan'}
+          {isLoading && (
+            <span className="w-3 h-3 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+          )}
+          Re-scan
         </button>
       </div>
 
       {/* Body */}
       <div className="p-4 space-y-3">
+        <SummaryStats report={report} />
+
         {isLoading && <LoadingSkeleton />}
 
         {isError && error && (
           <ErrorMessage message={error.message} />
         )}
 
-        {!isLoading && !isError && !report && (
-          <p className="text-xs text-gray-400 text-center py-2">
-            No generated code to scan. Accept tasks and run implementation first.
-          </p>
-        )}
-
-        {!isLoading && report && (
+        {!isLoading && (
           <>
-            <SummaryStats report={report} />
-            <div className="space-y-2" role="list" aria-label="File compliance results">
-              {violationFiles.map((file) => (
-                <ComplianceFileRow key={file.path} file={file} />
-              ))}
-              {report.compliant_files > 0 && violationFiles.length > 0 && (
-                <p className="text-xs text-green-600 pl-1">
-                  + {report.compliant_files} compliant file{report.compliant_files > 1 ? 's' : ''}
-                </p>
-              )}
-              {violationFiles.length === 0 && (
-                <p className="text-xs text-green-600 text-center py-1">
-                  All {report.total_files} files pass constitution checks.
-                </p>
-              )}
-            </div>
+            {report && (
+              <div className="space-y-2" role="list" aria-label="File compliance results">
+                {violationFiles.map((file) => (
+                  <ComplianceFileRow key={file.path} file={file} />
+                ))}
+                {report.compliant_files > 0 && violationFiles.length > 0 && (
+                  <p className="text-xs text-green-600 pl-1">
+                    + {report.compliant_files} compliant file{report.compliant_files > 1 ? 's' : ''}
+                  </p>
+                )}
+                {violationFiles.length === 0 && (
+                  <p className="text-xs text-green-600 text-center py-1">
+                    All {report.total_files} files pass constitution checks.
+                  </p>
+                )}
+              </div>
+            )}
+            {!report && (
+              <p className="text-xs text-gray-400 text-center py-2">
+                No generated code to scan. Accept tasks and run implementation first.
+              </p>
+            )}
           </>
         )}
       </div>
@@ -126,18 +131,22 @@ export function CompliancePanel({
   );
 }
 
-function SummaryStats({ report }: { report: NonNullable<ReturnType<typeof useComplianceReport>['report']> }) {
+function SummaryStats({ report }: { report: ReturnType<typeof useComplianceReport>['report'] }) {
+  const totalFiles = report?.total_files ?? 0;
+  const compliantFiles = report?.compliant_files ?? 0;
+  const totalViolations = report?.total_violations ?? 0;
+
   return (
     <div className="flex items-center gap-4 text-xs">
       <span className="text-gray-500">
-        {report.total_files} file{report.total_files !== 1 ? 's' : ''} scanned
+        {totalFiles} file{totalFiles !== 1 ? 's' : ''} scanned
       </span>
       <span className="text-green-600">
-        {report.compliant_files} compliant
+        {compliantFiles} compliant
       </span>
-      {report.total_violations > 0 && (
+      {totalViolations > 0 && (
         <span className="text-red-600 font-medium">
-          {report.total_violations} violation{report.total_violations !== 1 ? 's' : ''}
+          {totalViolations} violation{totalViolations !== 1 ? 's' : ''}
         </span>
       )}
     </div>
