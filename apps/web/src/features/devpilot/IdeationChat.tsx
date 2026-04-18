@@ -16,9 +16,11 @@ interface IdeationChatProps {
   onSendMessage: (message: string) => void;
   /** When true, force-collapse the "Your idea" panel (e.g. when proposal panel is visible) */
   forceCollapsed?: boolean;
+  /** When true, show a hint directing users to the prototype panel */
+  disambiguationActive?: boolean;
 }
 
-export function IdeationChat({ messages, isLoading, streamingText, error, onSendMessage, forceCollapsed }: IdeationChatProps) {
+export function IdeationChat({ messages, isLoading, streamingText, error, onSendMessage, forceCollapsed, disambiguationActive }: IdeationChatProps) {
   const [input, setInput] = useState('');
   const [inputExpanded, setInputExpanded] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -96,6 +98,13 @@ export function IdeationChat({ messages, isLoading, streamingText, error, onSend
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {disambiguationActive && (
+            <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-sm text-indigo-700">
+              <span className="text-lg">👉</span>
+              <span>Choose a prototype type from the panel on the right to generate a preview.</span>
             </div>
           )}
 

@@ -15,6 +15,7 @@ import { PipelineModals } from './PipelineModals';
 import { usePipelineStatus } from './usePipelineStatus';
 import { useFeatureAICosts } from './useFeatureAICosts';
 import { NotificationBanner } from './NotificationBanner';
+import { VersionBumpModal } from './VersionBumpModal';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -28,6 +29,13 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
   const [showReleases, setShowReleases] = useState(false);
+  const [versionBumpFeature, setVersionBumpFeature] = useState<ProductFeature | null>(null);
+
+  // FR-149: Version labels are fetched lazily per-feature in VersionHistoryPanel
+  const getVersionLabel = useCallback((_featureId: string): string | null => {
+    return null; // Version labels shown in VersionHistoryPanel when expanded
+  }, []);
+
   const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
     if (!roadmap.isAdmin) return;
     if (!canAccessPanel(stage)) return;
@@ -183,10 +191,12 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           onEditFeature={roadmap.setEditingFeature}
           onDeleteFeature={roadmap.setDeletingFeature}
           onLinkCriteria={roadmap.setLinkingCriteriaFeature}
+          onNewVersion={roadmap.isAdmin ? setVersionBumpFeature : undefined}
           getPipeline={pipeline.getPipeline}
           onPipelineStageClick={roadmap.isAdmin ? handlePipelineStageClick : undefined}
           getFeatureCost={roadmap.isAdmin ? getFeatureCost : undefined}
           canAccessPanel={canAccessPanel}
+          getVersionLabel={getVersionLabel}
         />
       )}
 
@@ -231,6 +241,22 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onStartImplementation={setImplementingFeature}
         onRunTests={setTestingFeature}
       />
+
+      {/* FR-149: Version Bump Modal */}
+      {versionBumpFeature && (
+        <VersionBumpModal
+          featureId={versionBumpFeature.id}
+          featureCode={versionBumpFeature.feature_code}
+          featureTitle={versionBumpFeature.title}
+          currentVersion={getVersionLabel(versionBumpFeature.id)}
+          onClose={() => setVersionBumpFeature(null)}
+          onSuccess={() => {
+            setVersionBumpFeature(null);
+            roadmap.fetchFeatures();
+            pipeline.invalidate();
+          }}
+        />
+      )}
     </div>
   );
 }

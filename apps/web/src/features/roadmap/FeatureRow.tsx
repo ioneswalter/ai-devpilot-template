@@ -12,10 +12,12 @@ export interface FeatureRowProps {
   onEditFeature: (feature: ProductFeature) => void;
   onDeleteFeature: (feature: ProductFeature) => void;
   onLinkCriteria: (feature: ProductFeature) => void;
+  onNewVersion?: (feature: ProductFeature) => void;
   pipeline?: FeaturePipelineState;
   onPipelineStageClick?: (stage: PipelineStageName) => void;
   aiCost?: number | null;
   canAccessPanel?: (stage: PipelineStageName) => boolean;
+  currentVersionLabel?: string | null;
 }
 
 export function FeatureRow({
@@ -26,10 +28,12 @@ export function FeatureRow({
   onEditFeature,
   onDeleteFeature,
   onLinkCriteria,
+  onNewVersion,
   pipeline,
   onPipelineStageClick,
   aiCost,
   canAccessPanel,
+  currentVersionLabel,
 }: FeatureRowProps) {
   const chevronClass = `transition-transform ${isExpanded ? 'rotate-180' : ''}`;
 
@@ -59,6 +63,11 @@ export function FeatureRow({
             {getTypeBadge(feature.feature_type)}
             {getPriorityBadge(feature.priority)}
             {getStatusBadge(feature.status)}
+            {currentVersionLabel && (
+              <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-slate-100 text-slate-600">
+                {currentVersionLabel}
+              </span>
+            )}
             <svg
               className={`w-4 h-4 text-gray-400 ${chevronClass}`}
               fill="none"
@@ -134,6 +143,8 @@ export function FeatureRow({
           onEditFeature={onEditFeature}
           onDeleteFeature={onDeleteFeature}
           onLinkCriteria={onLinkCriteria}
+          onNewVersion={onNewVersion}
+          currentVersionLabel={currentVersionLabel}
         />
       </div>
     </div>
@@ -148,6 +159,8 @@ function DesktopBadgesColumn({
   onEditFeature,
   onDeleteFeature,
   onLinkCriteria,
+  onNewVersion,
+  currentVersionLabel,
 }: {
   feature: ProductFeature;
   isAdmin: boolean;
@@ -155,6 +168,8 @@ function DesktopBadgesColumn({
   onEditFeature: (feature: ProductFeature) => void;
   onDeleteFeature: (feature: ProductFeature) => void;
   onLinkCriteria: (feature: ProductFeature) => void;
+  onNewVersion?: (feature: ProductFeature) => void;
+  currentVersionLabel?: string | null;
 }) {
   return (
     <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
@@ -162,6 +177,11 @@ function DesktopBadgesColumn({
       {getTypeBadge(feature.feature_type)}
       {getPriorityBadge(feature.priority)}
       {getStatusBadge(feature.status)}
+      {currentVersionLabel && (
+        <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-slate-100 text-slate-600">
+          {currentVersionLabel}
+        </span>
+      )}
       {/* Admin buttons */}
       {isAdmin && (
         <div className="flex items-center gap-1 ml-2">
@@ -177,6 +197,18 @@ function DesktopBadgesColumn({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
+            </button>
+          )}
+          {feature.status === 'released' && onNewVersion && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onNewVersion(feature);
+              }}
+              className="px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
+              title="Create a new version"
+            >
+              New Version
             </button>
           )}
           {['proposed', 'specified'].includes(feature.status) && (

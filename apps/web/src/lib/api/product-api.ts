@@ -67,4 +67,66 @@ export const productApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  // FR-149: Feature versioning
+  bumpVersion: (featureId: string, bumpType: 'minor' | 'major', changeSummary: string) =>
+    apiClient<{ data: VersionBumpResponse }>('feature-versions', {
+      method: 'POST',
+      body: JSON.stringify({ feature_id: featureId, bump_type: bumpType, change_summary: changeSummary }),
+    }),
+
+  getVersions: (featureId: string) =>
+    apiClient<{ data: VersionListResponse }>(`feature-versions?feature_id=${featureId}`, {
+      method: 'GET',
+    }),
+
+  compareVersions: (v1: string, v2: string) =>
+    apiClient<{ data: VersionCompareResponse }>(`feature-versions?action=compare&v1=${v1}&v2=${v2}`, {
+      method: 'GET',
+    }),
 };
+
+// FR-149 types
+export interface FeatureVersionDB {
+  id: string;
+  version_number: number;
+  version_label: string | null;
+  status: string | null;
+  change_summary: string | null;
+  changed_by: string | null;
+  created_at: string;
+  superseded_by: string | null;
+}
+
+export interface VersionBumpResponse {
+  id: string;
+  feature_id: string;
+  version_number: number;
+  version_label: string;
+  title: string;
+  description: string;
+  acceptance_criteria: string[];
+  status: string;
+  change_summary: string;
+  created_at: string;
+  archived_version: {
+    id: string;
+    version_label: string;
+    superseded_by: string;
+  } | null;
+}
+
+export interface VersionListResponse {
+  versions: FeatureVersionDB[];
+  current_version: string | null;
+  total: number;
+}
+
+export interface VersionCompareResponse {
+  v1: { id: string; version_label: string; title: string; description: string | null; acceptance_criteria: string[]; created_at: string };
+  v2: { id: string; version_label: string; title: string; description: string | null; acceptance_criteria: string[]; created_at: string };
+  diff: {
+    title: { changed: boolean };
+    description: { changed: boolean };
+    acceptance_criteria: { added: string[]; removed: string[]; unchanged: string[] };
+  };
+}

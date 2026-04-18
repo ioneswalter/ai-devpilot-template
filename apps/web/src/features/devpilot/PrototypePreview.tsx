@@ -47,25 +47,29 @@ export function PrototypePreview({
   onFinalise,
   isFinalised,
 }: PrototypePreviewProps) {
-  // Disambiguation state — ask user to choose
+  // Disambiguation state — ask user to choose prototype type
   if (disambiguation) {
     return (
-      <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 p-6">
+      <div className="h-full flex items-center justify-center bg-indigo-50 rounded-lg border-2 border-indigo-300 p-6 animate-pulse-once">
         <div className="text-center max-w-sm">
-          <p className="text-sm font-medium text-gray-700 mb-2">
-            This feature has both UI and backend elements
+          <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🎨</span>
+          </div>
+          <p className="text-base font-semibold text-indigo-900 mb-2">
+            Choose a prototype type
           </p>
-          <p className="text-xs text-gray-500 mb-4">
-            Should I generate screens, a flowchart, or a process diagram?
+          <p className="text-sm text-indigo-600 mb-6">
+            This feature has both UI and backend elements. Pick one to generate an interactive preview.
           </p>
-          <div className="flex gap-2 justify-center">
+          <div className="flex flex-col gap-3">
             {disambiguation.detected_types.map((type) => (
               <button
                 key={type}
                 onClick={() => onSelectType(type)}
-                className="px-3 py-2 text-xs font-medium rounded-lg border border-gray-300 bg-white hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                className="w-full px-4 py-3 text-sm font-medium rounded-lg border-2 border-indigo-200 bg-white hover:bg-indigo-100 hover:border-indigo-400 transition-colors flex items-center gap-3 justify-center shadow-sm"
               >
-                {TYPE_LABELS[type].icon} {TYPE_LABELS[type].label}
+                <span className="text-lg">{TYPE_LABELS[type].icon}</span>
+                <span>{TYPE_LABELS[type].label}</span>
               </button>
             ))}
           </div>

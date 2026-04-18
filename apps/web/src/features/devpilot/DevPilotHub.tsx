@@ -15,7 +15,6 @@ interface DevPilotHubProps {
   onSelectConversation: (id: string) => void;
   onArchive: (id: string) => void;
   onBack?: () => void;
-  onNavigateIntegrations?: () => void;
 }
 
 export function DevPilotHub({
@@ -26,7 +25,6 @@ export function DevPilotHub({
   onSelectConversation,
   onArchive,
   onBack,
-  onNavigateIntegrations,
 }: DevPilotHubProps) {
   const draftCount = conversations.filter((c) => c.status === 'draft' && c.message_count > 0).length;
   const submittedCount = conversations.filter((c) => c.status === 'submitted').length;
@@ -51,14 +49,6 @@ export function DevPilotHub({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {onNavigateIntegrations && (
-              <button
-                onClick={onNavigateIntegrations}
-                className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-medium text-sm"
-              >
-                Integrations
-              </button>
-            )}
             <button
               onClick={onNewIdeation}
               disabled={isCreating}

@@ -18,10 +18,12 @@ interface FeatureListViewProps {
   onEditFeature: (feature: ProductFeature) => void;
   onDeleteFeature: (feature: ProductFeature) => void;
   onLinkCriteria: (feature: ProductFeature) => void;
+  onNewVersion?: (feature: ProductFeature) => void;
   getPipeline?: (featureId: string) => FeaturePipelineState | undefined;
   onPipelineStageClick?: (feature: ProductFeature, stage: PipelineStageName) => void;
   getFeatureCost?: (featureId: string) => number | null;
   canAccessPanel?: (stage: PipelineStageName) => boolean;
+  getVersionLabel?: (featureId: string) => string | null;
 }
 
 export function FeatureListView({
@@ -37,10 +39,12 @@ export function FeatureListView({
   onEditFeature,
   onDeleteFeature,
   onLinkCriteria,
+  onNewVersion,
   getPipeline,
   onPipelineStageClick,
   getFeatureCost,
   canAccessPanel,
+  getVersionLabel,
 }: FeatureListViewProps) {
   return (
     <section className="py-8">
@@ -91,10 +95,12 @@ export function FeatureListView({
                       onEditFeature={onEditFeature}
                       onDeleteFeature={onDeleteFeature}
                       onLinkCriteria={onLinkCriteria}
+                      onNewVersion={onNewVersion}
                       pipeline={getPipeline?.(feature.id)}
                       onPipelineStageClick={onPipelineStageClick ? (stage) => onPipelineStageClick(feature, stage) : undefined}
                       aiCost={getFeatureCost?.(feature.id) ?? null}
                       canAccessPanel={canAccessPanel}
+                      currentVersionLabel={getVersionLabel?.(feature.id) ?? null}
                     />
 
                     {/* Expanded Detail */}

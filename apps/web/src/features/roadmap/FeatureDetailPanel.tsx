@@ -7,6 +7,7 @@ import { FeatureComments } from '../../components/FeatureComments';
 import { FeatureRating } from '../../components/FeatureRating';
 import { getTestTypeBadge } from '../../components/roadmap/badge-utils';
 import { parseCriteria, type ProductFeature } from './roadmap-helpers';
+import { VersionHistoryPanel } from './VersionHistoryPanel';
 import type { MutableRefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { aiUsageApi } from '@/lib/api/ai-usage-api';
@@ -226,6 +227,11 @@ export function FeatureDetailPanel({
         </h4>
         <FeatureRating featureId={feature.id} isMember={isMember} />
       </div>
+
+      {/* FR-149: Version History */}
+      {feature.feature_code.startsWith('FR-') && (
+        <VersionHistoryPanel featureId={feature.id} />
+      )}
 
       {/* Comments Section */}
       <FeatureComments featureId={feature.id} featureCode={feature.feature_code} isMember={isMember} />

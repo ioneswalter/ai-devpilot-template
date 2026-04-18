@@ -57,6 +57,23 @@ export async function handleUpdateFeature(
     if (statusError) return statusError;
   }
 
+  // FR-149: Block editing acceptance_criteria or description on released features
+  if (!('status' in filteredUpdates)) {
+    const editBlockedFields = ['acceptance_criteria', 'description'];
+    const hasBlockedEdits = editBlockedFields.some(f => f in filteredUpdates);
+    if (hasBlockedEdits) {
+      const { data: current } = await supabase
+        .from('product_features').select('status').eq('id', feature_id).single();
+      if (current?.status === 'released') {
+        return errorResponse(
+          'VERSION_BUMP_REQUIRED',
+          'Released features cannot be edited directly. Create a new version first.',
+          409,
+        );
+      }
+    }
+  }
+
   // Allow update even if only test_cases_text is provided
   const hasTestCases = test_cases_text && test_cases_text.trim();
   if (Object.keys(filteredUpdates).length === 0 && !hasTestCases) {
