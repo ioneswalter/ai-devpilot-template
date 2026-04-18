@@ -97,12 +97,12 @@ export async function handleApproveReview(
 
   const now = new Date().toISOString();
 
-  // 5. Update feature: merge criteria, change status to "approved"
+  // 5. Update feature: merge criteria, change status to "specified"
   const { error: featureUpdateErr } = await supabase
     .from('product_features')
     .update({
       acceptance_criteria: acceptedCriteria,
-      status: 'approved',
+      status: 'specified',
       updated_at: now,
     })
     .eq('id', feature.id);
@@ -158,7 +158,7 @@ export async function handleApproveReview(
       feature: {
         id: feature.id,
         feature_code: feature.feature_code,
-        status: 'approved',
+        status: 'specified',
         acceptance_criteria: acceptedCriteria,
         updated_at: now,
       },

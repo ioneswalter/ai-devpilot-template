@@ -121,7 +121,7 @@ export function TestRunPanel({
   const buildRejected = buildGateQuery.data?.rejected ?? 0;
   const buildNeedsReview = featureStatus === 'in_development' && (buildPending > 0 || buildRejected > 0);
 
-  const needsBuild = featureStatus === 'proposed' || featureStatus === 'reviewed' || featureStatus === 'approved';
+  const needsBuild = featureStatus === 'proposed' || featureStatus === 'reviewed' || featureStatus === 'specified';
   if (needsBuild) return <BuildRequiredGate featureCode={featureCode} featureTitle={featureTitle} featureStatus={featureStatus} onClose={onClose} />;
   if (buildNeedsReview) return <BuildReviewGate featureCode={featureCode} featureTitle={featureTitle} buildPending={buildPending} buildRejected={buildRejected} onClose={onClose} />;
 

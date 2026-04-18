@@ -30,9 +30,9 @@ export async function handleStartReview(
     return { error: { code: 'FEATURE_NOT_FOUND', message: 'Feature does not exist' }, status: 404 };
   }
 
-  if (feature.status !== 'proposed' && feature.status !== 'approved') {
+  if (feature.status !== 'proposed' && feature.status !== 'specified') {
     return {
-      error: { code: 'INVALID_STATUS', message: `Feature is "${feature.status}" — review requires "proposed" or "approved" status` },
+      error: { code: 'INVALID_STATUS', message: `Feature is "${feature.status}" — review requires "proposed" or "specified" status` },
       status: 422,
     };
   }

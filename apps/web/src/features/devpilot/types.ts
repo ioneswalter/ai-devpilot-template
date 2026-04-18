@@ -52,7 +52,7 @@ export interface DedupMatch {
   feature_code: string;
   title: string;
   similarity: 'high' | 'medium';
-  status: 'released' | 'proposed' | 'approved' | 'in_development';
+  status: 'released' | 'proposed' | 'specified' | 'in_development';
   description_excerpt: string;
   recommendation: 'use_existing' | 'enhance_existing' | 'converge';
 }

@@ -57,7 +57,7 @@ export async function buildReviewContext(
       .select('feature_code, title, status, acceptance_criteria')
       .eq('spec_section', specSection)
       .neq('id', featureId)
-      .in('status', ['released', 'approved', 'in_development'])
+      .in('status', ['released', 'specified', 'in_development'])
       .order('feature_code')
       .limit(10);
 

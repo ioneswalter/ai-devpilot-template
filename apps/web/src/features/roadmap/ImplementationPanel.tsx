@@ -53,12 +53,12 @@ export function ImplementationPanel({
       try { return (await adminApi.getReview(featureId)).data.review; }
       catch { return null; }
     },
-    enabled: featureStatus === 'approved',
+    enabled: featureStatus === 'specified',
     staleTime: 5_000,
   });
   const specReviewStatus = specReviewQuery.data?.status ?? null;
-  const specReviewBlocking = featureStatus === 'approved' && specReviewStatus === 'in_review';
-  const specReviewSentBack = featureStatus === 'approved' && specReviewStatus === 'sent_back';
+  const specReviewBlocking = featureStatus === 'specified' && specReviewStatus === 'in_review';
+  const specReviewSentBack = featureStatus === 'specified' && specReviewStatus === 'sent_back';
 
   useEffect(() => {
     if (!hasScrolledToLog.current && impl.isImplementing && logRef.current) {

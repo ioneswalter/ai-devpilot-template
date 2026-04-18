@@ -82,8 +82,8 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
               <div className="text-[10px] lg:text-xs text-blue-200">Reviewed</div>
             </div>
             <div className="text-center">
-              <div className="text-lg lg:text-xl font-bold text-yellow-300">{stats.approved}</div>
-              <div className="text-[10px] lg:text-xs text-blue-200">Approved</div>
+              <div className="text-lg lg:text-xl font-bold text-yellow-300">{stats.specified}</div>
+              <div className="text-[10px] lg:text-xs text-blue-200">Specified</div>
             </div>
             <div className="text-center">
               <div className="text-lg lg:text-xl font-bold text-sky-300">{stats.inDevelopment}</div>

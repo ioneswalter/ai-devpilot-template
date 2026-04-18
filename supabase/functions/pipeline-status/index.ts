@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     let featuresQuery = supabase
       .from('product_features')
       .select('id, status')
-      .in('status', ['proposed', 'reviewed', 'approved', 'in_development', 'in_testing', 'released']);
+      .in('status', ['proposed', 'reviewed', 'specified', 'in_development', 'in_testing', 'released']);
 
     if (featureIdParam) {
       featuresQuery = featuresQuery.eq('id', featureIdParam);

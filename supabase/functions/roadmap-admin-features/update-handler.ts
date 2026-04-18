@@ -102,7 +102,7 @@ async function validateStatusTransition(
   newStatus: string,
 ): Promise<Response | null> {
   const statusOrder = [
-    'proposed', 'approved', 'in_development', 'in_testing', 'released',
+    'proposed', 'specified', 'in_development', 'in_testing', 'released',
   ];
 
   const { data: currentFeature, error: fetchError } = await supabase
@@ -125,7 +125,7 @@ async function validateStatusTransition(
     // Acceptance criteria required for approved, in_development, or released
     if (
       targetStages.some(
-        s => s === 'approved' || s === 'in_development' || s === 'released',
+        s => s === 'specified' || s === 'in_development' || s === 'released',
       )
     ) {
       const criteria = currentFeature.acceptance_criteria as string[] | null;

@@ -176,7 +176,7 @@ function DesktopBadgesColumn({
               </svg>
             </button>
           )}
-          {['proposed', 'approved'].includes(feature.status) && (
+          {['proposed', 'specified'].includes(feature.status) && (
             <>
               <button
                 onClick={(e) => {

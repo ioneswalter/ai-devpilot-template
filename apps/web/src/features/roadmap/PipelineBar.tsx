@@ -20,7 +20,7 @@ const STAGE_ORDER: PipelineStageName[] = ['spec', 'build', 'test', 'deploy'];
 const DEFAULT_STAGE = { status: 'not_started' as const, label: 'Not Started' };
 
 export function PipelineBar({ featureStatus, pipeline, isAdmin, isLoading, onStageClick }: PipelineBarProps) {
-  // Only show for approved, in_development, released features
+  // Only show for specified, in_development, released features
   if (!PIPELINE_VISIBLE_STATUSES.includes(featureStatus as typeof PIPELINE_VISIBLE_STATUSES[number])) {
     return null;
   }

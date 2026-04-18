@@ -82,7 +82,7 @@ export interface ProductFeature {
   implementing_features?: { [criterionIndex: number]: string[] };
 }
 
-export type FilterStatus = 'all' | 'released' | 'in_development' | 'proposed' | 'reviewed' | 'approved';
+export type FilterStatus = 'all' | 'released' | 'in_development' | 'proposed' | 'reviewed' | 'specified';
 export type FilterPriority = 'all' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5';
 export type FilterType = 'all' | 'journey' | 'functional_requirement';
 export type FilterCategory = 'all' | 'toolkit' | 'business_module' | 'internal' | 'none';

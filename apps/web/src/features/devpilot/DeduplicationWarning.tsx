@@ -26,7 +26,7 @@ const similarityColors: Record<string, string> = {
 const statusColors: Record<string, string> = {
   released: 'bg-green-100 text-green-700',
   proposed: 'bg-blue-100 text-blue-700',
-  approved: 'bg-purple-100 text-purple-700',
+  specified: 'bg-purple-100 text-purple-700',
   in_development: 'bg-orange-100 text-orange-700',
 };
 

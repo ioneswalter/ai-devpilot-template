@@ -113,7 +113,7 @@ export async function handleDeleteFeature(
     return errorResponse('NOT_FOUND', 'Feature not found', 404);
   }
 
-  if (!['proposed', 'approved'].includes(existingFeature.status)) {
+  if (!['proposed', 'specified'].includes(existingFeature.status)) {
     return errorResponse(
       'FORBIDDEN',
       'Cannot delete features that are in development or released',
