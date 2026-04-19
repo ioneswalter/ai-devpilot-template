@@ -26,8 +26,9 @@ function formatTimestamp(iso: string): string {
 function AuditRecordCard({ record }: { record: FixAuditRecord }) {
   const [expanded, setExpanded] = useState(false);
   const isBlocked = record.action === 'fix_blocked';
-  const isApiError = record.constitutional_result.status === 'API_ERROR';
-  const hasViolations = record.constitutional_result.violations.length > 0;
+  const constitutionalResult = record.constitutional_result ?? { status: 'PASS' as const, violations: [] };
+  const isApiError = constitutionalResult.status === 'API_ERROR';
+  const hasViolations = (constitutionalResult.violations ?? []).length > 0;
 
   return (
     <div className={`border rounded-lg p-3 ${
@@ -103,18 +104,18 @@ function AuditRecordCard({ record }: { record: FixAuditRecord }) {
             <p className="text-xs font-medium text-gray-500 mb-1">
               Constitutional check:{' '}
               <span className={
-                record.constitutional_result.status === 'PASS'
+                constitutionalResult.status === 'PASS'
                   ? 'text-green-600'
                   : 'text-red-600'
               }>
-                {record.constitutional_result.status}
+                {constitutionalResult.status}
               </span>
             </p>
           </div>
 
           {/* Violations table */}
           {hasViolations && (
-            <ViolationsTable violations={record.constitutional_result.violations} />
+            <ViolationsTable violations={constitutionalResult.violations} />
           )}
         </div>
       )}

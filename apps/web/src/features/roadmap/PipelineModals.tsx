@@ -7,6 +7,7 @@ import { SpecReviewPanel } from './SpecReviewPanel';
 import { ImplementationPanel } from './ImplementationPanel';
 import { TestRunPanel } from './TestRunPanel';
 import { ReleasePanel } from './ReleasePanel';
+import { UATReviewPanel } from './UATReviewPanel';
 import { apiClient } from '../../lib/supabase-client';
 import type { ProductFeature } from './roadmap-helpers';
 
@@ -17,6 +18,8 @@ interface PipelineModalsProps {
   setImplementingFeature: (f: ProductFeature | null) => void;
   testingFeature: ProductFeature | null;
   setTestingFeature: (f: ProductFeature | null) => void;
+  uatFeature: ProductFeature | null;
+  setUatFeature: (f: ProductFeature | null) => void;
   showReleases: boolean;
   setShowReleases: (v: boolean) => void;
   onFetchFeatures: () => void;
@@ -30,6 +33,8 @@ export function PipelineModals({
   setImplementingFeature,
   testingFeature,
   setTestingFeature,
+  uatFeature,
+  setUatFeature,
   showReleases,
   setShowReleases,
   onFetchFeatures,
@@ -116,6 +121,26 @@ export function PipelineModals({
               onPipelineInvalidate();
             }}
             onRefresh={() => { onFetchFeatures(); onPipelineInvalidate(); }}
+          />
+        )}
+      </Modal>
+
+      {/* UAT Review Modal (FR-129) */}
+      <Modal
+        isOpen={!!uatFeature}
+        onClose={() => { setUatFeature(null); onPipelineInvalidate(); }}
+        size="xl"
+        showCloseButton={false}
+        flush
+        className="h-[92vh]"
+      >
+        {uatFeature && (
+          <UATReviewPanel
+            featureId={uatFeature.id}
+            featureCode={uatFeature.feature_code}
+            featureTitle={uatFeature.title}
+            featureStatus={uatFeature.status}
+            onClose={() => { setUatFeature(null); onPipelineInvalidate(); }}
           />
         )}
       </Modal>

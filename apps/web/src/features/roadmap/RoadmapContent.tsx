@@ -29,6 +29,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   const [reviewingFeature, setReviewingFeature] = useState<ProductFeature | null>(null);
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
+  const [uatFeature, setUatFeature] = useState<ProductFeature | null>(null);
   const [showReleases, setShowReleases] = useState(false);
   const [versionBumpFeature, setVersionBumpFeature] = useState<ProductFeature | null>(null);
 
@@ -114,6 +115,10 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       const updated = roadmap.features.find((f) => f.id === implementingFeature.id);
       if (updated && updated !== implementingFeature) setImplementingFeature(updated);
     }
+    if (uatFeature) {
+      const updated = roadmap.features.find((f) => f.id === uatFeature.id);
+      if (updated && updated !== uatFeature) setUatFeature(updated);
+    }
   }, [roadmap.features]);
 
   return (
@@ -181,9 +186,12 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       {/* FR-116: Test-ready notification banner */}
       {roadmap.isAdmin && (
         <div className="container mx-auto px-4 mt-2">
-          <NotificationBanner onNavigateToFeature={(fId) => {
+          <NotificationBanner onNavigateToFeature={(fId, tab) => {
             const f = roadmap.features.find((feat) => feat.id === fId);
-            if (f) setTestingFeature(f);
+            if (f) {
+              if (tab === 'uat') setUatFeature(f);
+              else setTestingFeature(f);
+            }
           }} />
         </div>
       )}
@@ -238,6 +246,8 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         setImplementingFeature={setImplementingFeature}
         testingFeature={testingFeature}
         setTestingFeature={setTestingFeature}
+        uatFeature={uatFeature}
+        setUatFeature={setUatFeature}
         showReleases={showReleases}
         setShowReleases={setShowReleases}
         onFetchFeatures={roadmap.fetchFeatures}

@@ -53,13 +53,13 @@ export function NotificationBanner({ onNavigateToFeature }: NotificationBannerPr
         <div
           key={n.id}
           className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border text-sm ${
-            n.type === 'test_ready'
-              ? 'bg-teal-50 border-teal-200 text-teal-800'
+            n.type === 'test_ready' ? 'bg-teal-50 border-teal-200 text-teal-800'
+              : n.type === 'uat_ready' ? 'bg-indigo-50 border-indigo-200 text-indigo-800'
               : 'bg-amber-50 border-amber-200 text-amber-800'
           }`}
         >
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-base">{n.type === 'test_ready' ? '\u2705' : '\u26A0\uFE0F'}</span>
+            <span className="text-base">{n.type === 'test_ready' ? '\u2705' : n.type === 'uat_ready' ? '\uD83D\uDCCB' : '\u26A0\uFE0F'}</span>
             <div className="min-w-0">
               <span className="font-medium">{n.title}</span>
               {n.message && <span className="text-xs opacity-75 ml-2">{n.message}</span>}
@@ -69,12 +69,12 @@ export function NotificationBanner({ onNavigateToFeature }: NotificationBannerPr
             {onNavigateToFeature && (
               <button
                 onClick={() => {
-                  onNavigateToFeature(n.feature_id, 'test');
+                  onNavigateToFeature(n.feature_id, n.type === 'uat_ready' ? 'uat' : 'test');
                   markRead(n.id).catch(() => {});
                 }}
                 className="px-2 py-1 text-xs font-medium bg-white border rounded hover:bg-gray-50"
               >
-                Open Test Panel
+                {n.type === 'uat_ready' ? 'Open UAT Panel' : 'Open Test Panel'}
               </button>
             )}
             <button
