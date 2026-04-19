@@ -289,6 +289,7 @@ export interface ImplementationTaskItem {
   ai_log: string | null;
   complexity_score: ComplexityScore | null;
   fix_audit_trail: FixAuditRecord[] | null;
+  version_label?: string;
 }
 
 export interface ImplementationRequestWithItems {

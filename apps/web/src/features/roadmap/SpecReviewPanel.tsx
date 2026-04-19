@@ -4,6 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase-client';
 import { useSpecReview } from './useSpecReview';
 import { ReviewItemCard } from './ReviewItemCard';
 import { ReviewApprovalBar } from './ReviewApprovalBar';
@@ -54,6 +56,24 @@ export function SpecReviewPanel({
   const [newItemContent, setNewItemContent] = useState('');
   const [showSuccess, setShowSuccess] = useState<string | null>(null);
   const [, setArtifactCount] = useState<number | null>(null);
+
+  // FR-149 v1.1: Detect versioned feature needing new spec review
+  const versionQuery = useQuery({
+    queryKey: ['feature-version-spec', featureId],
+    queryFn: async () => {
+      const { data: versions } = await supabase
+        .from('feature_versions')
+        .select('id, version_label, version_number, superseded_by')
+        .eq('feature_id', featureId)
+        .order('version_number', { ascending: false });
+      if (!versions || versions.length === 0) return null;
+      const current = versions.find(v => v.superseded_by === null);
+      if (!current || current.version_number <= 1) return null;
+      return { currentLabel: current.version_label, priorLabel: versions.find(v => v.superseded_by !== null)?.version_label ?? 'v1.0' };
+    },
+    staleTime: 30_000,
+  });
+  const versionInfo = versionQuery.data;
 
   if (!ready || spec.isLoading) {
     return (
@@ -132,6 +152,18 @@ export function SpecReviewPanel({
           <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800"><strong>Feedback:</strong> {spec.review.feedback}</div>
         )}
       </div>
+
+      {versionInfo && spec.review?.status === 'approved' && featureStatus === 'reviewed' && (
+        <div className="px-4 py-3 bg-purple-50 border-b border-purple-100">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-purple-100 text-purple-700">{versionInfo.currentLabel}</span>
+            <span className="text-sm font-medium text-purple-900">New version needs specification</span>
+          </div>
+          <p className="text-xs text-purple-700">
+            The criteria below are from {versionInfo.priorLabel} (approved). Run <code className="bg-purple-100 px-1 rounded">\spec {featureCode}</code> in Claude Code to generate spec review items for the {versionInfo.currentLabel} delta criteria.
+          </p>
+        </div>
+      )}
 
       {anyError && <div className="px-4 py-2 bg-red-50 border-b border-red-100 text-xs text-red-600">{(anyError as Error).message}</div>}
       <SpecArtifactsView featureId={featureId} onArtifactsLoaded={setArtifactCount} defaultCollapsed />

@@ -17,6 +17,7 @@ import { LearningInsightsPanel } from './LearningInsightsPanel';
 import { PipelineDashboard } from './PipelineDashboard';
 import { CompliancePanel } from './CompliancePanel';
 import { SpecRequiredGate, ReviewBlockingGate, ManualImplGate } from './ImplementationGates';
+import { VersionGroupedTasks } from './VersionGroupedTasks';
 
 interface ImplementationPanelProps {
   featureId: string;
@@ -191,20 +192,7 @@ export function ImplementationPanel({
           </div>
         )}
 
-        <div>
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Implementation Tasks ({impl.taskItems.length})
-            {versionInfo && <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono rounded bg-slate-100 text-slate-500">{versionInfo.priorLabel}</span>}
-          </h4>
-          <div className="space-y-2">
-            {impl.taskItems.map((item, i) => (
-              <div key={item.id} className="space-y-1">
-                <ImplementationTaskCard item={item} index={i} onDecision={(id, data) => impl.updateTaskItem(id, data)} onComment={(id, comment) => impl.updateTaskItem(id, { comment })} isUpdating={impl.isUpdating} isImplementing={impl.isImplementing} />
-                {item.complexity_score && <ComplexityScorePanel score={item.complexity_score} taskItems={impl.taskItems} parentTaskId={item.id} />}
-              </div>
-            ))}
-          </div>
-        </div>
+        <VersionGroupedTasks taskItems={impl.taskItems} versionInfo={versionInfo} onDecision={(id, data) => impl.updateTaskItem(id, data)} onComment={(id, comment) => impl.updateTaskItem(id, { comment })} isUpdating={impl.isUpdating} isImplementing={impl.isImplementing} />
 
         {showAddForm ? (
           <AddTaskForm isAdding={impl.isAdding} onAdd={(task) => impl.addTaskItem(task).then(() => setShowAddForm(false))} onCancel={() => setShowAddForm(false)} />

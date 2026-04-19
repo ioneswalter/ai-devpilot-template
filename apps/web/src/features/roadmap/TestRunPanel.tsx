@@ -147,9 +147,9 @@ export function TestRunPanel({
 
   if (view === 'status') {
     return (
-      <>
+      <div className="flex flex-col h-full overflow-hidden">
         {versionInfo && (
-          <div className="px-4 py-3 bg-purple-50 border-b border-purple-100">
+          <div className="px-4 py-3 bg-purple-50 border-b border-purple-100 shrink-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-purple-100 text-purple-700">{versionInfo.currentLabel}</span>
               <span className="text-sm font-medium text-purple-900">New version needs test generation</span>
@@ -169,7 +169,7 @@ export function TestRunPanel({
           onRunTests={(prefilled) => { setResults(prefilled); setNotes({}); setView('execute'); }}
           onComplete={onComplete} onRefresh={onRefresh} onClose={onClose}
         />
-      </>
+      </div>
     );
   }
 
