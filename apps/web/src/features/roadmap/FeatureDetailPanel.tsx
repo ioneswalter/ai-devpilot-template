@@ -8,7 +8,9 @@ import { FeatureRating } from '../../components/FeatureRating';
 import { getTestTypeBadge } from '../../components/roadmap/badge-utils';
 import { parseCriteria, type ProductFeature } from './roadmap-helpers';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
+import { VersionSelector } from './VersionSelector';
 import type { MutableRefObject } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { aiUsageApi } from '@/lib/api/ai-usage-api';
 
@@ -228,13 +230,37 @@ export function FeatureDetailPanel({
         <FeatureRating featureId={feature.id} isMember={isMember} />
       </div>
 
-      {/* FR-149: Version History */}
+      {/* FR-149: Version History with Version Selector */}
       {feature.feature_code.startsWith('FR-') && (
-        <VersionHistoryPanel featureId={feature.id} />
+        <VersionHistoryWithSelector featureId={feature.id} />
       )}
 
       {/* Comments Section */}
       <FeatureComments featureId={feature.id} featureCode={feature.feature_code} isMember={isMember} />
+    </div>
+  );
+}
+
+/** Version History with Selector — FR-149 v1.1 */
+function VersionHistoryWithSelector({ featureId }: { featureId: string }) {
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+
+  return (
+    <div className="mt-4 pt-4 border-t">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-semibold text-gray-900 flex items-center">
+          <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Version History
+        </h4>
+        <VersionSelector
+          featureId={featureId}
+          selectedVersionId={selectedVersionId}
+          onSelectVersion={setSelectedVersionId}
+        />
+      </div>
+      <VersionHistoryPanel featureId={featureId} />
     </div>
   );
 }

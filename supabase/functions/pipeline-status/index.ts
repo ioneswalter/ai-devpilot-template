@@ -18,6 +18,7 @@ import {
   type SpecArtifactRow,
   type FeatureRow,
 } from './compute-stages.ts';
+import { getCurrentVersionId } from '../_shared/version-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,14 +81,26 @@ Deno.serve(async (req) => {
 
     const featureIds = (features as FeatureRow[]).map((f) => f.id);
 
-    // Batch fetch all stage data in parallel
+    // FR-149 v1.1: Get current version IDs for all features
+    const versionMap = new Map<string, string | null>();
+    const { data: allVersions } = await supabase
+      .from('feature_versions')
+      .select('id, feature_id, superseded_by, version_number')
+      .in('feature_id', featureIds)
+      .is('superseded_by', null)
+      .order('version_number', { ascending: false });
+    for (const v of allVersions ?? []) {
+      if (!versionMap.has(v.feature_id)) versionMap.set(v.feature_id, v.id);
+    }
+
+    // Batch fetch all stage data in parallel (include feature_version_id)
     const [specResult, implResult, testBatch1, testBatch2, artifactResult, pipelineResult] = await Promise.all([
-      supabase.from('spec_reviews').select('feature_id, status').in('feature_id', featureIds).order('created_at', { ascending: false }),
-      supabase.from('implementation_requests').select('feature_id, status, code_applied').in('feature_id', featureIds).order('created_at', { ascending: false }),
-      supabase.from('test_cases').select('feature_id, passed').in('feature_id', featureIds).range(0, 999),
-      supabase.from('test_cases').select('feature_id, passed').in('feature_id', featureIds).range(1000, 2999),
+      supabase.from('spec_reviews').select('feature_id, feature_version_id, status').in('feature_id', featureIds).order('created_at', { ascending: false }),
+      supabase.from('implementation_requests').select('feature_id, feature_version_id, status, code_applied').in('feature_id', featureIds).order('created_at', { ascending: false }),
+      supabase.from('test_cases').select('feature_id, feature_version_id, passed').in('feature_id', featureIds).range(0, 999),
+      supabase.from('test_cases').select('feature_id, feature_version_id, passed').in('feature_id', featureIds).range(1000, 2999),
       supabase.from('feature_spec_artifacts').select('feature_id, artifact_type').in('feature_id', featureIds),
-      supabase.from('pipeline_runs').select('feature_id, status, current_stage, completed_tasks, total_tasks, deploy_results').in('feature_id', featureIds).order('created_at', { ascending: false }),
+      supabase.from('pipeline_runs').select('feature_id, feature_version_id, status, current_stage, completed_tasks, total_tasks, deploy_results').in('feature_id', featureIds).order('created_at', { ascending: false }),
     ]);
 
     const testResult = {
@@ -99,18 +112,42 @@ Deno.serve(async (req) => {
     if (implResult.error) return errorResponse('DB_ERROR', implResult.error.message, 500);
     if (testResult.error) return errorResponse('DB_ERROR', testResult.error.message, 500);
 
-    const allSpecs = (specResult.data ?? []) as SpecReviewRow[];
-    const allImpls = (implResult.data ?? []) as ImplRequestRow[];
-    const allArtifacts = (artifactResult.data ?? []) as SpecArtifactRow[];
-    const allPipelineRuns = (pipelineResult.data ?? []) as PipelineRunRow[];
+    // FR-149 v1.1: Filter pipeline records to current version
+    const filterByVersion = <T extends { feature_id: string; feature_version_id?: string | null }>(
+      records: T[], fid: string,
+    ): T[] => {
+      const currentVid = versionMap.get(fid);
+      if (!currentVid) return records.filter(r => r.feature_id === fid); // unversioned: show all
+      // Versioned: show records matching current version OR NULL (pre-versioning records for v1.0)
+      return records.filter(r => r.feature_id === fid && (r.feature_version_id === currentVid || r.feature_version_id === null));
+    };
 
-    const pipelines = (features as FeatureRow[]).map((f) => ({
-      feature_id: f.id,
-      spec: computeSpecStage(allSpecs, allArtifacts, f.id, f.status),
-      build: computeBuildStage(allImpls, allPipelineRuns, f.id, f.status),
-      test: computeTestStage((testResult.data ?? []) as TestCaseRow[], f.id),
-      deploy: computeDeployStage(allPipelineRuns, f.id, f.status),
-    }));
+    const allSpecs = (specResult.data ?? []) as (SpecReviewRow & { feature_version_id?: string | null })[];
+    const allImpls = (implResult.data ?? []) as (ImplRequestRow & { feature_version_id?: string | null })[];
+    const allTests = (testResult.data ?? []) as (TestCaseRow & { feature_version_id?: string | null })[];
+    const allArtifacts = (artifactResult.data ?? []) as SpecArtifactRow[];
+    const allPipelineRuns = (pipelineResult.data ?? []) as (PipelineRunRow & { feature_version_id?: string | null })[];
+
+    // Check version_id from query param for per-version view
+    const versionIdParam = url.searchParams.get('version_id');
+
+    const pipelines = (features as FeatureRow[]).map((f) => {
+      // If specific version_id requested, filter to that version only
+      const filterFn = <T extends { feature_id: string; feature_version_id?: string | null }>(records: T[]): T[] => {
+        if (versionIdParam) {
+          return records.filter(r => r.feature_id === f.id && (r.feature_version_id === versionIdParam || r.feature_version_id === null));
+        }
+        return filterByVersion(records, f.id);
+      };
+
+      return {
+        feature_id: f.id,
+        spec: computeSpecStage(filterFn(allSpecs), allArtifacts, f.id, f.status),
+        build: computeBuildStage(filterFn(allImpls), filterFn(allPipelineRuns) as PipelineRunRow[], f.id, f.status),
+        test: computeTestStage(filterFn(allTests), f.id),
+        deploy: computeDeployStage(filterFn(allPipelineRuns) as PipelineRunRow[], f.id, f.status),
+      };
+    });
 
     return jsonResponse({ pipelines });
   } catch (err) {

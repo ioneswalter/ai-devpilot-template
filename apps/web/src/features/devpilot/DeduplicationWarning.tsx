@@ -9,7 +9,7 @@ import type { DedupMatch } from './types';
 
 export interface DedupDecision {
   feature_code: string;
-  action: 'use_existing' | 'enhance_existing' | 'converge' | 'different';
+  action: 'use_existing' | 'enhance_existing' | 'converge' | 'version_bump' | 'different';
 }
 
 interface DeduplicationWarningProps {
@@ -120,6 +120,21 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                       <span className="text-gray-500 font-normal"> — update {match.feature_code} with this proposal</span>
                     </span>
                   </label>
+                  {match.status === 'released' && (
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name={`dedup-${match.feature_code}`}
+                        checked={chosen === 'version_bump'}
+                        onChange={() => setDecision(match.feature_code, 'version_bump')}
+                        className="h-4 w-4 border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                      />
+                      <span className="text-xs font-medium text-purple-700">
+                        Create new version
+                        <span className="text-gray-500 font-normal"> — version bump {match.feature_code} with this proposal</span>
+                      </span>
+                    </label>
+                  )}
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
                       type="radio"

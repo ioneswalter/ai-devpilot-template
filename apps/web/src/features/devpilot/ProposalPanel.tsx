@@ -12,6 +12,7 @@ import { ProposalFormFields, initJourneyForm } from './ProposalFormFields';
 import type { ProposalFormState } from './ProposalFormFields';
 import { ProposalPanelTabs } from './ProposalPanelTabs';
 import { devpilotApi } from '@/lib/api-client';
+import { productApi } from '@/lib/api/product-api';
 import { supabase } from '@/lib/supabase-client';
 import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
 
@@ -133,16 +134,51 @@ export function ProposalPanel({
     else if (allResults.length > 0) onSubmitted(allResults);
   };
 
+  const deleteNewFeature = async (featureId: string) => {
+    await supabase.from('test_cases').delete().eq('feature_id', featureId);
+    await supabase.from('feature_spec_artifacts').delete().eq('feature_id', featureId);
+    await supabase.from('ideation_conversations').update({ submitted_feature_id: null }).eq('submitted_feature_id', featureId);
+    await supabase.from('product_features').delete().eq('id', featureId);
+  };
+
   const handleDedupDecision = async (decisions: DedupDecision[]) => {
     if (!dedupResult) return;
+    const versionBump = decisions.find((d) => d.action === 'version_bump');
     const useExisting = decisions.find((d) => d.action === 'use_existing' || d.action === 'enhance_existing' || d.action === 'converge');
-    if (useExisting) {
+
+    if (versionBump) {
+      const newFeatureId = dedupResult.feature.id;
+      const targetCode = versionBump.feature_code;
+      await deleteNewFeature(newFeatureId);
+      const { data: targetFeature } = await supabase.from('product_features')
+        .select('id, title, description, acceptance_criteria').eq('feature_code', targetCode).single();
+      if (targetFeature) {
+        const f = forms[activeIndex];
+        const changeSummary = `New version from Ideation: ${f.title}`;
+        await productApi.bumpVersion(targetFeature.id, 'minor', changeSummary);
+        // Augment: merge new criteria with existing, don't replace
+        const newCriteria = f.journeys.length > 0
+          ? f.journeys.flatMap((j) => j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean))
+          : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
+        const existingCriteria = (targetFeature.acceptance_criteria as string[]) ?? [];
+        const mergedCriteria = [...existingCriteria, ...newCriteria];
+        const mergedTitle = `${targetFeature.title} with ${f.title}`;
+        const mergedDescription = `${targetFeature.description}\n\n${f.description}`;
+        const { data: updated } = await supabase.from('product_features')
+          .update({ title: mergedTitle, description: mergedDescription, acceptance_criteria: mergedCriteria, priority: f.priority, updated_at: new Date().toISOString() })
+          .eq('id', targetFeature.id).select('id, feature_code, title, status, priority, category').single();
+        if (updated) {
+          await supabase.from('ideation_conversations').update({ submitted_feature_id: updated.id, status: 'submitted' }).eq('id', conversationId);
+          updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
+          setDedupResult(null);
+          onSubmitted([{ ...dedupResult, feature: { ...updated, status: updated.status as 'proposed', category: updated.category ?? null } }]);
+          return;
+        }
+      }
+    } else if (useExisting) {
       const newFeatureId = dedupResult.feature.id;
       const targetCode = useExisting.feature_code;
-      await supabase.from('test_cases').delete().eq('feature_id', newFeatureId);
-      await supabase.from('feature_spec_artifacts').delete().eq('feature_id', newFeatureId);
-      await supabase.from('ideation_conversations').update({ submitted_feature_id: null }).eq('submitted_feature_id', newFeatureId);
-      await supabase.from('product_features').delete().eq('id', newFeatureId);
+      await deleteNewFeature(newFeatureId);
       const f = forms[activeIndex];
       const criteriaArray = f.journeys.length > 0
         ? f.journeys.flatMap((j) => j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean))

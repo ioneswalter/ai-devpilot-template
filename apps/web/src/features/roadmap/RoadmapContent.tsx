@@ -3,7 +3,7 @@
  * Composes header, filters, list/kanban views, copilot, and admin modals.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CopilotPanel } from '../../features/copilot';
 import { KanbanBoard } from '../../components/roadmap/KanbanBoard';
 import { useRoadmapData } from './useRoadmapData';
@@ -19,6 +19,7 @@ import { VersionBumpModal } from './VersionBumpModal';
 import type { ProductFeature } from './roadmap-helpers';
 import type { PipelineStageName } from './pipeline-types';
 import { useUserRoles } from '@/hooks/useUserRoles';
+import { supabase } from '@/lib/supabase-client';
 
 export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
   const roadmap = useRoadmapData(featureParam);
@@ -31,10 +32,34 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   const [showReleases, setShowReleases] = useState(false);
   const [versionBumpFeature, setVersionBumpFeature] = useState<ProductFeature | null>(null);
 
-  // FR-149: Version labels are fetched lazily per-feature in VersionHistoryPanel
-  const getVersionLabel = useCallback((_featureId: string): string | null => {
-    return null; // Version labels shown in VersionHistoryPanel when expanded
-  }, []);
+  // FR-149: Fetch version labels for all versioned features
+  const versionLabelsRef = useRef<Record<string, string>>({});
+  const [versionLabelsLoaded, setVersionLabelsLoaded] = useState(false);
+
+  useEffect(() => {
+    const featureIds = roadmap.features.map((f) => f.id);
+    if (featureIds.length === 0) return;
+    supabase
+      .from('feature_versions')
+      .select('feature_id, version_label, version_number')
+      .in('feature_id', featureIds)
+      .is('superseded_by', null)
+      .order('version_number', { ascending: false })
+      .then(({ data }) => {
+        const labels: Record<string, string> = {};
+        for (const v of data ?? []) {
+          if (!labels[v.feature_id] && v.version_label) {
+            labels[v.feature_id] = v.version_label;
+          }
+        }
+        versionLabelsRef.current = labels;
+        setVersionLabelsLoaded(true);
+      });
+  }, [roadmap.features]);
+
+  const getVersionLabel = useCallback((featureId: string): string | null => {
+    return versionLabelsRef.current[featureId] ?? null;
+  }, [versionLabelsLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
     if (!roadmap.isAdmin) return;

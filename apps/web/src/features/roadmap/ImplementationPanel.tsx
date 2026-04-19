@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
+import { supabase } from '@/lib/supabase-client';
 import { useImplementation } from './useImplementation';
 import { ImplementationTaskCard } from './ImplementationTaskCard';
 import { ImplementationStartForm } from './ImplementationStartForm';
@@ -46,6 +47,24 @@ export function ImplementationPanel({
   }, []);
 
   const impl = useImplementation(featureId);
+
+  // FR-149 v1.1: Detect if feature has a newer version that needs building
+  const versionQuery = useQuery({
+    queryKey: ['feature-version-build', featureId],
+    queryFn: async () => {
+      const { data: versions } = await supabase
+        .from('feature_versions')
+        .select('id, version_label, version_number, superseded_by, status')
+        .eq('feature_id', featureId)
+        .order('version_number', { ascending: false });
+      if (!versions || versions.length === 0) return null;
+      const current = versions.find(v => v.superseded_by === null);
+      if (!current || current.version_number <= 1) return null;
+      return { currentLabel: current.version_label, currentStatus: current.status, priorLabel: versions.find(v => v.superseded_by !== null)?.version_label ?? 'v1.0' };
+    },
+    staleTime: 30_000,
+  });
+  const versionInfo = versionQuery.data;
 
   const specReviewQuery = useQuery({
     queryKey: ['spec-review-gate', featureId],
@@ -136,6 +155,28 @@ export function ImplementationPanel({
         <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">{impl.request.error_message}</div>
       )}
 
+      {versionInfo && (
+        <div className="px-4 py-3 bg-purple-50 border-b border-purple-100">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-purple-100 text-purple-700">{versionInfo.currentLabel}</span>
+            <span className="text-sm font-medium text-purple-900">
+              {featureStatus === 'specified' ? 'New version ready to build' :
+               featureStatus === 'in_testing' ? 'Version built — ready to deploy' :
+               featureStatus === 'in_development' ? 'Version build in progress' :
+               'New version'}
+            </span>
+          </div>
+          <p className="text-xs text-purple-700">
+            {featureStatus === 'specified'
+              ? <>Run <code className="bg-purple-100 px-1 rounded">\build {featureCode}</code> in Claude Code to implement the {versionInfo.currentLabel} delta.</>
+              : featureStatus === 'in_testing'
+              ? <>The {versionInfo.currentLabel} build is complete. Run <code className="bg-purple-100 px-1 rounded">\deploy</code> to deploy changes to production.</>
+              : <>The {versionInfo.currentLabel} implementation is in progress.</>
+            }
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {aiPlan?.summary && (
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
@@ -151,7 +192,10 @@ export function ImplementationPanel({
         )}
 
         <div>
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Implementation Tasks ({impl.taskItems.length})</h4>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Implementation Tasks ({impl.taskItems.length})
+            {versionInfo && <span className="ml-2 px-1.5 py-0.5 text-[10px] font-mono rounded bg-slate-100 text-slate-500">{versionInfo.priorLabel}</span>}
+          </h4>
           <div className="space-y-2">
             {impl.taskItems.map((item, i) => (
               <div key={item.id} className="space-y-1">

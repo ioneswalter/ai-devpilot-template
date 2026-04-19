@@ -80,8 +80,8 @@ export function CompliancePanel({
         <button
           type="button"
           onClick={refetch}
-          disabled={isLoading}
-          className="px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          disabled={isLoading || !report}
+          className="px-2.5 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
         >
           {isLoading && (
             <span className="w-3 h-3 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />

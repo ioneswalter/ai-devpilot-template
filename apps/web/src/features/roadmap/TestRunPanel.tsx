@@ -6,6 +6,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
+import { supabase } from '@/lib/supabase-client';
 import { useTestExecution } from './useTestExecution';
 import { AutomatedExecuteView } from './AutomatedExecuteView';
 import { useCriteriaCoverage } from './useCriteriaCoverage';
@@ -121,22 +122,54 @@ export function TestRunPanel({
   const buildRejected = buildGateQuery.data?.rejected ?? 0;
   const buildNeedsReview = featureStatus === 'in_development' && (buildPending > 0 || buildRejected > 0);
 
+  // FR-149 v1.1: Detect if feature has a newer version needing tests
+  const versionQuery = useQuery({
+    queryKey: ['feature-version-test', featureId],
+    queryFn: async () => {
+      const { data: versions } = await supabase
+        .from('feature_versions')
+        .select('id, version_label, version_number, superseded_by')
+        .eq('feature_id', featureId)
+        .order('version_number', { ascending: false });
+      if (!versions || versions.length === 0) return null;
+      const current = versions.find(v => v.superseded_by === null);
+      if (!current || current.version_number <= 1) return null;
+      const prior = versions.find(v => v.superseded_by !== null);
+      return { currentLabel: current.version_label, priorLabel: prior?.version_label ?? 'v1.0' };
+    },
+    staleTime: 30_000,
+  });
+  const versionInfo = versionQuery.data;
+
   const needsBuild = featureStatus === 'proposed' || featureStatus === 'reviewed' || featureStatus === 'specified';
   if (needsBuild) return <BuildRequiredGate featureCode={featureCode} featureTitle={featureTitle} featureStatus={featureStatus} onClose={onClose} />;
   if (buildNeedsReview) return <BuildReviewGate featureCode={featureCode} featureTitle={featureTitle} buildPending={buildPending} buildRejected={buildRejected} onClose={onClose} />;
 
   if (view === 'status') {
     return (
-      <TestRunStatusView
-        featureId={featureId} featureCode={featureCode} featureTitle={featureTitle}
-        featureStatus={featureStatus} testCases={testCases} acceptanceCriteria={acceptanceCriteria}
-        coverage={coverage} lastRunResults={lastRunResults} history={exec.history}
-        isLoading={exec.isLoading} passedCount={passedCount} failedCount={failedCount}
-        skippedCount={skippedCount} notRunCount={notRunCount} allPassed={allPassed}
-        isDeployed={isDeployed}
-        onRunTests={(prefilled) => { setResults(prefilled); setNotes({}); setView('execute'); }}
-        onComplete={onComplete} onRefresh={onRefresh} onClose={onClose}
-      />
+      <>
+        {versionInfo && (
+          <div className="px-4 py-3 bg-purple-50 border-b border-purple-100">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-purple-100 text-purple-700">{versionInfo.currentLabel}</span>
+              <span className="text-sm font-medium text-purple-900">New version needs test generation</span>
+            </div>
+            <p className="text-xs text-purple-700">
+              The tests below are from {versionInfo.priorLabel} (passed). Run <code className="bg-purple-100 px-1 rounded">\generate-tests {featureCode}</code> in Claude Code to generate tests for the {versionInfo.currentLabel} delta criteria.
+            </p>
+          </div>
+        )}
+        <TestRunStatusView
+          featureId={featureId} featureCode={featureCode} featureTitle={featureTitle}
+          featureStatus={featureStatus} testCases={testCases} acceptanceCriteria={acceptanceCriteria}
+          coverage={coverage} lastRunResults={lastRunResults} history={exec.history}
+          isLoading={exec.isLoading} passedCount={passedCount} failedCount={failedCount}
+          skippedCount={skippedCount} notRunCount={notRunCount} allPassed={allPassed}
+          isDeployed={isDeployed}
+          onRunTests={(prefilled) => { setResults(prefilled); setNotes({}); setView('execute'); }}
+          onComplete={onComplete} onRefresh={onRefresh} onClose={onClose}
+        />
+      </>
     );
   }
 

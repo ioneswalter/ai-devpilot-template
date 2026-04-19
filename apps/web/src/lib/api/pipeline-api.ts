@@ -11,10 +11,15 @@ import type { LearningInsights } from './test-api';
 
 export const pipelineApiMethods = {
   // Pipeline Status (FR-111)
-  getPipelineStatus: (featureId?: string) =>
-    apiClient<PipelineStatusResponse>(
-      `pipeline-status${featureId ? `?feature_id=${featureId}` : ''}`,
-    ),
+  getPipelineStatus: (featureId?: string, versionId?: string) => {
+    const params = new URLSearchParams();
+    if (featureId) params.set('feature_id', featureId);
+    if (versionId) params.set('version_id', versionId);
+    const qs = params.toString();
+    return apiClient<PipelineStatusResponse>(
+      `pipeline-status${qs ? `?${qs}` : ''}`,
+    );
+  },
 
   // Pipeline Orchestrator (FR-113)
   startPipeline: (featureId: string, requestId: string) =>

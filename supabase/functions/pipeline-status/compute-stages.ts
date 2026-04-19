@@ -5,11 +5,13 @@
 
 export interface SpecReviewRow {
   feature_id: string;
+  feature_version_id?: string | null; // FR-149 v1.1
   status: string;
 }
 
 export interface ImplRequestRow {
   feature_id: string;
+  feature_version_id?: string | null; // FR-149 v1.1
   status: string;
   code_applied: boolean | null;
 }
@@ -20,6 +22,7 @@ export interface DeployResultsRow {
 
 export interface PipelineRunRow {
   feature_id: string;
+  feature_version_id?: string | null; // FR-149 v1.1
   status: string;
   current_stage: string;
   completed_tasks: number;
@@ -29,6 +32,7 @@ export interface PipelineRunRow {
 
 export interface TestCaseRow {
   feature_id: string;
+  feature_version_id?: string | null; // FR-149 v1.1
   passed: boolean | null;
 }
 
