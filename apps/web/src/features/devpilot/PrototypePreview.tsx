@@ -5,17 +5,14 @@
  * FR-140: AI Prototype Builder
  */
 
-import type { PrototypeType } from '@ownyourgig/types';
 import { PrototypeToolbar } from './PrototypeToolbar';
+import type { PrototypeType } from '@ownyourgig/types';
 
 interface PrototypePreviewProps {
   content: string | null;
   prototypeType: PrototypeType | null;
-  isGenerating: boolean;
-  error: { code: string; message: string } | null;
-  disambiguation: { detected_types: PrototypeType[]; confidence: number } | null;
-  onSelectType: (type: PrototypeType) => void;
-  onRetry: () => void;
+  isLoading: boolean;
+  featureCode?: string;
   versionNumber: number;
   totalVersions: number;
   versions?: Array<{ id: string; version_number: number; prototype_type: string; content: string; feedback_prompt: string | null; is_current: boolean; confidence: number | null; created_at: string }>;
@@ -25,20 +22,11 @@ interface PrototypePreviewProps {
   isFinalised?: boolean;
 }
 
-const TYPE_LABELS: Record<PrototypeType, { label: string; icon: string }> = {
-  ui: { label: 'UI Screens', icon: '🖥️' },
-  flowchart: { label: 'Flowchart', icon: '🔀' },
-  process: { label: 'Process Diagram', icon: '⚙️' },
-};
-
 export function PrototypePreview({
   content,
   prototypeType,
-  isGenerating,
-  error,
-  disambiguation,
-  onSelectType,
-  onRetry,
+  isLoading,
+  featureCode,
   versionNumber,
   totalVersions,
   versions = [],
@@ -47,69 +35,10 @@ export function PrototypePreview({
   onFinalise,
   isFinalised,
 }: PrototypePreviewProps) {
-  // Disambiguation state — ask user to choose prototype type
-  if (disambiguation) {
-    return (
-      <div className="h-full flex items-center justify-center bg-indigo-50 rounded-lg border-2 border-indigo-300 p-6 animate-pulse-once">
-        <div className="text-center max-w-sm">
-          <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">🎨</span>
-          </div>
-          <p className="text-base font-semibold text-indigo-900 mb-2">
-            Choose a prototype type
-          </p>
-          <p className="text-sm text-indigo-600 mb-6">
-            This feature has both UI and backend elements. Pick one to generate an interactive preview.
-          </p>
-          <div className="flex flex-col gap-3">
-            {disambiguation.detected_types.map((type) => (
-              <button
-                key={type}
-                onClick={() => onSelectType(type)}
-                className="w-full px-4 py-3 text-sm font-medium rounded-lg border-2 border-indigo-200 bg-white hover:bg-indigo-100 hover:border-indigo-400 transition-colors flex items-center gap-3 justify-center shadow-sm"
-              >
-                <span className="text-lg">{TYPE_LABELS[type].icon}</span>
-                <span>{TYPE_LABELS[type].label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const cmdCode = featureCode || 'FR-XXX';
 
-  // Error state
-  if (error) {
-    return (
-      <div className="h-full flex items-center justify-center bg-red-50 rounded-lg border border-red-200 p-6">
-        <div className="text-center max-w-sm">
-          <p className="text-sm font-medium text-red-700 mb-1">
-            Prototype generation failed
-          </p>
-          <p className="text-xs text-red-600 mb-4">{error.message}</p>
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={onRetry}
-              className="px-4 py-2 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
-            >
-              Retry
-            </button>
-            {error.code === 'GENERATION_TIMEOUT' && (
-              <button
-                onClick={onRetry}
-                className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Simplify &amp; Retry
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading state
-  if (isGenerating) {
+  // Loading state (fetching from storage)
+  if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300">
         <div className="text-center">
@@ -117,23 +46,25 @@ export function PrototypePreview({
             <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
               <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
             </div>
-            <p className="text-sm text-gray-500">Generating prototype...</p>
-            <p className="text-xs text-gray-400">This may take up to 30 seconds</p>
+            <p className="text-sm text-gray-500">Loading prototype...</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Empty state
+  // Empty state — command reminder
   if (!content) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-300 p-6">
-        <div className="text-center max-w-xs">
-          <p className="text-sm font-medium text-gray-500 mb-1">Prototype Preview</p>
-          <p className="text-xs text-gray-400">
-            Describe a feature in the chat and click "Generate Prototype" to see an interactive preview here.
+        <div className="text-center max-w-sm">
+          <p className="text-sm font-medium text-gray-500 mb-2">No prototype yet</p>
+          <p className="text-xs text-gray-400 mb-3">
+            Run the following command in Claude Code to create a prototype:
           </p>
+          <code className="text-xs font-mono bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded border border-indigo-200">
+            \generate-prototype {cmdCode}
+          </code>
         </div>
       </div>
     );
@@ -159,6 +90,9 @@ export function PrototypePreview({
         className="flex-1 w-full bg-white"
         style={{ border: 'none', minHeight: '400px' }}
       />
+      <div className="px-3 py-2 bg-gray-50 border-t text-xs text-gray-500">
+        To iterate, run <code className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">\iterate-prototype {cmdCode} &apos;your feedback&apos;</code> in Claude Code.
+      </div>
     </div>
   );
 }

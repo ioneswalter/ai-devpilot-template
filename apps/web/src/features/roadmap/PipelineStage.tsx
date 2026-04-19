@@ -68,8 +68,9 @@ function CheckIcon() {
 }
 
 export function PipelineStage({ stage, status, isAdmin, onClick }: PipelineStageProps) {
-  const isDone = status.status === 'completed' || status.status === 'warning';
-  const styles = STATUS_STYLES[status.status];
+  const safeStatus = status ?? { status: 'not_started' as const, label: 'Not Started' };
+  const isDone = safeStatus.status === 'completed' || safeStatus.status === 'warning';
+  const styles = STATUS_STYLES[safeStatus.status] ?? STATUS_STYLES.not_started;
   const isClickable = isAdmin && !!onClick;
 
   return (
@@ -87,15 +88,15 @@ export function PipelineStage({ stage, status, isAdmin, onClick }: PipelineStage
         ${isClickable ? 'cursor-pointer hover:shadow-sm active:scale-95' : 'cursor-default'}
         disabled:cursor-default
       `}
-      title={`${STAGE_LABELS[stage]}: ${status.label}`}
-      aria-label={`${STAGE_LABELS[stage]} stage: ${status.label}`}
+      title={`${STAGE_LABELS[stage]}: ${safeStatus.label}`}
+      aria-label={`${STAGE_LABELS[stage]} stage: ${safeStatus.label}`}
       aria-disabled={!isClickable}
       tabIndex={isClickable ? 0 : -1}
     >
       {isDone ? <CheckIcon /> : <CircleIcon />}
       <span>{STAGE_LABELS[stage]}</span>
-      {status.label !== 'Not Started' && status.label !== STAGE_LABELS[stage] && (
-        <span className="hidden lg:inline text-[10px] opacity-75">· {status.label}</span>
+      {safeStatus.label !== 'Not Started' && safeStatus.label !== STAGE_LABELS[stage] && (
+        <span className="hidden lg:inline text-[10px] opacity-75">· {safeStatus.label}</span>
       )}
     </button>
   );

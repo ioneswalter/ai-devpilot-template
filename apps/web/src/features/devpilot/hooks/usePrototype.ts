@@ -25,9 +25,7 @@ interface VersionInfo {
 interface PrototypeState {
   content: string | null;
   prototypeType: PrototypeType | null;
-  isGenerating: boolean;
-  error: { code: string; message: string } | null;
-  disambiguation: { detected_types: PrototypeType[]; confidence: number } | null;
+  isLoading: boolean;
   versionNumber: number;
   totalVersions: number;
   versions: VersionInfo[];
@@ -37,17 +35,11 @@ export function usePrototype(conversationId: string | null) {
   const [state, setState] = useState<PrototypeState>({
     content: null,
     prototypeType: null,
-    isGenerating: false,
-    error: null,
-    disambiguation: null,
+    isLoading: false,
     versionNumber: 0,
     totalVersions: 0,
     versions: [],
   });
-
-  const setGenerating = useCallback((val: boolean) => {
-    setState((s) => ({ ...s, isGenerating: val, error: null }));
-  }, []);
 
   /** Process metadata from a chat message to update prototype state */
   const processMessage = useCallback((msg: ConversationMessage) => {
@@ -59,47 +51,26 @@ export function usePrototype(conversationId: string | null) {
         ...s,
         content: null, // Will be loaded via fetchVersions
         prototypeType: meta.prototype_type as PrototypeType,
-        isGenerating: false,
-        error: null,
-        disambiguation: null,
+        isLoading: true,
         versionNumber: meta.version_number as number,
         totalVersions: Math.max(s.totalVersions, meta.version_number as number),
       }));
-      // Fetch the actual content
       if (conversationId) {
         fetchVersions(conversationId);
       }
-    }
-
-    if (meta.type === 'prototype_disambiguation') {
-      setState((s) => ({
-        ...s,
-        isGenerating: false,
-        disambiguation: {
-          detected_types: meta.detected_types as PrototypeType[],
-          confidence: meta.confidence as number,
-        },
-      }));
-    }
-
-    if (meta.type === 'prototype_error') {
-      setState((s) => ({
-        ...s,
-        isGenerating: false,
-        error: {
-          code: meta.error_code as string,
-          message: meta.message as string,
-        },
-      }));
     }
   }, [conversationId]);
 
   /** Fetch all versions for the conversation */
   const fetchVersions = useCallback(async (convId: string) => {
+    setState((s) => ({ ...s, isLoading: true }));
     try {
       const result = await devpilotApi.getPrototypeVersions(convId);
       const data = result?.data;
-      if (!data?.versions?.length) return;
+      if (!data?.versions?.length) {
+        setState((s) => ({ ...s, isLoading: false }));
+        return;
+      }
 
       const current = data.versions.find(
         (v: VersionInfo) => v.is_current,
@@ -111,23 +82,11 @@ export function usePrototype(conversationId: string | null) {
         prototypeType: (current?.prototype_type as PrototypeType) ?? s.prototypeType,
         versionNumber: data.current_version,
         totalVersions: data.total_versions,
+        isLoading: false,
       }));
     } catch {
-      // Silently fail — prototype preview is optional
+      setState((s) => ({ ...s, isLoading: false }));
     }
-  }, []);
-
-  /** Clear disambiguation and error states */
-  const clearDisambiguation = useCallback(() => {
-    setState((s) => ({ ...s, disambiguation: null }));
-  }, []);
-
-  const clearError = useCallback(() => {
-    setState((s) => ({ ...s, error: null }));
-  }, []);
-
-  const setError = useCallback((error: { code: string; message: string }) => {
-    setState((s) => ({ ...s, error, isGenerating: false }));
   }, []);
 
   /** Revert to a specific version */
@@ -171,13 +130,9 @@ export function usePrototype(conversationId: string | null) {
     hasPrototype,
     isFinalised,
     isReverting,
-    setGenerating,
     processMessage,
     fetchVersions,
     revertToVersion,
     finalise,
-    clearDisambiguation,
-    clearError,
-    setError,
   };
 }

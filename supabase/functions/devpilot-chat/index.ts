@@ -43,7 +43,7 @@ const requestSchema = z.object({
   message: z.string().min(1, 'Message is required').max(10000, 'Message too long'),
   model: z.string().optional(),
   generate_prototype: z.boolean().optional(),
-  prototype_type: z.enum(['ui', 'flowchart', 'process']).optional(),
+  prototype_type: z.enum(['ui', 'flowchart', 'sequence']).optional(),
 });
 
 /** Call Claude API via fetch instead of the heavy SDK to save memory */
@@ -244,19 +244,14 @@ Deno.serve(async (req) => {
 
     await supabase.from('ideation_conversations').update(updates).eq('id', conversation_id);
 
-    // FR-140: Prototype generation (when explicitly requested)
+    // FR-140 v2.0: Browser-side prototype generation retired — use Claude Code commands
     if (validation.data.generate_prototype) {
-      const protoMeta = await handlePrototypeGeneration(
-        supabase, conversation_id, message,
-        validation.data.prototype_type, assistantMsg.id,
-      );
-      if (protoMeta) {
-        // Update assistant message metadata with prototype info
-        const merged = { ...metadata, ...protoMeta };
-        await supabase.from('conversation_messages')
-          .update({ metadata: merged }).eq('id', assistantMsg.id);
-        assistantMsg.metadata = merged;
-      }
+      return jsonResponse({
+        error: {
+          code: 'GONE',
+          message: 'Browser-side prototype generation retired in v2.0. Use \\generate-prototype FR-XXX in Claude Code.',
+        },
+      }, 410);
     }
 
     return jsonResponse({

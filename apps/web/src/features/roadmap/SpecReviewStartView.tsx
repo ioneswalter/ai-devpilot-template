@@ -92,6 +92,11 @@ export function SpecReviewStartView({
         ) : null}
       </div>
 
+      <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100">
+        <p className="text-xs text-indigo-700">
+          Run <code className="font-mono bg-indigo-100 px-1 rounded">\generate-prototype {featureCode}</code> in Claude Code to create a visual prototype for this feature.
+        </p>
+      </div>
       <div className="flex-1 overflow-y-auto">
         <SpecArtifactsView featureId={featureId} onArtifactsLoaded={onArtifactsLoaded} />
       </div>

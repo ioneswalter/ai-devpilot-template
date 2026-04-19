@@ -22,7 +22,7 @@ import { PrototypeVersionHistory } from './PrototypeVersionHistory';
 const TYPE_LABELS: Record<PrototypeType, string> = {
   ui: '🖥️ UI Screens',
   flowchart: '🔀 Flowchart',
-  process: '⚙️ Process',
+  sequence: '⚙️ Sequence',
 };
 
 interface PrototypeToolbarProps {
