@@ -11,12 +11,12 @@ interface UATChecklistItemProps {
   isUpdating: boolean;
 }
 
-const DECISION_STYLES = {
+const DECISION_STYLES: Record<string, string> = {
   pending: 'bg-gray-100 text-gray-600',
   pass: 'bg-green-100 text-green-700',
   fail: 'bg-red-100 text-red-700',
   defer: 'bg-amber-100 text-amber-700',
-} as const;
+};
 
 const SOURCE_BADGES = {
   spec_criterion: null,
@@ -69,8 +69,8 @@ function ScenarioDataView({ data }: { data: Record<string, unknown> | null }) {
   if (!data) return null;
   return (
     <div className="bg-gray-50 rounded p-2 mb-2 text-xs text-gray-600">
-      {data.steps && <div><strong>Steps:</strong> {String(data.steps)}</div>}
-      {data.expected_outcomes && <div><strong>Expected:</strong> {String(data.expected_outcomes)}</div>}
+      {data.steps != null && <div><strong>Steps:</strong> {String(data.steps)}</div>}
+      {data.expected_outcomes != null && <div><strong>Expected:</strong> {String(data.expected_outcomes)}</div>}
     </div>
   );
 }

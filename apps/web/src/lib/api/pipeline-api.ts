@@ -237,7 +237,7 @@ export interface PipelineNotification {
   id: string;
   feature_id: string;
   pipeline_id: string;
-  type: 'test_ready' | 'readiness_failed';
+  type: 'test_ready' | 'readiness_failed' | 'uat_ready';
   title: string;
   message: string;
   read: boolean;
