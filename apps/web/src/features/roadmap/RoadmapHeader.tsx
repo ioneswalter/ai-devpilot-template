@@ -57,7 +57,7 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
                       Arch
                     </button>
                     <button onClick={() => navigate({ to: '/devpilot-flowchart' })} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
-                      Flowchart
+                      Blueprint
                     </button>
                     <button onClick={() => navigate({ to: '/devpilot-prompts' })} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
                       Playbook
@@ -157,7 +157,7 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
                 </svg>
-                Flowchart
+                Blueprint
               </button>
             )}
             {isAdmin && (
