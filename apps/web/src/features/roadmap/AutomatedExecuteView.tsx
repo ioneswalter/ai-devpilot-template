@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAutomatedTests } from './useAutomatedTests';
 import { useExtensionBridge } from './useExtensionBridge';
 import { testAutomationApi } from '@/lib/api/test-automation-api';
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
 import { PreflightReport } from './PreflightReport';
 import { PhaseIndicator, ScriptList } from './AutomatedExecuteWidgets';
 import { RunningProgress } from './AutomatedExecuteSubViews';
@@ -208,7 +209,7 @@ export function AutomatedExecuteView({
             {auto.scripts.length === 0 && (
               <div className="text-center py-6 space-y-3">
                 <p className="text-sm text-gray-500">No test scripts found for this feature.</p>
-                <p className="text-xs text-gray-400">Run <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-indigo-600">\generate-tests {featureCode}</code> in Claude Code to generate scripts from actual source code.</p>
+                <p className="text-xs text-gray-400">Run <CopyableCommand command={`\\generate-tests ${featureCode}`} className="bg-gray-100" /> in Claude Code to generate scripts from actual source code.</p>
                 <button onClick={onSwitchToManual} className="px-3 py-1.5 text-xs font-medium text-indigo-700 border border-indigo-300 rounded hover:bg-indigo-50">Test Manually Instead</button>
               </div>
             )}

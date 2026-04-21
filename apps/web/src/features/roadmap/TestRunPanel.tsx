@@ -7,6 +7,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
 import { supabase } from '@/lib/supabase-client';
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
 import { useTestExecution } from './useTestExecution';
 import { AutomatedExecuteView } from './AutomatedExecuteView';
 import { useCriteriaCoverage } from './useCriteriaCoverage';
@@ -155,7 +156,7 @@ export function TestRunPanel({
               <span className="text-sm font-medium text-purple-900">New version needs test generation</span>
             </div>
             <p className="text-xs text-purple-700">
-              The tests below are from {versionInfo.priorLabel} (passed). Run <code className="bg-purple-100 px-1 rounded">\generate-tests {featureCode}</code> in Claude Code to generate tests for the {versionInfo.currentLabel} delta criteria.
+              The tests below are from {versionInfo.priorLabel} (passed). Run <CopyableCommand command={`\\generate-tests ${featureCode}`} className="bg-purple-100" /> in Claude Code to generate tests for the {versionInfo.currentLabel} delta criteria.
             </p>
           </div>
         )}

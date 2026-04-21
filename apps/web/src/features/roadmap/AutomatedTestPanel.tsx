@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
 import { useAutomatedTests } from './useAutomatedTests';
 import { useExtensionBridge } from './useExtensionBridge';
 import { parseGateWarnings, dismissGateWarning, isWarningDismissed } from './gate-warning-utils';
@@ -141,7 +142,7 @@ export function AutomatedTestPanel({ featureId, testCaseCount }: AutomatedTestPa
       <div className="divide-y">
         {auto.scripts.length === 0 && !auto.generating && (
           <div className="px-3 py-4 text-center text-xs text-gray-500">
-            No automated scripts yet. Run <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-indigo-600">\generate-tests FR-XXX</code> in Claude Code to create them from actual source code.
+            No automated scripts yet. Run <CopyableCommand command="\\generate-tests FR-XXX" className="bg-gray-100" /> in Claude Code to create them from actual source code.
           </div>
         )}
         {auto.scripts.map((script) => {

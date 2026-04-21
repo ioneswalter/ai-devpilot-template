@@ -3,6 +3,7 @@
  */
 
 import type { ReviewItem, ReviewItemType } from './spec-review-types';
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
 
 export function groupItemsByType(items: ReviewItem[]): Record<string, ReviewItem[]> {
   const groups: Record<string, ReviewItem[]> = {};
@@ -45,7 +46,7 @@ export function ProposalReviewBanner({ featureCode }: ProposalReviewBannerProps)
       </svg>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-amber-800">Proposal Review Required</p>
-        <p className="text-xs text-amber-700">Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> first, then <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> to generate the specification.</p>
+        <p className="text-xs text-amber-700">Run <CopyableCommand command={`\\review-proposal ${featureCode}`} className="bg-amber-100" /> first, then <CopyableCommand command={`\\spec ${featureCode}`} className="bg-amber-100" /> to generate the specification.</p>
       </div>
     </div>
   );
@@ -63,7 +64,7 @@ export function SpecGenerationBanner({ featureCode }: SpecGenerationBannerProps)
       </svg>
       <div className="flex-1 min-w-0">
         <p className="text-xs font-semibold text-violet-800">Specification Required</p>
-        <p className="text-xs text-violet-700">This feature has been reviewed. Run <code className="font-mono bg-violet-100 px-1 rounded">\spec {featureCode}</code> in Claude Code to generate the specification. AI Review becomes available after the spec is generated.</p>
+        <p className="text-xs text-violet-700">This feature has been reviewed. Run <CopyableCommand command={`\\spec ${featureCode}`} className="bg-violet-100" /> in Claude Code to generate the specification. AI Review becomes available after the spec is generated.</p>
       </div>
     </div>
   );

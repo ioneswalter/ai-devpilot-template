@@ -3,6 +3,8 @@
  * Guides the admin to use Claude Code for implementation.
  */
 
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
+
 interface ImplementationStartFormProps {
   featureCode: string;
   featureTitle: string;
@@ -70,7 +72,7 @@ export function ImplementationStartForm({
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <p className="text-xs text-gray-500 text-center">
-                After running <code className="bg-white px-1 py-0.5 rounded text-indigo-600 font-mono">\build</code>, tasks will appear here for your review.
+                After running <CopyableCommand command="\\build" className="bg-white" />, tasks will appear here for your review.
               </p>
             </div>
           </div>

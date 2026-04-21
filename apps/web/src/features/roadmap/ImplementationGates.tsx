@@ -3,6 +3,8 @@
  * when prerequisites (spec, review) are not met.
  */
 
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
+
 interface GateHeaderProps {
   featureCode: string;
   featureTitle: string;
@@ -47,8 +49,8 @@ export function SpecRequiredGate({ featureCode, featureTitle, featureStatus, onC
           </p>
           <p className="text-xs text-amber-700">
             {isProposed
-              ? <>Run <code className="font-mono bg-amber-100 px-1 rounded">\review-proposal {featureCode}</code> then <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> before building.</>
-              : <>Run <code className="font-mono bg-amber-100 px-1 rounded">\spec {featureCode}</code> to generate the specification before building.</>
+              ? <>Run <CopyableCommand command={`\\review-proposal ${featureCode}`} className="bg-amber-100" /> then <CopyableCommand command={`\\spec ${featureCode}`} className="bg-amber-100" /> before building.</>
+              : <>Run <CopyableCommand command={`\\spec ${featureCode}`} className="bg-amber-100" /> to generate the specification before building.</>
             }
           </p>
         </div>

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
 import { supabase } from '@/lib/supabase-client';
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
 import { useImplementation } from './useImplementation';
 import { ImplementationStartForm } from './ImplementationStartForm';
 import { ImplementationLog } from './ImplementationLog';
@@ -167,9 +168,9 @@ export function ImplementationPanel({
           </div>
           <p className="text-xs text-purple-700">
             {featureStatus === 'specified'
-              ? <>Run <code className="bg-purple-100 px-1 rounded">\build {featureCode}</code> in Claude Code to implement the {versionInfo.currentLabel} delta.</>
+              ? <>Run <CopyableCommand command={`\\build ${featureCode}`} className="bg-purple-100" /> in Claude Code to implement the {versionInfo.currentLabel} delta.</>
               : featureStatus === 'in_testing'
-              ? <>The {versionInfo.currentLabel} build is complete. Run <code className="bg-purple-100 px-1 rounded">\deploy</code> to deploy changes to production.</>
+              ? <>The {versionInfo.currentLabel} build is complete. Run <CopyableCommand command="\\deploy" className="bg-purple-100" /> to deploy changes to production.</>
               : <>The {versionInfo.currentLabel} implementation is in progress.</>
             }
           </p>
