@@ -18,7 +18,7 @@ import type { TestScriptExecutionResult } from './useExtensionBridge';
 export type { BrowserScriptResult, BrowserSuiteResult } from './useScriptExecution';
 import type { BrowserScriptResult, BrowserSuiteResult } from './useScriptExecution';
 
-interface UseAutomatedTestsState {
+export interface UseAutomatedTestsState {
   scripts: ScriptListItem[];
   scriptsLoaded: boolean;
   generating: boolean;
@@ -125,7 +125,7 @@ export function useAutomatedTests(featureId: string) {
   }, [featureId]);
 
   const generateScripts = useCallback(
-    createGenerateScripts(featureId, setState as Parameters<typeof createGenerateScripts>[1], loadScripts),
+    createGenerateScripts(featureId, setState, loadScripts),
     [featureId, loadScripts],
   );
 

@@ -59,9 +59,9 @@ interface BuildRequiredGateProps {
 
 export function BuildRequiredGate({ featureCode, featureTitle, featureStatus, onClose }: BuildRequiredGateProps) {
   const stepMsg = featureStatus === 'proposed'
-    ? <>Run <CopyableCommand command={`\\review-proposal ${featureCode}`} className="bg-amber-100" /> → <CopyableCommand command="\\spec" className="bg-amber-100" /> → <CopyableCommand command="\\build" className="bg-amber-100" /> first.</>
+    ? <>Run <CopyableCommand command={`\\review-proposal ${featureCode}`} className="bg-amber-100" /> → <CopyableCommand command={'\\spec'} className="bg-amber-100" /> → <CopyableCommand command={'\\build'} className="bg-amber-100" /> first.</>
     : featureStatus === 'reviewed'
-      ? <>Run <CopyableCommand command={`\\spec ${featureCode}`} className="bg-amber-100" /> → <CopyableCommand command="\\build" className="bg-amber-100" /> first.</>
+      ? <>Run <CopyableCommand command={`\\spec ${featureCode}`} className="bg-amber-100" /> → <CopyableCommand command={'\\build'} className="bg-amber-100" /> first.</>
       : <>Run <CopyableCommand command={`\\build ${featureCode}`} className="bg-amber-100" /> first, then accept the build in the Roadmap UI.</>;
 
   return (

@@ -6,9 +6,9 @@
 import { supabase } from '@/lib/supabase-client';
 import { testAutomationApi } from '@/lib/api/test-automation-api';
 import type { GenerateScriptsResult } from './automation-types';
+import type { UseAutomatedTestsState } from './useAutomatedTests';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SetState = (updater: (s: any) => any) => void;
+type SetState = (updater: (s: UseAutomatedTestsState) => UseAutomatedTestsState) => void;
 
 export function createGenerateScripts(
   featureId: string,

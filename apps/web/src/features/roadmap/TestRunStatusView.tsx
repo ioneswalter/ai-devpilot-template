@@ -92,7 +92,7 @@ export function TestRunStatusView({
           <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
           {allPassed && featureStatus !== 'released' && !isDeployed && (
             <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
-              Run <CopyableCommand command="\\deploy" className="bg-amber-100" /> before releasing
+              Run <CopyableCommand command={'\\deploy'} className="bg-amber-100" /> before releasing
             </span>
           )}
           {allPassed && featureStatus !== 'released' && isDeployed && (

@@ -170,7 +170,7 @@ export function ImplementationPanel({
             {featureStatus === 'specified'
               ? <>Run <CopyableCommand command={`\\build ${featureCode}`} className="bg-purple-100" /> in Claude Code to implement the {versionInfo.currentLabel} delta.</>
               : featureStatus === 'in_testing'
-              ? <>The {versionInfo.currentLabel} build is complete. Run <CopyableCommand command="\\deploy" className="bg-purple-100" /> to deploy changes to production.</>
+              ? <>The {versionInfo.currentLabel} build is complete. Run <CopyableCommand command={'\\deploy'} className="bg-purple-100" /> to deploy changes to production.</>
               : <>The {versionInfo.currentLabel} implementation is in progress.</>
             }
           </p>

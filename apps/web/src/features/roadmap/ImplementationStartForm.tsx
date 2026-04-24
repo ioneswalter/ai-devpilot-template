@@ -72,7 +72,7 @@ export function ImplementationStartForm({
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
               <p className="text-xs text-gray-500 text-center">
-                After running <CopyableCommand command="\\build" className="bg-white" />, tasks will appear here for your review.
+                After running <CopyableCommand command={`\\build ${featureCode}`} className="bg-white" />, tasks will appear here for your review.
               </p>
             </div>
           </div>
