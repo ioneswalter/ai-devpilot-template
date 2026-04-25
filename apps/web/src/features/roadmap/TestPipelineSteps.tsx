@@ -8,6 +8,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { testDataApi, type TestDataSet } from '@/lib/api/test-data-api';
 import { supabase } from '@/lib/supabase-client';
+import { CopyableCommand } from '@/components/ui/CopyableCommand';
 
 interface TestPipelineStepsProps {
   featureId: string;
@@ -142,7 +143,7 @@ export function TestPipelineSteps({
           scriptsStatus === 'blocked'
             ? 'Generate test data first (step 1)'
             : liveAutomatedCount === 0
-              ? `No scripts — run \\generate-tests ${featureCode} in Claude Code`
+              ? <>No scripts — run <CopyableCommand command={`\\generate-tests ${featureCode}`} /> in Claude Code</>
               : `${liveAutomatedCount}/${testCaseCount} test cases automated`
         }
         action={
@@ -200,7 +201,7 @@ function PipelineStep({
   number: number;
   title: string;
   status: StepStatus;
-  detail: string;
+  detail: React.ReactNode;
   action?: React.ReactNode;
   error?: string;
   success?: string;
