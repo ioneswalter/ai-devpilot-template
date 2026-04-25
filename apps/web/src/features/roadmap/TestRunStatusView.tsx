@@ -42,7 +42,11 @@ export function TestRunStatusView({
   onRunTests, onComplete, onRefresh, onClose,
 }: TestRunStatusViewProps) {
   return (
-    <div className="flex flex-col h-full">
+    // FR-089 v1.1: use flex-1 + min-h-0 (not h-full) so when this view is a sibling
+    // of the version banner inside TestRunPanel's flex-col wrapper, it correctly
+    // shrinks to fill remaining space and the inner scrollable middle can scroll —
+    // otherwise the footer overflows the modal and the user can't reach the Close button.
+    <div className="flex-1 min-h-0 flex flex-col">
       <div className="p-4 border-b bg-white">
         <div className="flex items-center gap-2">
           <code className="text-xs font-mono text-blue-600">{featureCode}</code>

@@ -44,14 +44,15 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
   const [overrideConvId, setOverrideConvId] = useState<string | null>(null);
   const effectiveConvId = overrideConvId ?? conversationId;
 
+  const isRealConv = !!effectiveConvId && effectiveConvId !== 'pending';
   const messagesQuery = useQuery({
-    queryKey: effectiveConvId ? queryKeys.ideation.chat(effectiveConvId) : queryKeys.ideation.all(),
+    queryKey: isRealConv ? queryKeys.ideation.chat(effectiveConvId!) : queryKeys.ideation.all(),
     queryFn: async () => {
-      if (!effectiveConvId) return [] as ConversationMessage[];
-      const response = await devpilotApi.getConversation(effectiveConvId);
+      if (!isRealConv) return [] as ConversationMessage[];
+      const response = await devpilotApi.getConversation(effectiveConvId!);
       return mapApiMessages(response.data.messages ?? []);
     },
-    enabled: !!effectiveConvId,
+    enabled: isRealConv,
   });
 
   const messages = messagesQuery.data ?? [];

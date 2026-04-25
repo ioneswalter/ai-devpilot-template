@@ -13,6 +13,8 @@ import { SpecArtifactsView } from './SpecArtifactsView';
 import { SpecReviewStartView } from './SpecReviewStartView';
 import type { ReviewItem, ReviewItemType } from './spec-review-types';
 import { CopyableCommand } from '@/components/ui/CopyableCommand';
+import { usePrototypeAttachment } from '@/features/devpilot/hooks/usePrototypeAttachment';
+import { PrototypePanel } from './PrototypePanel';
 
 interface SpecReviewPanelProps {
   featureId: string;
@@ -53,6 +55,8 @@ export function SpecReviewPanel({
   useEffect(() => { const t = setTimeout(() => setReady(true), 800); return () => clearTimeout(t); }, []);
 
   const spec = useSpecReview(featureId);
+  // FR-089 v1.1 J3 (C2): inline-render the prototype attachment if one exists.
+  const prototypeAttachment = usePrototypeAttachment(featureId);
   const [newItemType, setNewItemType] = useState<ReviewItemType>('criterion');
   const [newItemContent, setNewItemContent] = useState('');
   const [showSuccess, setShowSuccess] = useState<string | null>(null);
@@ -179,11 +183,7 @@ export function SpecReviewPanel({
 
       {anyError && <div className="px-4 py-2 bg-red-50 border-b border-red-100 text-xs text-red-600">{(anyError as Error).message}</div>}
       <SpecArtifactsView featureId={featureId} onArtifactsLoaded={setArtifactCount} defaultCollapsed />
-      <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100">
-        <p className="text-xs text-indigo-700">
-          Run <CopyableCommand command={`\\generate-prototype ${featureCode}`} className="bg-indigo-100" /> in Claude Code to create a visual prototype for this feature.
-        </p>
-      </div>
+      <PrototypePanel featureCode={featureCode} attachment={prototypeAttachment} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {sectionOrder.map(type => {

@@ -36,6 +36,59 @@ interface ProposalPanelProps {
   onSubmitted: (results: SubmitProposalResponse[]) => void;
 }
 
+interface UpdatedFeatureRow {
+  id: string;
+  feature_code: string;
+  title: string;
+  status: string;
+  priority: string;
+  category: string | null;
+}
+
+function criteriaFromForm(f: ProposalFormState): string[] {
+  return f.journeys.length > 0
+    ? f.journeys.flatMap((j) => j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean))
+    : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
+}
+
+async function deleteThrowawayFeature(featureId: string): Promise<void> {
+  const r1 = await supabase.from('test_cases').delete().eq('feature_id', featureId);
+  if (r1.error) throw new Error(`Cleanup failed (test_cases): ${r1.error.message}`);
+  const r2 = await supabase.from('feature_spec_artifacts').delete().eq('feature_id', featureId);
+  if (r2.error) throw new Error(`Cleanup failed (feature_spec_artifacts): ${r2.error.message}`);
+  const r3 = await supabase.from('ideation_conversations').update({ submitted_feature_id: null }).eq('submitted_feature_id', featureId);
+  if (r3.error) throw new Error(`Cleanup failed (clearing submitted_feature_id): ${r3.error.message}`);
+  const r4 = await supabase.from('product_features').delete().eq('id', featureId);
+  if (r4.error) throw new Error(`Cleanup failed (product_features): ${r4.error.message}`);
+}
+
+async function mergeIntoVersionedFeature(targetCode: string, throwawayId: string, f: ProposalFormState, conversationId: string): Promise<UpdatedFeatureRow> {
+  const { data: target, error: fetchErr } = await supabase.from('product_features')
+    .select('id, title, description, acceptance_criteria').eq('feature_code', targetCode).single();
+  if (fetchErr || !target) throw new Error(`Target feature ${targetCode} not found: ${fetchErr?.message ?? 'no data'}`);
+  await productApi.bumpVersion(target.id, 'minor', `New version from Ideation: ${f.title}`);
+  const mergedCriteria = [...((target.acceptance_criteria as string[]) ?? []), ...criteriaFromForm(f)];
+  const { data: updated, error: updateErr } = await supabase.from('product_features')
+    .update({ title: `${target.title} with ${f.title}`, description: `${target.description}\n\n${f.description}`, acceptance_criteria: mergedCriteria, priority: f.priority, updated_at: new Date().toISOString() })
+    .eq('id', target.id).select('id, feature_code, title, status, priority, category').single();
+  if (updateErr || !updated) throw new Error(`Failed to merge into ${targetCode}: ${updateErr?.message ?? 'no data returned'}`);
+  const { error: relinkErr } = await supabase.from('ideation_conversations').update({ submitted_feature_id: updated.id, status: 'submitted' }).eq('id', conversationId);
+  if (relinkErr) throw new Error(`Failed to re-link conversation: ${relinkErr.message}`);
+  await deleteThrowawayFeature(throwawayId);
+  return updated as UpdatedFeatureRow;
+}
+
+async function replaceFeatureContent(targetCode: string, throwawayId: string, f: ProposalFormState, conversationId: string): Promise<UpdatedFeatureRow> {
+  const { data: updated, error: updateErr } = await supabase.from('product_features')
+    .update({ title: f.title, description: f.description, acceptance_criteria: criteriaFromForm(f), priority: f.priority, status: 'proposed', updated_at: new Date().toISOString() })
+    .eq('feature_code', targetCode).select('id, feature_code, title, status, priority, category').single();
+  if (updateErr || !updated) throw new Error(`Failed to update ${targetCode}: ${updateErr?.message ?? 'no data returned'}`);
+  const { error: relinkErr } = await supabase.from('ideation_conversations').update({ submitted_feature_id: updated.id, status: 'submitted' }).eq('id', conversationId);
+  if (relinkErr) throw new Error(`Failed to re-link conversation: ${relinkErr.message}`);
+  await deleteThrowawayFeature(throwawayId);
+  return updated as UpdatedFeatureRow;
+}
+
 function initFormState(p: AdminProposal | MemberProposal): ProposalFormState {
   return {
     title: p.title, description: p.description,
@@ -134,68 +187,31 @@ export function ProposalPanel({
     else if (allResults.length > 0) onSubmitted(allResults);
   };
 
-  const deleteNewFeature = async (featureId: string) => {
-    await supabase.from('test_cases').delete().eq('feature_id', featureId);
-    await supabase.from('feature_spec_artifacts').delete().eq('feature_id', featureId);
-    await supabase.from('ideation_conversations').update({ submitted_feature_id: null }).eq('submitted_feature_id', featureId);
-    await supabase.from('product_features').delete().eq('id', featureId);
-  };
-
   const handleDedupDecision = async (decisions: DedupDecision[]) => {
     if (!dedupResult) return;
     const versionBump = decisions.find((d) => d.action === 'version_bump');
     const useExisting = decisions.find((d) => d.action === 'use_existing' || d.action === 'enhance_existing' || d.action === 'converge');
-
-    if (versionBump) {
-      const newFeatureId = dedupResult.feature.id;
-      const targetCode = versionBump.feature_code;
-      await deleteNewFeature(newFeatureId);
-      const { data: targetFeature } = await supabase.from('product_features')
-        .select('id, title, description, acceptance_criteria').eq('feature_code', targetCode).single();
-      if (targetFeature) {
-        const f = forms[activeIndex];
-        const changeSummary = `New version from Ideation: ${f.title}`;
-        await productApi.bumpVersion(targetFeature.id, 'minor', changeSummary);
-        // Augment: merge new criteria with existing, don't replace
-        const newCriteria = f.journeys.length > 0
-          ? f.journeys.flatMap((j) => j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean))
-          : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
-        const existingCriteria = (targetFeature.acceptance_criteria as string[]) ?? [];
-        const mergedCriteria = [...existingCriteria, ...newCriteria];
-        const mergedTitle = `${targetFeature.title} with ${f.title}`;
-        const mergedDescription = `${targetFeature.description}\n\n${f.description}`;
-        const { data: updated } = await supabase.from('product_features')
-          .update({ title: mergedTitle, description: mergedDescription, acceptance_criteria: mergedCriteria, priority: f.priority, updated_at: new Date().toISOString() })
-          .eq('id', targetFeature.id).select('id, feature_code, title, status, priority, category').single();
-        if (updated) {
-          await supabase.from('ideation_conversations').update({ submitted_feature_id: updated.id, status: 'submitted' }).eq('id', conversationId);
-          updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
-          setDedupResult(null);
-          onSubmitted([{ ...dedupResult, feature: { ...updated, status: updated.status as 'proposed', category: updated.category ?? null } }]);
-          return;
-        }
+    const f = forms[activeIndex];
+    try {
+      if (versionBump) {
+        const updated = await mergeIntoVersionedFeature(versionBump.feature_code, dedupResult.feature.id, f, conversationId);
+        updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
+        setDedupResult(null);
+        onSubmitted([{ ...dedupResult, feature: { ...updated, status: updated.status as 'proposed', category: updated.category ?? null } }]);
+        return;
       }
-    } else if (useExisting) {
-      const newFeatureId = dedupResult.feature.id;
-      const targetCode = useExisting.feature_code;
-      await deleteNewFeature(newFeatureId);
-      const f = forms[activeIndex];
-      const criteriaArray = f.journeys.length > 0
-        ? f.journeys.flatMap((j) => j.acceptance_scenarios.split('\n').map((s) => s.trim()).filter(Boolean))
-        : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
-      const { data: updated } = await supabase.from('product_features')
-        .update({ title: f.title, description: f.description, acceptance_criteria: criteriaArray, priority: f.priority, status: 'proposed', updated_at: new Date().toISOString() })
-        .eq('feature_code', targetCode).select('id, feature_code, title, status, priority, category').single();
-      if (updated) {
-        await supabase.from('ideation_conversations').update({ submitted_feature_id: updated.id, status: 'submitted' }).eq('id', conversationId);
+      if (useExisting) {
+        const updated = await replaceFeatureContent(useExisting.feature_code, dedupResult.feature.id, f, conversationId);
         updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
         setDedupResult(null);
         onSubmitted([{ ...dedupResult, feature: { ...updated, status: 'proposed' as const, category: updated.category ?? null } }]);
         return;
       }
+      setDedupResult(null);
+      onSubmitted([dedupResult]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to apply duplicate-detection decision');
     }
-    setDedupResult(null);
-    onSubmitted([dedupResult]);
   };
 
   return (
