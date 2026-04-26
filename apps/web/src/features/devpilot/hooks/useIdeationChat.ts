@@ -190,11 +190,8 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
   }, []);
 
   const clearMessages = useCallback(() => {
-    if (effectiveConvId) {
-      queryClient.setQueryData<ConversationMessage[]>(queryKeys.ideation.chat(effectiveConvId), []);
-    }
     setOverrideConvId(null);
-  }, [effectiveConvId, queryClient]);
+  }, []);
 
   return {
     messages,

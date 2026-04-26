@@ -9,7 +9,7 @@ import type { DedupMatch } from './types';
 
 export interface DedupDecision {
   feature_code: string;
-  action: 'use_existing' | 'enhance_existing' | 'converge' | 'version_bump' | 'different';
+  action: 'use_existing' | 'enhance_existing' | 'converge' | 'version_bump' | 'merge_in_flight' | 'different';
 }
 
 interface DeduplicationWarningProps {
@@ -101,6 +101,11 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${statusColors[match.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {match.status.replace(/_/g, ' ')}
                     </span>
+                    {match.has_in_flight_version && match.in_flight_version_label && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700" title="Feature has an unreleased version in progress">
+                        {match.in_flight_version_label} in-flight
+                      </span>
+                    )}
                   </div>
                 </div>
                 {match.description_excerpt && (
@@ -120,7 +125,21 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                       <span className="text-gray-500 font-normal"> — update {match.feature_code} with this proposal</span>
                     </span>
                   </label>
-                  {match.status === 'released' && (
+                  {match.has_in_flight_version && match.in_flight_version_label ? (
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name={`dedup-${match.feature_code}`}
+                        checked={chosen === 'merge_in_flight'}
+                        onChange={() => setDecision(match.feature_code, 'merge_in_flight')}
+                        className="h-4 w-4 border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                      />
+                      <span className="text-xs font-medium text-purple-700">
+                        Add to in-flight {match.in_flight_version_label}
+                        <span className="text-gray-500 font-normal"> — append criteria to {match.feature_code} {match.in_flight_version_label}</span>
+                      </span>
+                    </label>
+                  ) : match.status === 'released' && (
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="radio"

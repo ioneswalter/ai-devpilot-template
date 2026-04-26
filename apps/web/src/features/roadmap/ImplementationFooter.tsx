@@ -37,7 +37,11 @@ export function ImplementationFooter({
   onWriteCode,
   onClose,
 }: ImplementationFooterProps) {
-  const progressPct = acceptedCount > 0 ? (implementedCount / acceptedCount) * 100 : 0;
+  // Denominator clamps to at least implementedCount so "X/Y completed" never shows X > Y.
+  // Edge case: tasks can be marked completed before acceptance (e.g. patch builds where
+  // implementation runs ahead of review), which would otherwise display "35/18 completed".
+  const progressDenominator = Math.max(acceptedCount, implementedCount);
+  const progressPct = progressDenominator > 0 ? (implementedCount / progressDenominator) * 100 : 0;
 
   return (
     <div className="border-t flex-shrink-0">
@@ -49,7 +53,7 @@ export function ImplementationFooter({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
             <span className="text-xs font-medium text-blue-700">
-              Generating code... {implementedCount}/{acceptedCount} tasks completed
+              Generating code... {implementedCount}/{progressDenominator} tasks completed
             </span>
           </div>
           <div className="w-full bg-blue-200 rounded-full h-1.5">

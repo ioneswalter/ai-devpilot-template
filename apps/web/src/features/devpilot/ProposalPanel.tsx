@@ -12,7 +12,6 @@ import { ProposalFormFields, initJourneyForm } from './ProposalFormFields';
 import type { ProposalFormState } from './ProposalFormFields';
 import { ProposalPanelTabs } from './ProposalPanelTabs';
 import { devpilotApi } from '@/lib/api-client';
-import { productApi } from '@/lib/api/product-api';
 import { supabase } from '@/lib/supabase-client';
 import type { AdminProposal, MemberProposal, SubmitProposalResponse } from './types';
 
@@ -51,6 +50,28 @@ function criteriaFromForm(f: ProposalFormState): string[] {
     : f.criteria.split('\n').map((c) => c.trim()).filter(Boolean);
 }
 
+async function mergeIntoInFlightFeature(targetCode: string, throwawayId: string, f: ProposalFormState, conversationId: string): Promise<UpdatedFeatureRow & { in_flight_version_label: string }> {
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+  if (!accessToken) throw new Error('Not authenticated');
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const res = await fetch(`${supabaseUrl}/functions/v1/devpilot-merge-in-flight`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      feature_code: targetCode,
+      conversation_id: conversationId,
+      criteria: criteriaFromForm(f),
+      throwaway_feature_id: throwawayId,
+    }),
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json.error?.message ?? `Merge failed (HTTP ${res.status})`);
+  }
+  return { ...json.data.feature, in_flight_version_label: json.data.in_flight_version_label };
+}
+
 async function deleteThrowawayFeature(featureId: string): Promise<void> {
   const r1 = await supabase.from('test_cases').delete().eq('feature_id', featureId);
   if (r1.error) throw new Error(`Cleanup failed (test_cases): ${r1.error.message}`);
@@ -63,19 +84,34 @@ async function deleteThrowawayFeature(featureId: string): Promise<void> {
 }
 
 async function mergeIntoVersionedFeature(targetCode: string, throwawayId: string, f: ProposalFormState, conversationId: string): Promise<UpdatedFeatureRow> {
-  const { data: target, error: fetchErr } = await supabase.from('product_features')
-    .select('id, title, description, acceptance_criteria').eq('feature_code', targetCode).single();
-  if (fetchErr || !target) throw new Error(`Target feature ${targetCode} not found: ${fetchErr?.message ?? 'no data'}`);
-  await productApi.bumpVersion(target.id, 'minor', `New version from Ideation: ${f.title}`);
-  const mergedCriteria = [...((target.acceptance_criteria as string[]) ?? []), ...criteriaFromForm(f)];
-  const { data: updated, error: updateErr } = await supabase.from('product_features')
-    .update({ title: `${target.title} with ${f.title}`, description: `${target.description}\n\n${f.description}`, acceptance_criteria: mergedCriteria, priority: f.priority, updated_at: new Date().toISOString() })
-    .eq('id', target.id).select('id, feature_code, title, status, priority, category').single();
-  if (updateErr || !updated) throw new Error(`Failed to merge into ${targetCode}: ${updateErr?.message ?? 'no data returned'}`);
-  const { error: relinkErr } = await supabase.from('ideation_conversations').update({ submitted_feature_id: updated.id, status: 'submitted' }).eq('id', conversationId);
-  if (relinkErr) throw new Error(`Failed to re-link conversation: ${relinkErr.message}`);
-  await deleteThrowawayFeature(throwawayId);
-  return updated as UpdatedFeatureRow;
+  // FR-149 v1.1 / J8: server-side merge via devpilot-merge-version. The prior
+  // client-side UPDATE on product_features was hitting 406 due to RLS for
+  // non-owner admins. The Edge Function uses service role + compensation.
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+  if (!accessToken) throw new Error('Not authenticated');
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const res = await fetch(`${supabaseUrl}/functions/v1/devpilot-merge-version`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      feature_code: targetCode,
+      conversation_id: conversationId,
+      throwaway_feature_id: throwawayId,
+      proposal: {
+        title: f.title,
+        description: f.description,
+        criteria: criteriaFromForm(f),
+        priority: f.priority,
+      },
+      bump_type: 'minor',
+    }),
+  });
+  const json = await res.json();
+  if (!res.ok || json.error) {
+    throw new Error(json.error?.message ?? `Merge-version failed (HTTP ${res.status})`);
+  }
+  return json.data.feature as UpdatedFeatureRow;
 }
 
 async function replaceFeatureContent(targetCode: string, throwawayId: string, f: ProposalFormState, conversationId: string): Promise<UpdatedFeatureRow> {
@@ -189,10 +225,18 @@ export function ProposalPanel({
 
   const handleDedupDecision = async (decisions: DedupDecision[]) => {
     if (!dedupResult) return;
+    const mergeInFlight = decisions.find((d) => d.action === 'merge_in_flight');
     const versionBump = decisions.find((d) => d.action === 'version_bump');
     const useExisting = decisions.find((d) => d.action === 'use_existing' || d.action === 'enhance_existing' || d.action === 'converge');
     const f = forms[activeIndex];
     try {
+      if (mergeInFlight) {
+        const updated = await mergeIntoInFlightFeature(mergeInFlight.feature_code, dedupResult.feature.id, f, conversationId);
+        updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });
+        setDedupResult(null);
+        onSubmitted([{ ...dedupResult, feature: { ...updated, status: updated.status as 'proposed', category: updated.category ?? null } }]);
+        return;
+      }
       if (versionBump) {
         const updated = await mergeIntoVersionedFeature(versionBump.feature_code, dedupResult.feature.id, f, conversationId);
         updateForm(activeIndex, { submitted: true, submittedCode: updated.feature_code });

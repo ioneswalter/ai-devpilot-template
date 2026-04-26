@@ -55,6 +55,10 @@ export interface DedupMatch {
   status: 'released' | 'proposed' | 'specified' | 'in_development';
   description_excerpt: string;
   recommendation: 'use_existing' | 'enhance_existing' | 'converge';
+  /** FR-149 v1.1 / J9: true if feature has a proposed v1.N in the feature_versions table */
+  has_in_flight_version?: boolean;
+  /** FR-149 v1.1 / J9: e.g. "v1.1" — used to label the "Add to in-flight" merge option */
+  in_flight_version_label?: string | null;
 }
 
 /** AI-generated test case within a proposal */

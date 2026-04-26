@@ -92,25 +92,29 @@ export async function updateFeatureStatus(
   currentStatus: string,
 ): Promise<StatusUpdateResult> {
   try {
-    if (currentStatus === 'testing' || currentStatus === 'released') {
+    // Accept legacy 'testing' as already-correct so existing rows don't double-update.
+    // The valid status value is 'in_testing' (with underscore) per the rest of the system;
+    // a prior bug here wrote 'testing' which made the PipelineBar disappear (it filters on
+    // PIPELINE_VISIBLE_STATUSES which only includes 'in_testing').
+    if (currentStatus === 'in_testing' || currentStatus === 'testing' || currentStatus === 'released') {
       await appendLog(supabase, pipelineId, 'info',
         `Feature already "${currentStatus}" — skipping status update`);
       return { status: 'success', from: currentStatus, to: currentStatus };
     }
 
     const { error } = await supabase.from('product_features').update({
-      status: 'testing',
+      status: 'in_testing',
       updated_at: new Date().toISOString(),
     }).eq('id', featureId);
 
     if (error) throw new Error(error.message);
 
     await appendLog(supabase, pipelineId, 'info',
-      `Feature status: ${currentStatus} → testing`);
+      `Feature status: ${currentStatus} → in_testing`);
 
-    return { status: 'success', from: currentStatus, to: 'testing' };
+    return { status: 'success', from: currentStatus, to: 'in_testing' };
   } catch {
-    return { status: 'failed', from: currentStatus, to: 'testing' };
+    return { status: 'failed', from: currentStatus, to: 'in_testing' };
   }
 }
 

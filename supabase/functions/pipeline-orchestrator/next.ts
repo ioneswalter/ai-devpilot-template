@@ -49,13 +49,19 @@ export async function handleNext(params: NextParams): Promise<void> {
       .eq('implementation_status', 'generating')
       .lt('updated_at', staleThreshold);
 
-    // Find next pending accepted task
+    // Find next pending accepted task. Excludes manual-verification items —
+    // tasks whose work is performed by the user (not code generation), marked
+    // by task_type='manual' OR the legacy file_path='manual verification'
+    // sentinel. Without this filter, the orchestrator would invoke code
+    // generation against a non-file path and produce garbage or fail loudly.
     const { data: tasks } = await supabase
       .from('implementation_task_items')
       .select('*')
       .eq('request_id', request_id)
       .in('decision', ['accepted', 'modified'])
       .eq('implementation_status', 'pending')
+      .neq('task_type', 'manual')
+      .neq('file_path', 'manual verification')
       .order('sort_order', { ascending: true })
       .limit(1);
 

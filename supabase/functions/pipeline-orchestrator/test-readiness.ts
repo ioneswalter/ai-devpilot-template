@@ -53,7 +53,7 @@ export async function runTestReadiness(
     seed_data: { status: 'skipped', duration_ms: 0, errors: [], records: 0 },
     test_cases: { status: 'skipped', duration_ms: 0, errors: [], created: 0, skipped: 0 },
     automated_tests: { status: 'skipped', duration_ms: 0, errors: [], total: 0, passed: 0, failed: 0, is_release_ready: false },
-    status_update: { status: 'failed', from: '', to: 'testing' },
+    status_update: { status: 'failed', from: '', to: 'in_testing' },
     started_at: new Date().toISOString(),
     completed_at: '',
     overall_status: 'failed',

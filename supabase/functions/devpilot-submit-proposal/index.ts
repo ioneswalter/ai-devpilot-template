@@ -8,6 +8,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
 import { performDedupCheck } from '../_shared/dedup-check.ts';
+import { enrichMatchWithVersionInfo } from '../_shared/dedup-enrichment.ts';
+import { getInFlightVersion } from '../_shared/version-utils.ts';
 import { generateSpecMarkdown, extractResearchNotes } from '../_shared/speckit-generator.ts';
 import type { SpecKitProposal } from '../_shared/speckit-generator.ts';
 import { buildTestCases, attachPrototype } from './proposal-helpers.ts';
@@ -139,14 +141,35 @@ Deno.serve(async (req) => {
     // Dedup check
     const { data: allFeatures } = await supabase
       .from('product_features')
-      .select('feature_code, title, description, status');
+      .select('id, feature_code, title, description, status');
+
+    const featuresList = (allFeatures ?? []) as Array<{ id: string; feature_code: string; title: string; description: string; status: string }>;
 
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
     const dedupResult = await performDedupCheck(
       proposal,
-      (allFeatures ?? []) as Array<{ feature_code: string; title: string; description: string; status: string }>,
+      featuresList,
       anthropicApiKey
     );
+
+    // FR-149 v1.1 / J9: enrich matches with authoritative DB status + in-flight version info.
+    // Replaces AI-claimed status (which has been observed to hallucinate) so the client
+    // can render correct badges and offer "Add to in-flight v1.N" instead of a doomed bump.
+    if (dedupResult.matches.length > 0) {
+      const dbFeatureMap = new Map(featuresList.map((f) => [f.feature_code, { status: f.status, id: f.id }]));
+      const inFlightEntries = await Promise.all(
+        dedupResult.matches.map(async (m) => {
+          const db = dbFeatureMap.get(m.feature_code);
+          if (!db) return null;
+          const inFlight = await getInFlightVersion(supabase, db.id);
+          return inFlight ? [m.feature_code, { version_label: inFlight.version_label }] as const : null;
+        })
+      );
+      const inFlightMap = new Map(inFlightEntries.filter((e): e is readonly [string, { version_label: string }] => e !== null));
+      dedupResult.matches = dedupResult.matches.map((m) =>
+        enrichMatchWithVersionInfo(m as unknown as { feature_code: string; status: string }, dbFeatureMap, inFlightMap) as typeof m
+      );
+    }
 
     // Generate SpecKit artifacts
     const specMarkdown = generateSpecMarkdown(proposal as SpecKitProposal, featureCode);
