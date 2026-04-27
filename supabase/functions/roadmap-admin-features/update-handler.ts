@@ -88,8 +88,11 @@ export async function handleUpdateFeature(
   const now = new Date().toISOString();
   filteredUpdates.updated_at = now;
 
-  // Feature Versioning (I2-04): Snapshot current state before edits
-  await snapshotFeatureVersion(supabase, feature_id, filteredUpdates, userId);
+  // FR-149 v1.1 hardening: snapshotFeatureVersion (legacy v1.0 audit-trail) is
+  // removed. It produced NULL-label rows that collided with structured versioning
+  // (bumpFeatureVersion / getInFlightVersion). Audit history for versioned features
+  // now lives entirely in the labelled feature_versions chain managed by the bump
+  // and merge flows.
 
   const { data: feature, error: updateError } = await supabase
     .from('product_features')
@@ -184,53 +187,6 @@ async function validateTestGate(
     return errorResponse('TESTS_NOT_PASSED', `Cannot release: ${failedOrNotRun.length} test(s) not passed. All tests must pass before releasing.`, 400);
   }
   return null;
-}
-
-/** Snapshot the current feature state before applying edits */
-async function snapshotFeatureVersion(
-  supabase: SupabaseClient,
-  featureId: string,
-  filteredUpdates: Record<string, unknown>,
-  userId: string,
-): Promise<void> {
-  try {
-    const { data: current } = await supabase
-      .from('product_features')
-      .select('id, title, description, acceptance_criteria, status, category')
-      .eq('id', featureId)
-      .single();
-
-    if (!current) return;
-
-    const { data: lastVersion } = await supabase
-      .from('feature_versions')
-      .select('version_number')
-      .eq('feature_id', featureId)
-      .order('version_number', { ascending: false })
-      .limit(1)
-      .single();
-
-    const nextVersion = (lastVersion?.version_number ?? 0) + 1;
-    const changedFields = Object.keys(filteredUpdates).filter(
-      k => k !== 'updated_at',
-    );
-
-    await supabase.from('feature_versions').insert({
-      id: crypto.randomUUID(),
-      feature_id: featureId,
-      version_number: nextVersion,
-      title: current.title,
-      description: current.description,
-      acceptance_criteria: current.acceptance_criteria,
-      status: current.status,
-      category: current.category,
-      change_summary: `Fields updated: ${changedFields.join(', ')}`,
-      changed_by: userId,
-    });
-  } catch (versionError) {
-    // Non-blocking — don't fail the edit if versioning fails
-    console.warn('Feature versioning snapshot failed:', versionError);
-  }
 }
 
 /** Append new test cases to an existing feature (deduped) */
