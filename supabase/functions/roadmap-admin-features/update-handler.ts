@@ -177,14 +177,30 @@ async function validateTestGate(
 ): Promise<Response | null> {
   const { data: testCases } = await supabase
     .from('test_cases')
-    .select('passed')
+    .select('id, test_code')
     .eq('feature_id', featureId);
   if (!testCases || testCases.length === 0) {
     return errorResponse('MISSING_TESTS', 'Cannot release: no test cases defined. Add test cases first.', 400);
   }
-  const failedOrNotRun = testCases.filter((tc: { passed: boolean | null }) => tc.passed !== true);
-  if (failedOrNotRun.length > 0) {
-    return errorResponse('TESTS_NOT_PASSED', `Cannot release: ${failedOrNotRun.length} test(s) not passed. All tests must pass before releasing.`, 400);
+
+  // FR-145 v1.1 hardening: require real test_runs evidence (result='pass')
+  // for every test_case, not just the test_cases.passed flag. The flag has
+  // been bypassed historically, producing 113 phantom-released features.
+  const ids = testCases.map((t: { id: string }) => t.id);
+  const { data: runs } = await supabase
+    .from('test_runs')
+    .select('test_case_id')
+    .in('test_case_id', ids)
+    .eq('result', 'pass');
+  const passed = new Set((runs ?? []).map((r: { test_case_id: string }) => r.test_case_id));
+  const missing = testCases.filter((t: { id: string }) => !passed.has(t.id));
+  if (missing.length > 0) {
+    const codes = missing.map((t: { test_code: string | null }) => t.test_code ?? '?').slice(0, 5).join(', ');
+    return errorResponse(
+      'TESTS_NOT_PASSED',
+      `Cannot release: ${missing.length} test(s) lack a passing test_runs row (${codes}${missing.length > 5 ? ', …' : ''}). Run the tests via the test runner before releasing.`,
+      400,
+    );
   }
   return null;
 }
