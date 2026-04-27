@@ -97,6 +97,10 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
               <div className="text-[10px] lg:text-xs text-blue-200">In Dev</div>
             </div>
             <div className="text-center">
+              <div className="text-lg lg:text-xl font-bold text-indigo-300">{stats.inAcceptance}</div>
+              <div className="text-[10px] lg:text-xs text-blue-200">Acceptance</div>
+            </div>
+            <div className="text-center">
               <div className="text-lg lg:text-xl font-bold text-green-300">{stats.released}</div>
               <div className="text-[10px] lg:text-xs text-blue-200">Released</div>
             </div>

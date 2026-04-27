@@ -11,6 +11,8 @@ const STAGE_REQUIRED_ACTIONS: Record<PipelineStageName, readonly string[]> = {
   spec: ['spec_review', 'view_pipeline'],
   build: ['build', 'fix_build', 'view_pipeline'],
   test: ['test', 'fix_test', 'view_pipeline'],
+  // FR-130 v2.0 / J10: UAT panel visible to BP, SE, Admin (anyone who can review or pick up fix-cycle tasks).
+  uat: ['uat_review', 'fix_build', 'view_pipeline'],
   deploy: ['deploy', 'view_pipeline'],
 };
 
@@ -27,6 +29,6 @@ export function canAccessStage(
 export function getAccessibleStages(
   allowedActions: readonly string[],
 ): Set<PipelineStageName> {
-  const stages: PipelineStageName[] = ['spec', 'build', 'test', 'deploy'];
+  const stages: PipelineStageName[] = ['spec', 'build', 'test', 'uat', 'deploy'];
   return new Set(stages.filter((s) => canAccessStage(allowedActions, s)));
 }

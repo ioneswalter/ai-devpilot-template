@@ -18,6 +18,7 @@ const STAGE_LABELS: Record<PipelineStageName, string> = {
   spec: 'Spec',
   build: 'Build',
   test: 'Test',
+  uat: 'UAT', // PipelineStage is rarely used for uat — UatPipelineTile handles that path; this keeps the type Record exhaustive.
   deploy: 'Deploy',
 };
 

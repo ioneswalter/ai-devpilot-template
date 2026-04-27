@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { productApi } from '../../lib/api-client';
 import { apiClient } from '../../lib/supabase-client';
+import { uatApiMethods } from '../../lib/api/uat-api';
 import { type TransitionRequest } from '../../components/roadmap/KanbanBoard';
 import {
   dbToUiFeature,
@@ -19,6 +20,8 @@ import {
 export interface RoadmapStats {
   total: number;
   released: number;
+  /** FR-130 v2.0 / J13 (T050): count of features at status = in_acceptance. */
+  inAcceptance: number;
   inDevelopment: number;
   specified: number;
   reviewed: number;
@@ -62,6 +65,7 @@ export function useRoadmapData(featureParam?: string) {
   // Kanban transition modal state
   const [pendingTransition, setPendingTransition] = useState<TransitionRequest | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionError, setTransitionError] = useState<string | null>(null);
 
   const fetchFeatures = useCallback(async () => {
     try {
@@ -145,6 +149,7 @@ export function useRoadmapData(featureParam?: string) {
   const stats: RoadmapStats = {
     total: filteredFeatures.length,
     released: filteredFeatures.filter((f) => f.status === 'released').length,
+    inAcceptance: filteredFeatures.filter((f) => f.status === 'in_acceptance').length,
     inDevelopment: filteredFeatures.filter((f) => f.status === 'in_development' || f.status === 'in_testing').length,
     specified: filteredFeatures.filter((f) => f.status === 'specified').length,
     reviewed: filteredFeatures.filter((f) => f.status === 'reviewed').length,
@@ -207,30 +212,42 @@ export function useRoadmapData(featureParam?: string) {
   // Kanban handlers
   const handleTransitionRequest = useCallback((request: TransitionRequest) => {
     setPendingTransition(request);
+    setTransitionError(null);
   }, []);
 
   const handleTransitionConfirm = useCallback(async () => {
     if (!pendingTransition) return;
-    const { featureId, toStatus } = pendingTransition;
+    const { featureId, fromStatus, toStatus } = pendingTransition;
 
     setIsTransitioning(true);
-    setFeatures((prev) => prev.map((f) => (f.id === featureId ? { ...f, status: toStatus } : f)));
+    setTransitionError(null);
     try {
-      await apiClient('roadmap-admin-features', {
-        method: 'PATCH',
-        body: JSON.stringify({ feature_id: featureId, status: toStatus }),
-      });
+      // FR-130 v2.0 / J7: drag onto Acceptance generates (or reuses) a UAT
+      // package; the trg_uat_package_promotes_feature trigger flips the feature
+      // to in_acceptance atomically. No direct PATCH needed.
+      if (toStatus === 'in_acceptance' && fromStatus !== 'in_acceptance') {
+        await uatApiMethods.generatePackage(featureId, 'manual');
+      } else {
+        await apiClient('roadmap-admin-features', {
+          method: 'PATCH',
+          body: JSON.stringify({ feature_id: featureId, status: toStatus }),
+        });
+      }
+      await fetchFeatures();
+      setPendingTransition(null);
     } catch (error) {
-      console.error('Failed to update status:', error);
+      const message = error instanceof Error ? error.message : 'Transition failed';
+      setTransitionError(message);
+      // Refresh to undo any optimistic UI state
       await fetchFeatures();
     } finally {
       setIsTransitioning(false);
-      setPendingTransition(null);
     }
   }, [pendingTransition, fetchFeatures]);
 
   const handleTransitionCancel = useCallback(() => {
     setPendingTransition(null);
+    setTransitionError(null);
   }, []);
 
   const handleKanbanFeatureClick = useCallback((featureId: string) => {
@@ -303,6 +320,7 @@ export function useRoadmapData(featureParam?: string) {
     // Kanban
     pendingTransition,
     isTransitioning,
+    transitionError,
     handleTransitionRequest,
     handleTransitionConfirm,
     handleTransitionCancel,

@@ -268,6 +268,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         onLinkCriteriaSuccess={roadmap.fetchFeatures}
         pendingTransition={roadmap.pendingTransition}
         isTransitioning={roadmap.isTransitioning}
+        transitionError={roadmap.transitionError}
         onTransitionConfirm={async () => {
           await roadmap.handleTransitionConfirm();
           pipeline.invalidate();

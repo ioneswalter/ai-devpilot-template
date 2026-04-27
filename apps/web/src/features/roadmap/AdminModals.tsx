@@ -23,6 +23,7 @@ interface AdminModalsProps {
   onLinkCriteriaSuccess: () => void;
   pendingTransition: TransitionRequest | null;
   isTransitioning: boolean;
+  transitionError?: string | null;
   onTransitionConfirm: () => void;
   onTransitionCancel: () => void;
   onReviewWithAI?: (feature: ProductFeature) => void;
@@ -44,6 +45,7 @@ export function AdminModals({
   onLinkCriteriaSuccess,
   pendingTransition,
   isTransitioning,
+  transitionError,
   onTransitionConfirm,
   onTransitionCancel,
   onReviewWithAI,
@@ -134,6 +136,7 @@ export function AdminModals({
             onConfirm={onTransitionConfirm}
             onCancel={onTransitionCancel}
             isUpdating={isTransitioning}
+            errorMessage={transitionError ?? null}
             onReviewWithAI={onReviewWithAI ? () => {
               onTransitionCancel();
               onReviewWithAI(transitionFeature);

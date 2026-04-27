@@ -118,6 +118,8 @@ export function FeatureRow({
             isAdmin={isAdmin}
             onStageClick={onPipelineStageClick}
             canAccessPanel={canAccessPanel}
+            featureId={feature.id}
+            featureCode={feature.feature_code}
           />
           {/* Related User Stories - shown inline for FRs */}
           {feature.related_user_stories && feature.related_user_stories.length > 0 && (
@@ -172,16 +174,23 @@ function DesktopBadgesColumn({
   currentVersionLabel?: string | null;
 }) {
   return (
-    <div className="hidden lg:flex items-center gap-2 flex-shrink-0">
-      {getCategoryBadge(feature.category)}
-      {getTypeBadge(feature.feature_type)}
-      {getPriorityBadge(feature.priority)}
-      {getStatusBadge(feature.status)}
-      {currentVersionLabel && (
-        <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-slate-100 text-slate-600">
-          {currentVersionLabel}
-        </span>
-      )}
+    <div className="hidden lg:flex items-start gap-2 flex-shrink-0">
+      {/* Badges stacked vertically (right-aligned) so the title/pipeline area gets more horizontal room */}
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-1">
+          {getCategoryBadge(feature.category)}
+          {getTypeBadge(feature.feature_type)}
+        </div>
+        <div className="flex items-center gap-1">
+          {getPriorityBadge(feature.priority)}
+          {getStatusBadge(feature.status)}
+        </div>
+        {currentVersionLabel && (
+          <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-slate-100 text-slate-600">
+            {currentVersionLabel}
+          </span>
+        )}
+      </div>
       {/* Admin buttons */}
       {isAdmin && (
         <div className="flex items-center gap-1 ml-2">

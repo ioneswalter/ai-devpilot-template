@@ -148,6 +148,87 @@ export function computeTestStage(
   return { status: 'in_progress', label: `${passed}/${total} passed` };
 }
 
+export interface UatPackageRow {
+  id: string;
+  feature_id: string;
+  status: string;
+  due_at: string | null;
+  created_at: string;
+}
+
+export interface UatDecisionRow {
+  package_id: string;
+  cycle_number: number;
+  decision: string;
+}
+
+export interface UatStageDetail extends StageStatus {
+  packageStatus: string | null;
+  cycleNumber: number;
+  decisionCounts: { pass: number; fail: number; defer: number; pending: number };
+  dueAt: string | null;
+}
+
+/**
+ * FR-130 v2.0 / J10: compute UAT pipeline tile state.
+ *
+ * Picks the latest UAT package per feature, derives the cycle number from the
+ * highest cycle in uat_review_decisions, and aggregates per-decision counts
+ * across that cycle's items. SLA overdue is reflected in the label only;
+ * the consumer renders the overdue badge from packageStatus + dueAt.
+ */
+export function computeUatStage(
+  packages: UatPackageRow[],
+  decisions: UatDecisionRow[],
+  totalChecklistItems: number,
+  featureId: string,
+  featureStatus: string,
+): UatStageDetail {
+  const featurePackages = packages.filter((p) => p.feature_id === featureId);
+  const latest = featurePackages.length > 0 ? featurePackages[0] : null;
+
+  if (!latest) {
+    return {
+      status: featureStatus === 'released' ? 'completed' : 'not_started',
+      label: featureStatus === 'released' ? 'Released' : 'Not Started',
+      packageStatus: null,
+      cycleNumber: 0,
+      decisionCounts: { pass: 0, fail: 0, defer: 0, pending: 0 },
+      dueAt: null,
+    };
+  }
+
+  const pkgDecisions = decisions.filter((d) => d.package_id === latest.id);
+  const maxCycle = pkgDecisions.reduce((m, d) => Math.max(m, d.cycle_number), 0);
+  const currentCycleDecisions = pkgDecisions.filter((d) => d.cycle_number === maxCycle);
+  const counts = { pass: 0, fail: 0, defer: 0, pending: 0 };
+  for (const d of currentCycleDecisions) {
+    if (d.decision === 'pass') counts.pass++;
+    else if (d.decision === 'fail') counts.fail++;
+    else if (d.decision === 'defer') counts.defer++;
+  }
+  counts.pending = Math.max(0, totalChecklistItems - counts.pass - counts.fail - counts.defer);
+
+  const cycleLabel = maxCycle > 1 ? ` · Cycle ${maxCycle}` : '';
+  if (latest.status === 'approved') {
+    return { status: 'completed', label: `Approved${cycleLabel}`, packageStatus: 'approved', cycleNumber: maxCycle || 1, decisionCounts: counts, dueAt: latest.due_at };
+  }
+  if (latest.status === 'rejected') {
+    return { status: 'warning', label: `Rejected${cycleLabel}`, packageStatus: 'rejected', cycleNumber: maxCycle || 1, decisionCounts: counts, dueAt: latest.due_at };
+  }
+  // in_review
+  const overdue = latest.due_at !== null && new Date(latest.due_at).getTime() < Date.now();
+  const label = overdue ? `Overdue${cycleLabel}` : `In Review${cycleLabel}`;
+  return {
+    status: overdue ? 'warning' : 'in_progress',
+    label,
+    packageStatus: 'in_review',
+    cycleNumber: maxCycle || 1,
+    decisionCounts: counts,
+    dueAt: latest.due_at,
+  };
+}
+
 export function computeDeployStage(
   pipelineRuns: PipelineRunRow[],
   featureId: string,

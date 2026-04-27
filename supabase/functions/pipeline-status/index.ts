@@ -11,12 +11,15 @@ import {
   computeBuildStage,
   computeTestStage,
   computeDeployStage,
+  computeUatStage,
   type SpecReviewRow,
   type ImplRequestRow,
   type PipelineRunRow,
   type TestCaseRow,
   type SpecArtifactRow,
   type FeatureRow,
+  type UatPackageRow,
+  type UatDecisionRow,
 } from './compute-stages.ts';
 import { getCurrentVersionId } from '../_shared/version-utils.ts';
 
@@ -67,7 +70,7 @@ Deno.serve(async (req) => {
     let featuresQuery = supabase
       .from('product_features')
       .select('id, status')
-      .in('status', ['proposed', 'reviewed', 'specified', 'in_development', 'in_testing', 'released']);
+      .in('status', ['proposed', 'reviewed', 'specified', 'in_development', 'in_testing', 'in_acceptance', 'released']);
 
     if (featureIdParam) {
       featuresQuery = featuresQuery.eq('id', featureIdParam);
@@ -93,15 +96,39 @@ Deno.serve(async (req) => {
       if (!versionMap.has(v.feature_id)) versionMap.set(v.feature_id, v.id);
     }
 
-    // Batch fetch all stage data in parallel (include feature_version_id)
-    const [specResult, implResult, testBatch1, testBatch2, artifactResult, pipelineResult] = await Promise.all([
+    // Batch fetch all stage data in parallel (include feature_version_id).
+    // FR-130 v2.0 / J10: also fetch uat_packages (latest per feature) + uat_review_decisions for the UAT tile.
+    const [specResult, implResult, testBatch1, testBatch2, artifactResult, pipelineResult, uatPkgResult] = await Promise.all([
       supabase.from('spec_reviews').select('feature_id, feature_version_id, status').in('feature_id', featureIds).order('created_at', { ascending: false }),
       supabase.from('implementation_requests').select('feature_id, feature_version_id, status, code_applied').in('feature_id', featureIds).order('created_at', { ascending: false }),
       supabase.from('test_cases').select('feature_id, feature_version_id, passed').in('feature_id', featureIds).range(0, 999),
       supabase.from('test_cases').select('feature_id, feature_version_id, passed').in('feature_id', featureIds).range(1000, 2999),
       supabase.from('feature_spec_artifacts').select('feature_id, artifact_type').in('feature_id', featureIds),
       supabase.from('pipeline_runs').select('feature_id, feature_version_id, status, current_stage, completed_tasks, total_tasks, deploy_results').in('feature_id', featureIds).order('created_at', { ascending: false }),
+      supabase.from('uat_packages').select('id, feature_id, status, due_at, created_at').in('feature_id', featureIds).order('created_at', { ascending: false }),
     ]);
+
+    // FR-130 v2.0: For each latest UAT package per feature, fetch decision counts + checklist totals.
+    // Latest = first row per feature_id thanks to created_at DESC sort.
+    const latestPackagesByFeature = new Map<string, UatPackageRow>();
+    for (const p of (uatPkgResult.data ?? []) as UatPackageRow[]) {
+      if (!latestPackagesByFeature.has(p.feature_id)) latestPackagesByFeature.set(p.feature_id, p);
+    }
+    const latestPackageIds = Array.from(latestPackagesByFeature.values()).map((p) => p.id);
+    let uatDecisions: UatDecisionRow[] = [];
+    const checklistTotals = new Map<string, number>();
+    if (latestPackageIds.length > 0) {
+      const [decRes, itemRes] = await Promise.all([
+        supabase.from('uat_review_decisions').select('package_id, cycle_number, decision').in('package_id', latestPackageIds),
+        supabase.from('uat_checklist_items').select('package_id').in('package_id', latestPackageIds),
+      ]);
+      uatDecisions = (decRes.data ?? []) as UatDecisionRow[];
+      for (const it of itemRes.data ?? []) {
+        const pid = it.package_id as string;
+        checklistTotals.set(pid, (checklistTotals.get(pid) ?? 0) + 1);
+      }
+    }
+    const allUatPackages = Array.from(latestPackagesByFeature.values());
 
     const testResult = {
       data: [...(testBatch1.data ?? []), ...(testBatch2.data ?? [])],
@@ -140,11 +167,14 @@ Deno.serve(async (req) => {
         return filterByVersion(records, f.id);
       };
 
+      const latestPkg = latestPackagesByFeature.get(f.id);
+      const totalChecklist = latestPkg ? checklistTotals.get(latestPkg.id) ?? 0 : 0;
       return {
         feature_id: f.id,
         spec: computeSpecStage(filterFn(allSpecs), allArtifacts, f.id, f.status),
         build: computeBuildStage(filterFn(allImpls), filterFn(allPipelineRuns) as PipelineRunRow[], f.id, f.status),
         test: computeTestStage(filterFn(allTests), f.id),
+        uat: computeUatStage(allUatPackages, uatDecisions, totalChecklist, f.id, f.status),
         deploy: computeDeployStage(filterFn(allPipelineRuns) as PipelineRunRow[], f.id, f.status),
       };
     });

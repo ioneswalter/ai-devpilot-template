@@ -6,7 +6,10 @@
 import { useState } from 'react';
 import { useUATPackage } from './useUATPackage';
 import { useSubmitReview, useReviewContext } from '@/features/uat/hooks/useUatReview';
-import { UATChecklistItem } from './UATChecklistItem';
+import { UatReviewerReassign } from './UatReviewerReassign';
+import { UATCycleHistoryTab, aggregateCycleHistory } from './UATCycleHistoryTab';
+import { UATTabBar } from './UATTabBar';
+import { UATReviewTab } from './UATReviewTab';
 import type { UatSubmitDecision, UatSubmitResult, UatPriorCycle, UatPrototypeRef } from '@/lib/api/uat-review-api';
 
 interface UATReviewPanelProps {
@@ -60,6 +63,7 @@ export function UATReviewPanel({
     priorCyclesByItem={priorCyclesByItem}
     prototypeByItem={prototypeByItem}
     currentCycle={reviewContext.data?.package.current_cycle ?? 1}
+    reviewItems={reviewContext.data?.items ?? []}
     onClose={onClose} onSuccess={setShowSuccess} />;
 }
 
@@ -98,47 +102,39 @@ function UATSuccessView({ result, featureCode }: { result: UatSubmitResult; feat
   );
 }
 
-function UATPackageView({ uat, submitReview, featureCode, featureTitle, priorCyclesByItem, prototypeByItem, currentCycle, onClose, onSuccess }: {
+function UATPackageView({ uat, submitReview, featureCode, featureTitle, priorCyclesByItem, prototypeByItem, currentCycle, reviewItems, onClose, onSuccess }: {
   uat: ReturnType<typeof useUATPackage>;
   submitReview: ReturnType<typeof useSubmitReview>;
   featureCode: string; featureTitle: string;
   priorCyclesByItem: Map<string, UatPriorCycle[]>;
   prototypeByItem: Map<string, UatPrototypeRef>;
   currentCycle: number;
+  /** Items from /uat-get-review-context with prior_cycles attached — drives the Cycle history tab. */
+  reviewItems: ReadonlyArray<import('@/lib/api/uat-review-api').UatReviewItem>;
   onClose: () => void; onSuccess: (r: UatSubmitResult) => void;
 }) {
   const pkg = uat.package!;
   const isReviewable = pkg.status === 'in_review';
+  const [tab, setTab] = useState<'review' | 'history'>('review');
+  const historyCount = aggregateCycleHistory(reviewItems).length;
   return (
     <div className="flex flex-col h-full">
       <UATHeader featureCode={featureCode} featureTitle={featureTitle} pkg={pkg} />
-      {currentCycle > 1 && (
-        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-700">
-          Re-review — submitting will record cycle {currentCycle}. Previous cycle decisions appear under each item.
-        </div>
+      <UATTabBar activeTab={tab} historyCount={historyCount} onChange={setTab} />
+      {tab === 'review' && (
+        <UATReviewTab
+          uat={uat} submitReview={submitReview}
+          currentCycle={currentCycle} priorCyclesByItem={priorCyclesByItem}
+          prototypeByItem={prototypeByItem} isReviewable={isReviewable}
+          approvalBar={
+            <UATApprovalBar uat={uat} submitReview={submitReview} isReviewable={isReviewable}
+              packageId={pkg.id} onClose={onClose} onSuccess={onSuccess} />
+          }
+        />
       )}
-      {pkg.spec_version_mismatch && (
-        <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700 flex items-center gap-2">
-          <span>Warning:</span><span>Spec updated since package generation (v{pkg.spec_version_at_creation} → v{pkg.current_spec_version}).</span>
-        </div>
+      {tab === 'history' && (
+        <div className="flex-1 overflow-y-auto"><UATCycleHistoryTab items={reviewItems} /></div>
       )}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {pkg.prototype_refs?.length > 0 && (
-          <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 mb-2">
-            <h4 className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-1">Prototype References</h4>
-            <p className="text-xs text-indigo-600">{pkg.prototype_refs.length} prototype(s) linked. Visual references appear alongside criteria.</p>
-          </div>
-        )}
-        {uat.items.map((item) => (
-          <UATChecklistItem key={item.id} item={item}
-            priorCycles={priorCyclesByItem.get(item.id) ?? []}
-            prototype={prototypeByItem.get(item.id) ?? null}
-            onDecision={(itemId, decision, feedback) => uat.updateItem({ itemId, decision, feedback }).catch(() => {})}
-            isUpdating={uat.isUpdating} />
-        ))}
-      </div>
-      <UATApprovalBar uat={uat} submitReview={submitReview} isReviewable={isReviewable}
-        packageId={pkg.id} onClose={onClose} onSuccess={onSuccess} />
     </div>
   );
 }
@@ -158,6 +154,11 @@ function UATHeader({ featureCode, featureTitle, pkg }: { featureCode: string; fe
         <span>Tests: {pkg.test_summary.passed}/{pkg.test_summary.total} passed</span>
         <span>{pkg.generated_by === 'auto' ? 'Auto-generated' : 'Manual'}</span>
       </div>
+      <UatReviewerReassign
+        packageId={pkg.id}
+        currentReviewerName={pkg.reviewer_name ?? null}
+        packageStatus={pkg.status}
+      />
     </div>
   );
 }
