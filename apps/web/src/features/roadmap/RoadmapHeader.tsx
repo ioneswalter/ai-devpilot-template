@@ -11,10 +11,11 @@ interface RoadmapHeaderProps {
   isAdmin: boolean;
   isMember: boolean;
   onOpenReleases?: () => void;
+  onOpenFixTasks?: () => void;
   isUnrestricted?: boolean;
 }
 
-export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenReleases, isUnrestricted }: RoadmapHeaderProps) {
+export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenReleases, onOpenFixTasks, isUnrestricted }: RoadmapHeaderProps) {
   const navigate = useNavigate();
 
   return (
@@ -40,6 +41,11 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
                 {isAdmin && onOpenReleases && (
                   <button onClick={onOpenReleases} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
                     Releases
+                  </button>
+                )}
+                {isAdmin && onOpenFixTasks && (
+                  <button onClick={onOpenFixTasks} className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center">
+                    Fix Tasks
                   </button>
                 )}
                 {isAdmin ? (
@@ -118,6 +124,17 @@ export function RoadmapHeader({ stats, isFiltered, isAdmin, isMember, onOpenRele
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
                 Releases
+              </button>
+            )}
+            {isAdmin && onOpenFixTasks && (
+              <button
+                onClick={onOpenFixTasks}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Fix Tasks
               </button>
             )}
             {isAdmin ? (

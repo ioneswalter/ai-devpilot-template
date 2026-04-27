@@ -1,8 +1,4 @@
-/**
- * RoadmapContent - Main roadmap page component (orchestrator).
- * Composes header, filters, list/kanban views, copilot, and admin modals.
- */
-
+/** RoadmapContent - Main roadmap page orchestrator. */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { CopilotPanel } from '../../features/copilot';
 import { KanbanBoard } from '../../components/roadmap/KanbanBoard';
@@ -31,6 +27,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
   const [uatFeature, setUatFeature] = useState<ProductFeature | null>(null);
   const [showReleases, setShowReleases] = useState(false);
+  const [showFixTasks, setShowFixTasks] = useState(() => new URLSearchParams(window.location.search).get('fixTasks') === 'open');
   const [versionBumpFeature, setVersionBumpFeature] = useState<ProductFeature | null>(null);
 
   // FR-149: Fetch version labels for all versioned features
@@ -95,13 +92,10 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
     }
   }, [roadmap.isAdmin, roadmap.handleTransitionRequest, pipeline]);
 
-  /** Handle pipeline stage click from kanban (featureId-based) */
   const handleKanbanPipelineClick = useCallback((featureId: string, stage: PipelineStageName) => {
     const feature = roadmap.features.find((f) => f.id === featureId);
     if (feature) handlePipelineStageClick(feature, stage);
   }, [roadmap.features, handlePipelineStageClick]);
-
-  // Sync modal feature state when features list refreshes
   useEffect(() => {
     if (reviewingFeature) {
       const updated = roadmap.features.find((f) => f.id === reviewingFeature.id);
@@ -118,6 +112,10 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
     if (uatFeature) {
       const updated = roadmap.features.find((f) => f.id === uatFeature.id);
       if (updated && updated !== uatFeature) setUatFeature(updated);
+    } else if (roadmap.features.length > 0) {
+      const param = new URLSearchParams(window.location.search).get('uat');
+      const f = param ? roadmap.features.find((x) => x.feature_code === param || x.id === param) : null;
+      if (f) setUatFeature(f);
     }
   }, [roadmap.features]);
 
@@ -130,6 +128,7 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         isAdmin={roadmap.isAdmin}
         isMember={isMember}
         onOpenReleases={() => setShowReleases(true)}
+        onOpenFixTasks={() => setShowFixTasks(true)}
         isUnrestricted={isUnrestricted}
       />
 
@@ -250,6 +249,8 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
         setUatFeature={setUatFeature}
         showReleases={showReleases}
         setShowReleases={setShowReleases}
+        showFixTasks={showFixTasks}
+        setShowFixTasks={setShowFixTasks}
         onFetchFeatures={roadmap.fetchFeatures}
         onPipelineInvalidate={pipeline.invalidate}
       />

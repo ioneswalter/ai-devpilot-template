@@ -13,6 +13,7 @@ import {
   generateTestCaseCode,
   filterDuplicateTestCases,
 } from './test-case-helpers.ts';
+import { checkUatReleaseGate } from './uat-release-gate.ts';
 
 export async function handleUpdateFeature(
   req: Request,
@@ -157,32 +158,31 @@ async function validateStatusTransition(
 
     // Test cases required for released
     if (targetStages.includes('released')) {
-      const { data: testCases } = await supabase
-        .from('test_cases')
-        .select('passed')
-        .eq('feature_id', currentFeature.id);
-
-      if (!testCases || testCases.length === 0) {
-        return errorResponse(
-          'MISSING_TESTS',
-          'Cannot release: no test cases defined. Add test cases first.',
-          400,
-        );
-      }
-
-      const failedOrNotRun = testCases.filter(
-        (tc: { passed: boolean | null }) => tc.passed !== true,
-      );
-      if (failedOrNotRun.length > 0) {
-        return errorResponse(
-          'TESTS_NOT_PASSED',
-          `Cannot release: ${failedOrNotRun.length} test(s) not passed. All tests must pass before releasing.`,
-          400,
-        );
-      }
+      const testGateError = await validateTestGate(supabase, currentFeature.id);
+      if (testGateError) return testGateError;
+      const uatGateError = await checkUatReleaseGate(supabase, currentFeature.id);
+      if (uatGateError) return uatGateError;
     }
   }
 
+  return null;
+}
+
+async function validateTestGate(
+  supabase: SupabaseClient,
+  featureId: string,
+): Promise<Response | null> {
+  const { data: testCases } = await supabase
+    .from('test_cases')
+    .select('passed')
+    .eq('feature_id', featureId);
+  if (!testCases || testCases.length === 0) {
+    return errorResponse('MISSING_TESTS', 'Cannot release: no test cases defined. Add test cases first.', 400);
+  }
+  const failedOrNotRun = testCases.filter((tc: { passed: boolean | null }) => tc.passed !== true);
+  if (failedOrNotRun.length > 0) {
+    return errorResponse('TESTS_NOT_PASSED', `Cannot release: ${failedOrNotRun.length} test(s) not passed. All tests must pass before releasing.`, 400);
+  }
   return null;
 }
 

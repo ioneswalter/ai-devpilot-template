@@ -4,11 +4,14 @@
 
 import { useState } from 'react';
 import type { UatChecklistItemData } from '@/lib/api/uat-api';
+import type { UatPriorCycle, UatPrototypeRef } from '@/lib/api/uat-review-api';
 
 interface UATChecklistItemProps {
   item: UatChecklistItemData;
   onDecision: (itemId: string, decision: string, feedback?: string) => void;
   isUpdating: boolean;
+  priorCycles?: UatPriorCycle[];
+  prototype?: UatPrototypeRef | null;
 }
 
 const DECISION_STYLES: Record<string, string> = {
@@ -24,7 +27,7 @@ const SOURCE_BADGES = {
   ideation_edge_case: { label: 'Edge Case', color: 'bg-purple-100 text-purple-700' },
 } as const;
 
-export function UATChecklistItem({ item, onDecision, isUpdating }: UATChecklistItemProps) {
+export function UATChecklistItem({ item, onDecision, isUpdating, priorCycles, prototype }: UATChecklistItemProps) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState(item.feedback ?? '');
   const sourceBadge = SOURCE_BADGES[item.source];
@@ -34,6 +37,8 @@ export function UATChecklistItem({ item, onDecision, isUpdating }: UATChecklistI
       <ItemBadges decision={item.decision} journeyPriority={item.journey_priority} sourceBadge={sourceBadge} />
       <p className="text-sm text-gray-800 mb-2">{item.content}</p>
       <ScenarioDataView data={item.scenario_data} />
+      {prototype && <PrototypePreviewInline prototype={prototype} />}
+      {priorCycles && priorCycles.length > 0 && <PriorCyclesView cycles={priorCycles} />}
       <DecisionButtons
         currentDecision={item.decision}
         hasFeedback={!!item.feedback}
@@ -48,6 +53,61 @@ export function UATChecklistItem({ item, onDecision, isUpdating }: UATChecklistI
           onSave={() => { onDecision(item.id, item.decision, feedback); setShowFeedback(false); }}
           isUpdating={isUpdating}
         />
+      )}
+    </div>
+  );
+}
+
+function PrototypePreviewInline({ prototype }: { prototype: UatPrototypeRef }) {
+  const [open, setOpen] = useState(false);
+  const isHtml = prototype.prototype_type === 'ui' || prototype.prototype_type === 'ui_mockup';
+  return (
+    <div className="bg-indigo-50 border border-indigo-100 rounded p-2 mb-2">
+      <button onClick={() => setOpen(!open)} className="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider hover:text-indigo-900">
+        {open ? '▼' : '▶'} Prototype: {prototype.prototype_type} v{prototype.version_number}
+      </button>
+      {open && prototype.content && (
+        <div className="mt-2">
+          {isHtml ? (
+            <iframe
+              srcDoc={prototype.content}
+              sandbox="allow-scripts"
+              className="w-full h-64 border border-indigo-200 rounded bg-white"
+              title={`Prototype ${prototype.id}`}
+            />
+          ) : (
+            <pre className="text-[10px] bg-white border border-indigo-200 rounded p-2 max-h-48 overflow-auto">{prototype.content.slice(0, 1500)}{prototype.content.length > 1500 ? '\n...' : ''}</pre>
+          )}
+        </div>
+      )}
+      {open && !prototype.content && (
+        <p className="mt-1.5 text-xs text-indigo-600">No content available for this prototype version.</p>
+      )}
+    </div>
+  );
+}
+
+function PriorCyclesView({ cycles }: { cycles: UatPriorCycle[] }) {
+  const [open, setOpen] = useState(false);
+  const latest = cycles[0];
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded p-2 mb-2">
+      <button onClick={() => setOpen(!open)} className="text-[10px] font-semibold text-slate-700 uppercase tracking-wider hover:text-slate-900">
+        {open ? '▼' : '▶'} Previous review (cycle {latest.cycle_number}, {cycles.length} prior)
+      </button>
+      {open && (
+        <div className="mt-1.5 space-y-1.5">
+          {cycles.map((c) => (
+            <div key={c.cycle_number} className="text-xs">
+              <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium mr-1.5 ${
+                c.decision === 'pass' ? 'bg-green-100 text-green-700' :
+                c.decision === 'fail' ? 'bg-red-100 text-red-700' :
+                'bg-amber-100 text-amber-700'
+              }`}>cycle {c.cycle_number} · {c.decision}</span>
+              {c.feedback && <span className="text-gray-600 italic">— {c.feedback}</span>}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
