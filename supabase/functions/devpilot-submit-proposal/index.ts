@@ -9,6 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
 import { performDedupCheck } from '../_shared/dedup-check.ts';
 import { enrichMatchWithVersionInfo } from '../_shared/dedup-enrichment.ts';
+import { extractFrCodes } from '../_shared/fr-code-extractor.ts';
 import { getInFlightVersion } from '../_shared/version-utils.ts';
 import { generateSpecMarkdown, extractResearchNotes } from '../_shared/speckit-generator.ts';
 import type { SpecKitProposal } from '../_shared/speckit-generator.ts';
@@ -151,6 +152,34 @@ Deno.serve(async (req) => {
       featuresList,
       anthropicApiKey
     );
+
+    // FR-149 v1.1 patch / FR-025: deterministic FR-code pre-pass. Any feature
+    // explicitly referenced by code (e.g. "FR-130 v2.0" in the title) MUST be
+    // surfaced as a high-similarity match regardless of what the AI returned.
+    // Closes the FR-130 → FR-158 incident on 2026-04-27.
+    const explicitCodes = extractFrCodes(proposal.title, proposal.description);
+    if (explicitCodes.length > 0) {
+      const featureByCode = new Map(featuresList.map((f) => [f.feature_code, f]));
+      const aiMatchByCode = new Map(dedupResult.matches.map((m) => [m.feature_code, m]));
+      for (const code of explicitCodes) {
+        const feature = featureByCode.get(code);
+        if (!feature) continue;
+        const aiMatch = aiMatchByCode.get(code);
+        if (aiMatch) {
+          aiMatch.similarity = 'high';
+          continue;
+        }
+        dedupResult.matches.push({
+          feature_code: feature.feature_code,
+          title: feature.title,
+          similarity: 'high',
+          status: feature.status,
+          description_excerpt: feature.description.substring(0, 150),
+          recommendation: 'enhance_existing',
+        });
+      }
+      if (dedupResult.matches.length > 0) dedupResult.passed = false;
+    }
 
     // FR-149 v1.1 / J9: enrich matches with authoritative DB status + in-flight version info.
     // Replaces AI-claimed status (which has been observed to hallucinate) so the client
