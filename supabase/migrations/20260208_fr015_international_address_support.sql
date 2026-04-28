@@ -53,35 +53,35 @@ BEGIN
     )
     SELECT pf.id, 'TC-FR015-001', 'Address format hints displayed',
       'Verify that address field shows clear labeling with expected international format',
-      'manual', 'P1', 'passed', false, true
+      'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-015'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (
       feature_id, test_code, title, description, test_type, priority, status, automated, passed
     )
     SELECT pf.id, 'TC-FR015-002', 'AI validation button works',
       'Verify that clicking AI validation button parses and structures the address',
-      'manual', 'P1', 'passed', false, true
+      'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-015'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (
       feature_id, test_code, title, description, test_type, priority, status, automated, passed
     )
     SELECT pf.id, 'TC-FR015-003', 'Country detection works',
       'Verify that system detects country from postal code patterns (AU, US, UK, PT)',
-      'manual', 'P1', 'passed', false, true
+      'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-015'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (
       feature_id, test_code, title, description, test_type, priority, status, automated, passed
     )
     SELECT pf.id, 'TC-FR015-004', 'User can confirm structured address',
       'Verify that user sees structured preview and can confirm or edit before saving',
-      'manual', 'P1', 'passed', false, true
+      'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-015'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
   END IF;
 END $$;

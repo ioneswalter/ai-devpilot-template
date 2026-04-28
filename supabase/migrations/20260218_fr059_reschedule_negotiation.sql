@@ -96,53 +96,53 @@ BEGIN
      AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_features')
   THEN
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-01', 'Provider requests reschedule', 'Verify provider can request reschedule from BID_ACCEPTED job', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-01', 'Provider requests reschedule', 'Verify provider can request reschedule from BID_ACCEPTED job', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-02', 'Customer sees reschedule request', 'Verify customer sees reschedule banner with proposed date and action buttons', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-02', 'Customer sees reschedule request', 'Verify customer sees reschedule banner with proposed date and action buttons', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-03', 'Customer approves reschedule', 'Verify approving reschedule updates schedule to proposed datetime', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-03', 'Customer approves reschedule', 'Verify approving reschedule updates schedule to proposed datetime', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-04', 'Customer counter-proposes', 'Verify customer can propose different datetime and status flips to PENDING_PROVIDER', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-04', 'Customer counter-proposes', 'Verify customer can propose different datetime and status flips to PENDING_PROVIDER', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-05', 'Provider responds to counter', 'Verify provider can approve or counter customer counter-proposal', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-05', 'Provider responds to counter', 'Verify provider can approve or counter customer counter-proposal', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-06', 'Max iterations enforced', 'Verify Counter button disabled after 3 rounds of negotiation', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-06', 'Max iterations enforced', 'Verify Counter button disabled after 3 rounds of negotiation', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-07', 'Cancel deal refunds escrow', 'Verify cancelling during negotiation marks escrow as REFUNDED', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-07', 'Cancel deal refunds escrow', 'Verify cancelling during negotiation marks escrow as REFUNDED', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-08', 'Status updates blocked during negotiation', 'Verify job status buttons disabled when reschedule is pending', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-08', 'Status updates blocked during negotiation', 'Verify job status buttons disabled when reschedule is pending', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-09', 'BID_ACCEPTED shows as scheduled', 'Verify timeline shows Scheduled step with green checkmark for BID_ACCEPTED jobs', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-09', 'BID_ACCEPTED shows as scheduled', 'Verify timeline shows Scheduled step with green checkmark for BID_ACCEPTED jobs', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
 
     INSERT INTO test_cases (feature_id, test_code, title, description, test_type, priority, status, automated, passed)
-    SELECT pf.id, 'TC-FR059-10', 'Customer can initiate reschedule', 'Verify customer can also initiate reschedule requests', 'manual', 'P1', 'passed', false, true
+    SELECT pf.id, 'TC-FR059-10', 'Customer can initiate reschedule', 'Verify customer can also initiate reschedule requests', 'manual', 'P1', 'passed', false, false
     FROM product_features pf WHERE pf.feature_code = 'FR-059'
-    ON CONFLICT (test_code) DO UPDATE SET passed = true, status = 'passed';
+    ON CONFLICT (test_code) DO NOTHING;
   END IF;
 END $$;
