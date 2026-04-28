@@ -34,18 +34,21 @@ CREATE INDEX IF NOT EXISTS idx_pipeline_runs_running ON pipeline_runs(status) WH
 ALTER TABLE pipeline_runs ENABLE ROW LEVEL SECURITY;
 
 -- Admin read/write access
+DROP POLICY IF EXISTS "Admin can read pipeline runs" ON pipeline_runs;
 CREATE POLICY "Admin can read pipeline runs"
   ON pipeline_runs FOR SELECT
   USING (
     EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = (auth.uid())::text)
   );
 
+DROP POLICY IF EXISTS "Admin can insert pipeline runs" ON pipeline_runs;
 CREATE POLICY "Admin can insert pipeline runs"
   ON pipeline_runs FOR INSERT
   WITH CHECK (
     EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = (auth.uid())::text)
   );
 
+DROP POLICY IF EXISTS "Admin can update pipeline runs" ON pipeline_runs;
 CREATE POLICY "Admin can update pipeline runs"
   ON pipeline_runs FOR UPDATE
   USING (
@@ -53,6 +56,7 @@ CREATE POLICY "Admin can update pipeline runs"
   );
 
 -- Service role bypass (for Edge Functions)
+DROP POLICY IF EXISTS "Service role full access pipeline runs" ON pipeline_runs;
 CREATE POLICY "Service role full access pipeline runs"
   ON pipeline_runs FOR ALL
   USING (auth.role() = 'service_role')
