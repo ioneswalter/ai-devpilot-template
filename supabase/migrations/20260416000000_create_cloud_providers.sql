@@ -28,18 +28,21 @@ CREATE INDEX IF NOT EXISTS idx_cloud_providers_is_primary ON cloud_providers (is
 ALTER TABLE cloud_providers ENABLE ROW LEVEL SECURITY;
 
 -- SELECT: Admin users only
+DROP POLICY IF EXISTS cloud_providers_select ON cloud_providers;
 CREATE POLICY cloud_providers_select ON cloud_providers
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 -- INSERT: Admin users only
+DROP POLICY IF EXISTS cloud_providers_insert ON cloud_providers;
 CREATE POLICY cloud_providers_insert ON cloud_providers
   FOR INSERT WITH CHECK (
     EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 -- UPDATE: Admin users only
+DROP POLICY IF EXISTS cloud_providers_update ON cloud_providers;
 CREATE POLICY cloud_providers_update ON cloud_providers
   FOR UPDATE USING (
     EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
