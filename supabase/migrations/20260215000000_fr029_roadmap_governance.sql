@@ -59,32 +59,39 @@ ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for feature_comments
 -- Anyone can read non-deleted comments
+DROP POLICY IF EXISTS "Anyone can read comments" ON feature_comments;
 CREATE POLICY "Anyone can read comments" ON feature_comments
   FOR SELECT USING (is_deleted = false);
 
 -- Authenticated users can insert their own comments
+DROP POLICY IF EXISTS "Authenticated users can insert comments" ON feature_comments;
 CREATE POLICY "Authenticated users can insert comments" ON feature_comments
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own comments
+DROP POLICY IF EXISTS "Users can update own comments" ON feature_comments;
 CREATE POLICY "Users can update own comments" ON feature_comments
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- Users can soft-delete their own comments
+DROP POLICY IF EXISTS "Users can delete own comments" ON feature_comments;
 CREATE POLICY "Users can delete own comments" ON feature_comments
   FOR DELETE USING (auth.uid() = user_id);
 
 -- RLS Policies for feature_ratings
 -- Anyone can read ratings
+DROP POLICY IF EXISTS "Anyone can read ratings" ON feature_ratings;
 CREATE POLICY "Anyone can read ratings" ON feature_ratings
   FOR SELECT USING (true);
 
 -- Authenticated users can insert/update their own ratings
+DROP POLICY IF EXISTS "Authenticated users can manage their ratings" ON feature_ratings;
 CREATE POLICY "Authenticated users can manage their ratings" ON feature_ratings
   FOR ALL USING (auth.uid() = user_id);
 
 -- RLS Policies for admin_users
 -- Anyone can read admin_users (to check if someone is admin)
+DROP POLICY IF EXISTS "Anyone can read admin_users" ON admin_users;
 CREATE POLICY "Anyone can read admin_users" ON admin_users
   FOR SELECT USING (true);
 

@@ -42,22 +42,28 @@ ALTER TABLE integration_test_results ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for integrations (admin-only via admin_users table)
 -- admin_users.user_id is text, auth.uid() returns uuid — cast to match
+DROP POLICY IF EXISTS integrations_select ON integrations;
 CREATE POLICY integrations_select ON integrations
   FOR SELECT USING (auth.uid()::text IN (SELECT user_id FROM admin_users));
 
+DROP POLICY IF EXISTS integrations_insert ON integrations;
 CREATE POLICY integrations_insert ON integrations
   FOR INSERT WITH CHECK (auth.uid()::text IN (SELECT user_id FROM admin_users));
 
+DROP POLICY IF EXISTS integrations_update ON integrations;
 CREATE POLICY integrations_update ON integrations
   FOR UPDATE USING (auth.uid()::text IN (SELECT user_id FROM admin_users));
 
+DROP POLICY IF EXISTS integrations_delete ON integrations;
 CREATE POLICY integrations_delete ON integrations
   FOR DELETE USING (auth.uid()::text IN (SELECT user_id FROM admin_users));
 
 -- RLS policies for integration_test_results (admin-only)
+DROP POLICY IF EXISTS integration_test_results_select ON integration_test_results;
 CREATE POLICY integration_test_results_select ON integration_test_results
   FOR SELECT USING (auth.uid()::text IN (SELECT user_id FROM admin_users));
 
+DROP POLICY IF EXISTS integration_test_results_insert ON integration_test_results;
 CREATE POLICY integration_test_results_insert ON integration_test_results
   FOR INSERT WITH CHECK (auth.uid()::text IN (SELECT user_id FROM admin_users));
 

@@ -268,35 +268,43 @@ ALTER TABLE cms_content_blocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cms_global_config ENABLE ROW LEVEL SECURITY;
 
 -- Public read access for CMS content
+DROP POLICY IF EXISTS "Allow public read access to cms_pages" ON cms_pages;
 CREATE POLICY "Allow public read access to cms_pages"
   ON cms_pages FOR SELECT
   USING (is_active = true);
 
+DROP POLICY IF EXISTS "Allow public read access to cms_sections" ON cms_sections;
 CREATE POLICY "Allow public read access to cms_sections"
   ON cms_sections FOR SELECT
   USING (is_visible = true);
 
+DROP POLICY IF EXISTS "Allow public read access to cms_content_blocks" ON cms_content_blocks;
 CREATE POLICY "Allow public read access to cms_content_blocks"
   ON cms_content_blocks FOR SELECT
   USING (is_visible = true);
 
+DROP POLICY IF EXISTS "Allow public read access to cms_global_config" ON cms_global_config;
 CREATE POLICY "Allow public read access to cms_global_config"
   ON cms_global_config FOR SELECT
   USING (true);
 
 -- Service role has full access
+DROP POLICY IF EXISTS "Allow service role full access to cms_pages" ON cms_pages;
 CREATE POLICY "Allow service role full access to cms_pages"
   ON cms_pages FOR ALL
   USING (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "Allow service role full access to cms_sections" ON cms_sections;
 CREATE POLICY "Allow service role full access to cms_sections"
   ON cms_sections FOR ALL
   USING (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "Allow service role full access to cms_content_blocks" ON cms_content_blocks;
 CREATE POLICY "Allow service role full access to cms_content_blocks"
   ON cms_content_blocks FOR ALL
   USING (auth.role() = 'service_role');
 
+DROP POLICY IF EXISTS "Allow service role full access to cms_global_config" ON cms_global_config;
 CREATE POLICY "Allow service role full access to cms_global_config"
   ON cms_global_config FOR ALL
   USING (auth.role() = 'service_role');

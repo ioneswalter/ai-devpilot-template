@@ -50,9 +50,11 @@ ALTER TABLE uat_packages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uat_checklist_items ENABLE ROW LEVEL SECURITY;
 
 -- Admin full access to packages
+DROP POLICY IF EXISTS uat_packages_admin_all ON uat_packages;
 CREATE POLICY uat_packages_admin_all ON uat_packages
   FOR ALL USING (true) WITH CHECK (true);
 
 -- Admin full access to checklist items
+DROP POLICY IF EXISTS uat_items_admin_all ON uat_checklist_items;
 CREATE POLICY uat_items_admin_all ON uat_checklist_items
   FOR ALL USING (true) WITH CHECK (true);
