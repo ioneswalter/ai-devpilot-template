@@ -27,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_uat_decisions_pkg_cycle ON uat_review_decisions(p
 ALTER TABLE uat_review_decisions ENABLE ROW LEVEL SECURITY;
 
 -- BP/SE/admin can read decisions for their packages
+DROP POLICY IF EXISTS uat_decisions_select_authorized ON uat_review_decisions;
 CREATE POLICY uat_decisions_select_authorized ON uat_review_decisions FOR SELECT
   USING (
     EXISTS (
@@ -39,6 +40,7 @@ CREATE POLICY uat_decisions_select_authorized ON uat_review_decisions FOR SELECT
   );
 
 -- Insert via service role (Edge Function) only
+DROP POLICY IF EXISTS uat_decisions_insert_service ON uat_review_decisions;
 CREATE POLICY uat_decisions_insert_service ON uat_review_decisions FOR INSERT
   WITH CHECK (auth.role() = 'service_role');
 
@@ -67,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_fix_tasks_feature ON fix_cycle_tasks(feature_id);
 ALTER TABLE fix_cycle_tasks ENABLE ROW LEVEL SECURITY;
 
 -- SE/BP/admin can read fix-cycle tasks
+DROP POLICY IF EXISTS fix_tasks_select_authorized ON fix_cycle_tasks;
 CREATE POLICY fix_tasks_select_authorized ON fix_cycle_tasks FOR SELECT
   USING (
     EXISTS (
@@ -79,10 +82,12 @@ CREATE POLICY fix_tasks_select_authorized ON fix_cycle_tasks FOR SELECT
   );
 
 -- Insert via service role only
+DROP POLICY IF EXISTS fix_tasks_insert_service ON fix_cycle_tasks;
 CREATE POLICY fix_tasks_insert_service ON fix_cycle_tasks FOR INSERT
   WITH CHECK (auth.role() = 'service_role');
 
 -- SE can update status of tasks assigned to them; admin can update any
+DROP POLICY IF EXISTS fix_tasks_update_se ON fix_cycle_tasks;
 CREATE POLICY fix_tasks_update_se ON fix_cycle_tasks FOR UPDATE
   USING (
     EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()::text)
@@ -113,6 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_uat_audit_pkg ON uat_review_audit(package_id);
 
 ALTER TABLE uat_review_audit ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS uat_audit_select_authorized ON uat_review_audit;
 CREATE POLICY uat_audit_select_authorized ON uat_review_audit FOR SELECT
   USING (
     EXISTS (
@@ -124,5 +130,6 @@ CREATE POLICY uat_audit_select_authorized ON uat_review_audit FOR SELECT
     )
   );
 
+DROP POLICY IF EXISTS uat_audit_insert_service ON uat_review_audit;
 CREATE POLICY uat_audit_insert_service ON uat_review_audit FOR INSERT
   WITH CHECK (auth.role() = 'service_role');

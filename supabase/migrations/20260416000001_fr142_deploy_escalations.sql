@@ -25,6 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_deploy_escalations_status ON deploy_escalations(s
 ALTER TABLE deploy_escalations ENABLE ROW LEVEL SECURITY;
 
 -- SELECT: authenticated admins only
+DROP POLICY IF EXISTS deploy_escalations_select ON deploy_escalations;
 CREATE POLICY deploy_escalations_select ON deploy_escalations
   FOR SELECT TO authenticated
   USING (
@@ -32,6 +33,7 @@ CREATE POLICY deploy_escalations_select ON deploy_escalations
   );
 
 -- UPDATE: authenticated admins only (acknowledge/resolve)
+DROP POLICY IF EXISTS deploy_escalations_update ON deploy_escalations;
 CREATE POLICY deploy_escalations_update ON deploy_escalations
   FOR UPDATE TO authenticated
   USING (
