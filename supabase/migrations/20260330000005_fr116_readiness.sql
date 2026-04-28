@@ -7,11 +7,7 @@ ALTER TABLE pipeline_runs ADD COLUMN IF NOT EXISTS readiness_results JSONB;
 -- 2. Extend current_stage CHECK constraint to include readiness stages
 ALTER TABLE pipeline_runs DROP CONSTRAINT IF EXISTS pipeline_runs_current_stage_check;
 ALTER TABLE pipeline_runs ADD CONSTRAINT pipeline_runs_current_stage_check
-  CHECK (current_stage IN (
-    'idle', 'implementing', 'build_check', 'build_passed', 'build_failed',
-    'deploying', 'deployed', 'deploy_failed',
-    'readying', 'ready_for_testing', 'readiness_partial'
-  ));
+  CHECK (current_stage IN ('idle', 'implementing', 'build_check', 'build_passed', 'build_failed', 'deploying', 'deployed', 'deploy_failed', 'readying', 'tested', 'waiting_for_deploy', 'ready_for_testing', 'readiness_partial'));
 
 -- 3. Create pipeline_notifications table
 CREATE TABLE IF NOT EXISTS pipeline_notifications (
