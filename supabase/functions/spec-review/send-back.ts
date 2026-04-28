@@ -12,9 +12,16 @@ interface SendBackParams {
   supabase: SupabaseClient;
 }
 
-export async function handleSendBack(
-  { reviewId, version, feedback, supabase }: SendBackParams
-): Promise<{ data?: unknown; error?: { code: string; message: string }; status: number }> {
+export async function handleSendBack({
+  reviewId,
+  version,
+  feedback,
+  supabase,
+}: SendBackParams): Promise<{
+  data?: unknown;
+  error?: { code: string; message: string };
+  status: number;
+}> {
   // 1. Fetch review
   const { data: review, error: reviewErr } = await supabase
     .from('spec_reviews')
@@ -66,7 +73,11 @@ export async function handleSendBack(
   return {
     data: {
       review: { id: reviewId, status: 'sent_back', feedback, updated_at: now },
-      feature: { id: review.feature_id, status: 'proposed', updated_at: feature?.updated_at ?? now },
+      feature: {
+        id: review.feature_id,
+        status: 'proposed',
+        updated_at: feature?.updated_at ?? now,
+      },
     },
     status: 200,
   };

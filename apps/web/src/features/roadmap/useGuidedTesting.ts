@@ -63,7 +63,9 @@ function saveSession(testCaseId: string, state: GuidedState): void {
       savedAt: Date.now(),
     };
     localStorage.setItem(cacheKey(testCaseId), JSON.stringify(data));
-  } catch { /* storage full or unavailable */ }
+  } catch {
+    /* storage full or unavailable */
+  }
 }
 
 /** Load cached session (expires after 2 hours) */
@@ -85,7 +87,11 @@ function loadSession(testCaseId: string): CachedSession | null {
 }
 
 function clearSession(testCaseId: string): void {
-  try { localStorage.removeItem(cacheKey(testCaseId)); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem(cacheKey(testCaseId));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function useGuidedTesting(featureId: string, testCaseId?: string) {
@@ -114,44 +120,56 @@ export function useGuidedTesting(featureId: string, testCaseId?: string) {
   }, []);
 
   /** Check FR-111 test data and start guided testing */
-  const startGuidedTesting = useCallback(async (testCaseId: string) => {
-    updateState({ phase: 'checking-data', error: null });
+  const startGuidedTesting = useCallback(
+    async (testCaseId: string) => {
+      updateState({ phase: 'checking-data', error: null });
 
-    try {
-      // Check if test data exists (FR-111 integration)
-      const checkResult = await testDataApi.check(featureId);
-      if (!checkResult.data.has_active_data) {
-        updateState({ phase: 'idle', needsTestData: true });
-        return;
+      try {
+        // Check if test data exists (FR-111 integration)
+        const checkResult = await testDataApi.check(featureId);
+        if (!checkResult.data.has_active_data) {
+          updateState({ phase: 'idle', needsTestData: true });
+          return;
+        }
+
+        await generateGuidance(testCaseId);
+      } catch (err) {
+        updateState({
+          phase: 'error',
+          error: err instanceof Error ? err.message : 'Failed to check test data',
+        });
       }
-
-      await generateGuidance(testCaseId);
-    } catch (err) {
-      updateState({ phase: 'error', error: err instanceof Error ? err.message : 'Failed to check test data' });
-    }
-  }, [featureId, updateState]);
+    },
+    [featureId, updateState]
+  );
 
   /** Generate test data then start guidance */
-  const generateTestDataAndStart = useCallback(async (testCaseId: string) => {
-    updateState({ generatingData: true, needsTestData: false });
-    try {
-      await testDataApi.generate({ feature_id: featureId, trigger_source: 'copilot' });
-      updateState({ generatingData: false });
-      await generateGuidance(testCaseId);
-    } catch (err) {
-      updateState({
-        generatingData: false,
-        phase: 'error',
-        error: err instanceof Error ? err.message : 'Failed to generate test data',
-      });
-    }
-  }, [featureId, updateState]);
+  const generateTestDataAndStart = useCallback(
+    async (testCaseId: string) => {
+      updateState({ generatingData: true, needsTestData: false });
+      try {
+        await testDataApi.generate({ feature_id: featureId, trigger_source: 'copilot' });
+        updateState({ generatingData: false });
+        await generateGuidance(testCaseId);
+      } catch (err) {
+        updateState({
+          generatingData: false,
+          phase: 'error',
+          error: err instanceof Error ? err.message : 'Failed to generate test data',
+        });
+      }
+    },
+    [featureId, updateState]
+  );
 
   /** Skip test data check and proceed */
-  const skipTestDataCheck = useCallback(async (testCaseId: string) => {
-    updateState({ needsTestData: false });
-    await generateGuidance(testCaseId);
-  }, [updateState]);
+  const skipTestDataCheck = useCallback(
+    async (testCaseId: string) => {
+      updateState({ needsTestData: false });
+      await generateGuidance(testCaseId);
+    },
+    [updateState]
+  );
 
   /** Core: get page state and call generate-guidance API */
   async function generateGuidance(testCaseId: string) {
@@ -167,7 +185,7 @@ export function useGuidedTesting(featureId: string, testCaseId?: string) {
             test_case_id: testCaseId,
             page_state: pageState,
           }),
-        },
+        }
       );
 
       const activeState: Partial<GuidedState> = {
@@ -193,7 +211,10 @@ export function useGuidedTesting(featureId: string, testCaseId?: string) {
   /** Navigate steps */
   const nextStep = useCallback(() => {
     setState((prev) => {
-      const next = { ...prev, currentStepIndex: Math.min(prev.currentStepIndex + 1, prev.steps.length - 1) };
+      const next = {
+        ...prev,
+        currentStepIndex: Math.min(prev.currentStepIndex + 1, prev.steps.length - 1),
+      };
       if (testCaseId) saveSession(testCaseId, next);
       return next;
     });
@@ -208,24 +229,28 @@ export function useGuidedTesting(featureId: string, testCaseId?: string) {
   }, [testCaseId]);
 
   /** Record step evidence */
-  const recordStepEvidence = useCallback((evidence: StepEvidence) => {
-    setState((prev) => {
-      const updated = [...prev.evidence];
-      const idx = updated.findIndex((e) => e.step_number === evidence.step_number);
-      if (idx >= 0) updated[idx] = evidence;
-      else updated.push(evidence);
-      const next = { ...prev, evidence: updated };
-      if (testCaseId) saveSession(testCaseId, next);
-      return next;
-    });
-  }, [testCaseId]);
+  const recordStepEvidence = useCallback(
+    (evidence: StepEvidence) => {
+      setState((prev) => {
+        const updated = [...prev.evidence];
+        const idx = updated.findIndex((e) => e.step_number === evidence.step_number);
+        if (idx >= 0) updated[idx] = evidence;
+        else updated.push(evidence);
+        const next = { ...prev, evidence: updated };
+        if (testCaseId) saveSession(testCaseId, next);
+        return next;
+      });
+    },
+    [testCaseId]
+  );
 
   /** Capture evidence for current step via extension */
-  const captureCurrentStepEvidence = useCallback(async (): Promise<CaptureEvidenceResult | null> => {
-    const step = state.steps[state.currentStepIndex];
-    if (!step) return null;
-    return extension.captureEvidence(step.step_number);
-  }, [state.steps, state.currentStepIndex, extension]);
+  const captureCurrentStepEvidence =
+    useCallback(async (): Promise<CaptureEvidenceResult | null> => {
+      const step = state.steps[state.currentStepIndex];
+      if (!step) return null;
+      return extension.captureEvidence(step.step_number);
+    }, [state.steps, state.currentStepIndex, extension]);
 
   /** Complete the guided session */
   const completeSession = useCallback(async (): Promise<GuidedTestEvidence | null> => {
@@ -242,7 +267,9 @@ export function useGuidedTesting(featureId: string, testCaseId?: string) {
           duration_ms: duration,
         }),
       });
-    } catch { /* non-critical */ }
+    } catch {
+      /* non-critical */
+    }
 
     const guidedEvidence: GuidedTestEvidence = {
       type: 'guided',
@@ -268,7 +295,9 @@ export function useGuidedTesting(featureId: string, testCaseId?: string) {
             duration_ms: Date.now() - startTime,
           }),
         });
-      } catch { /* non-critical */ }
+      } catch {
+        /* non-critical */
+      }
     }
     if (testCaseId) clearSession(testCaseId);
     setState(INITIAL_STATE);

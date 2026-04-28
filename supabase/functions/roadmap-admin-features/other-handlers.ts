@@ -3,28 +3,20 @@
  */
 
 import type { SupabaseClient } from './shared.ts';
-import {
-  RequestImplementationSchema,
-  errorResponse,
-  jsonResponse,
-} from './shared.ts';
+import { RequestImplementationSchema, errorResponse, jsonResponse } from './shared.ts';
 
 /** POST /request-implementation — Request AI to implement a feature */
 export async function handleRequestImplementation(
   req: Request,
   supabase: SupabaseClient,
   userId: string,
-  userEmail: string | undefined,
+  userEmail: string | undefined
 ): Promise<Response> {
   const rawBody = await req.json();
   const validation = RequestImplementationSchema.safeParse(rawBody);
 
   if (!validation.success) {
-    return errorResponse(
-      'VALIDATION_ERROR',
-      validation.error.errors[0].message,
-      400,
-    );
+    return errorResponse('VALIDATION_ERROR', validation.error.errors[0].message, 400);
   }
 
   const { feature_id, implementation_notes } = validation.data;
@@ -41,10 +33,7 @@ export async function handleRequestImplementation(
   }
 
   // Update feature status to in_development
-  await supabase
-    .from('product_features')
-    .update({ status: 'in_development' })
-    .eq('id', feature_id);
+  await supabase.from('product_features').update({ status: 'in_development' }).eq('id', feature_id);
 
   const implementationPrompt = `
 ## Feature Implementation Request
@@ -67,12 +56,7 @@ Create test cases for each acceptance criterion.
 Update the roadmap when complete.
   `.trim();
 
-  console.log(
-    'AI Implementation requested for:',
-    feature.feature_code,
-    'by',
-    userEmail,
-  );
+  console.log('AI Implementation requested for:', feature.feature_code, 'by', userEmail);
   console.log('Implementation prompt:', implementationPrompt);
 
   return jsonResponse({
@@ -89,17 +73,13 @@ Update the roadmap when complete.
 export async function handleDeleteFeature(
   req: Request,
   supabase: SupabaseClient,
-  userEmail: string | undefined,
+  userEmail: string | undefined
 ): Promise<Response> {
   const url = new URL(req.url);
   const featureId = url.searchParams.get('feature_id');
 
   if (!featureId) {
-    return errorResponse(
-      'VALIDATION_ERROR',
-      'feature_id is required',
-      400,
-    );
+    return errorResponse('VALIDATION_ERROR', 'feature_id is required', 400);
   }
 
   // Get feature to check status
@@ -117,7 +97,7 @@ export async function handleDeleteFeature(
     return errorResponse(
       'FORBIDDEN',
       'Cannot delete features that are in development or released',
-      403,
+      403
     );
   }
 
@@ -136,12 +116,7 @@ export async function handleDeleteFeature(
     return errorResponse('DATABASE_ERROR', 'Failed to delete feature', 500);
   }
 
-  console.log(
-    'Admin deleted feature:',
-    existingFeature.feature_code,
-    'by',
-    userEmail,
-  );
+  console.log('Admin deleted feature:', existingFeature.feature_code, 'by', userEmail);
 
   return jsonResponse({
     deleted: true,

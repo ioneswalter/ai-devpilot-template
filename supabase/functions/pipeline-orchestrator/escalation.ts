@@ -11,7 +11,7 @@ interface EscalationResult {
 export async function handleAcknowledgeEscalation(
   supabase: ReturnType<typeof createClient>,
   escalationId: string,
-  userId: string,
+  userId: string
 ): Promise<{ data?: EscalationResult; error?: { code: string; message: string } }> {
   const { data: esc } = await supabase
     .from('deploy_escalations')
@@ -27,19 +27,30 @@ export async function handleAcknowledgeEscalation(
     return { error: { code: 'ALREADY_ACKNOWLEDGED', message: 'Escalation already acknowledged' } };
   }
 
-  await supabase.from('deploy_escalations').update({
-    status: 'acknowledged',
-    acknowledged_by: userId,
-    acknowledged_at: new Date().toISOString(),
-  }).eq('id', escalationId);
+  await supabase
+    .from('deploy_escalations')
+    .update({
+      status: 'acknowledged',
+      acknowledged_by: userId,
+      acknowledged_at: new Date().toISOString(),
+    })
+    .eq('id', escalationId);
 
   // Set pipeline to escalated stage
-  await supabase.from('pipeline_runs').update({
-    current_stage: 'escalated',
-    last_heartbeat: new Date().toISOString(),
-  }).eq('id', esc.pipeline_id);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      current_stage: 'escalated',
+      last_heartbeat: new Date().toISOString(),
+    })
+    .eq('id', esc.pipeline_id);
 
-  await appendLog(supabase, esc.pipeline_id, 'warn', `Escalation acknowledged by SE — pipeline paused`);
+  await appendLog(
+    supabase,
+    esc.pipeline_id,
+    'warn',
+    `Escalation acknowledged by SE — pipeline paused`
+  );
 
   return {
     data: { escalation_id: escalationId, status: 'acknowledged', pipeline_stage: 'escalated' },
@@ -49,7 +60,7 @@ export async function handleAcknowledgeEscalation(
 export async function handleResolveEscalation(
   supabase: ReturnType<typeof createClient>,
   escalationId: string,
-  resolutionNotes: string,
+  resolutionNotes: string
 ): Promise<{ data?: EscalationResult; error?: { code: string; message: string } }> {
   const { data: esc } = await supabase
     .from('deploy_escalations')
@@ -62,22 +73,38 @@ export async function handleResolveEscalation(
   }
 
   if (esc.status !== 'acknowledged') {
-    return { error: { code: 'NOT_ACKNOWLEDGED', message: 'Escalation must be acknowledged before resolving' } };
+    return {
+      error: {
+        code: 'NOT_ACKNOWLEDGED',
+        message: 'Escalation must be acknowledged before resolving',
+      },
+    };
   }
 
-  await supabase.from('deploy_escalations').update({
-    status: 'resolved',
-    resolved_at: new Date().toISOString(),
-    resolution_notes: resolutionNotes,
-  }).eq('id', escalationId);
+  await supabase
+    .from('deploy_escalations')
+    .update({
+      status: 'resolved',
+      resolved_at: new Date().toISOString(),
+      resolution_notes: resolutionNotes,
+    })
+    .eq('id', escalationId);
 
   // Resume pipeline — set back to deploying and trigger next step
-  await supabase.from('pipeline_runs').update({
-    current_stage: 'deploying',
-    last_heartbeat: new Date().toISOString(),
-  }).eq('id', esc.pipeline_id);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      current_stage: 'deploying',
+      last_heartbeat: new Date().toISOString(),
+    })
+    .eq('id', esc.pipeline_id);
 
-  await appendLog(supabase, esc.pipeline_id, 'info', `Escalation resolved — pipeline resuming. Notes: ${resolutionNotes}`);
+  await appendLog(
+    supabase,
+    esc.pipeline_id,
+    'info',
+    `Escalation resolved — pipeline resuming. Notes: ${resolutionNotes}`
+  );
 
   // Trigger pipeline resume via self-chain
   try {
@@ -92,9 +119,9 @@ export async function handleResolveEscalation(
       const svcKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       fetch(fnUrl, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${svcKey}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${svcKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'redeploy', pipeline_id: esc.pipeline_id }),
-      }).catch(err => console.error('Resume trigger error:', err));
+      }).catch((err) => console.error('Resume trigger error:', err));
     }
   } catch (err) {
     console.error('Failed to trigger pipeline resume:', err);

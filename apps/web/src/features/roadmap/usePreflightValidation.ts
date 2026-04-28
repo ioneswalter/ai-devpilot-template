@@ -70,12 +70,15 @@ const DATA_CHECKS: Record<string, DataCheck[]> = {
   ],
 };
 
-const CONFIG_CHECKS: Record<string, Array<{
-  table: string;
-  column: string;
-  label: string;
-  suggestion: string;
-}>> = {
+const CONFIG_CHECKS: Record<
+  string,
+  Array<{
+    table: string;
+    column: string;
+    label: string;
+    suggestion: string;
+  }>
+> = {
   'FR-123': [
     {
       table: 'module_assessments',
@@ -90,7 +93,7 @@ const CONFIG_CHECKS: Record<string, Array<{
 
 export async function runPreflight(
   featureCode: string,
-  scripts: ScriptForValidation[],
+  scripts: ScriptForValidation[]
 ): Promise<PreflightResult> {
   const errors: PreflightIssue[] = [];
   const warnings: PreflightIssue[] = [];
@@ -125,7 +128,7 @@ export async function runPreflight(
 function validateScriptStructure(
   script: ScriptForValidation,
   errors: PreflightIssue[],
-  warnings: PreflightIssue[],
+  warnings: PreflightIssue[]
 ) {
   const { steps, testCaseTitle } = script;
 
@@ -187,7 +190,7 @@ function validateScriptStructure(
       // Only warn if it looks like a navigation click (Resume, Enroll, Back, etc.)
       const navKeywords = ['resume', 'enroll', 'back', 'next', 'open', 'view', 'start'];
       const isNavClick = navKeywords.some((kw) =>
-        (step.target?.value ?? '').toLowerCase().includes(kw),
+        (step.target?.value ?? '').toLowerCase().includes(kw)
       );
       if (isNavClick) {
         warnings.push({
@@ -219,15 +222,14 @@ function validateScriptStructure(
 
 // ── Data ownership validation ─────────────────────────────────────
 
-async function validateTestData(
-  featureCode: string,
-  errors: PreflightIssue[],
-) {
+async function validateTestData(featureCode: string, errors: PreflightIssue[]) {
   const checks = DATA_CHECKS[featureCode];
   if (!checks) return; // No data checks defined for this feature
 
   // Get current user
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   const userId = session?.user?.id;
   if (!userId) {
     errors.push({
@@ -278,10 +280,7 @@ async function validateTestData(
 
 // ── Config completeness validation ────────────────────────────────
 
-async function validateConfig(
-  featureCode: string,
-  errors: PreflightIssue[],
-) {
+async function validateConfig(featureCode: string, errors: PreflightIssue[]) {
   const checks = CONFIG_CHECKS[featureCode];
   if (!checks) return;
 

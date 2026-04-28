@@ -31,7 +31,12 @@ interface PipelineModalsProps {
   onPipelineInvalidate: () => void;
 }
 
-const MODAL_SIZE_PROPS = { size: 'xl' as const, showCloseButton: false, flush: true, className: 'h-[92vh]' };
+const MODAL_SIZE_PROPS = {
+  size: 'xl' as const,
+  showCloseButton: false,
+  flush: true,
+  className: 'h-[92vh]',
+};
 
 export function PipelineModals(props: PipelineModalsProps) {
   return (
@@ -41,13 +46,24 @@ export function PipelineModals(props: PipelineModalsProps) {
       <TestRunModal {...props} />
       <UATReviewModal {...props} />
       <ReleasePanel isOpen={props.showReleases} onClose={() => props.setShowReleases(false)} />
-      <FixCycleTasksModal showFixTasks={props.showFixTasks} setShowFixTasks={props.setShowFixTasks} />
+      <FixCycleTasksModal
+        showFixTasks={props.showFixTasks}
+        setShowFixTasks={props.setShowFixTasks}
+      />
     </>
   );
 }
 
-function SpecReviewModal({ reviewingFeature, setReviewingFeature, onFetchFeatures, onPipelineInvalidate }: PipelineModalsProps) {
-  const close = () => { setReviewingFeature(null); onPipelineInvalidate(); };
+function SpecReviewModal({
+  reviewingFeature,
+  setReviewingFeature,
+  onFetchFeatures,
+  onPipelineInvalidate,
+}: PipelineModalsProps) {
+  const close = () => {
+    setReviewingFeature(null);
+    onPipelineInvalidate();
+  };
   return (
     <Modal isOpen={!!reviewingFeature} onClose={close} {...MODAL_SIZE_PROPS}>
       {reviewingFeature && (
@@ -57,15 +73,27 @@ function SpecReviewModal({ reviewingFeature, setReviewingFeature, onFetchFeature
           featureTitle={reviewingFeature.title}
           featureStatus={reviewingFeature.status}
           onClose={close}
-          onReviewComplete={() => { setReviewingFeature(null); onFetchFeatures(); onPipelineInvalidate(); }}
+          onReviewComplete={() => {
+            setReviewingFeature(null);
+            onFetchFeatures();
+            onPipelineInvalidate();
+          }}
         />
       )}
     </Modal>
   );
 }
 
-function ImplementationModal({ implementingFeature, setImplementingFeature, onFetchFeatures, onPipelineInvalidate }: PipelineModalsProps) {
-  const close = () => { setImplementingFeature(null); onPipelineInvalidate(); };
+function ImplementationModal({
+  implementingFeature,
+  setImplementingFeature,
+  onFetchFeatures,
+  onPipelineInvalidate,
+}: PipelineModalsProps) {
+  const close = () => {
+    setImplementingFeature(null);
+    onPipelineInvalidate();
+  };
   return (
     <Modal isOpen={!!implementingFeature} onClose={close} {...MODAL_SIZE_PROPS}>
       {implementingFeature && (
@@ -76,15 +104,27 @@ function ImplementationModal({ implementingFeature, setImplementingFeature, onFe
           featureTitle={implementingFeature.title}
           featureStatus={implementingFeature.status}
           onClose={close}
-          onComplete={() => { setImplementingFeature(null); onFetchFeatures(); onPipelineInvalidate(); }}
+          onComplete={() => {
+            setImplementingFeature(null);
+            onFetchFeatures();
+            onPipelineInvalidate();
+          }}
         />
       )}
     </Modal>
   );
 }
 
-function TestRunModal({ testingFeature, setTestingFeature, onFetchFeatures, onPipelineInvalidate }: PipelineModalsProps) {
-  const close = () => { setTestingFeature(null); onPipelineInvalidate(); };
+function TestRunModal({
+  testingFeature,
+  setTestingFeature,
+  onFetchFeatures,
+  onPipelineInvalidate,
+}: PipelineModalsProps) {
+  const close = () => {
+    setTestingFeature(null);
+    onPipelineInvalidate();
+  };
   return (
     <Modal isOpen={!!testingFeature} onClose={() => setTestingFeature(null)} {...MODAL_SIZE_PROPS}>
       {testingFeature && (
@@ -105,7 +145,10 @@ function TestRunModal({ testingFeature, setTestingFeature, onFetchFeatures, onPi
             onFetchFeatures();
             onPipelineInvalidate();
           }}
-          onRefresh={() => { onFetchFeatures(); onPipelineInvalidate(); }}
+          onRefresh={() => {
+            onFetchFeatures();
+            onPipelineInvalidate();
+          }}
         />
       )}
     </Modal>
@@ -113,7 +156,10 @@ function TestRunModal({ testingFeature, setTestingFeature, onFetchFeatures, onPi
 }
 
 function UATReviewModal({ uatFeature, setUatFeature, onPipelineInvalidate }: PipelineModalsProps) {
-  const close = () => { setUatFeature(null); onPipelineInvalidate(); };
+  const close = () => {
+    setUatFeature(null);
+    onPipelineInvalidate();
+  };
   return (
     <Modal isOpen={!!uatFeature} onClose={close} {...MODAL_SIZE_PROPS}>
       {uatFeature && (
@@ -129,7 +175,13 @@ function UATReviewModal({ uatFeature, setUatFeature, onPipelineInvalidate }: Pip
   );
 }
 
-function FixCycleTasksModal({ showFixTasks, setShowFixTasks }: { showFixTasks: boolean; setShowFixTasks: (v: boolean) => void }) {
+function FixCycleTasksModal({
+  showFixTasks,
+  setShowFixTasks,
+}: {
+  showFixTasks: boolean;
+  setShowFixTasks: (v: boolean) => void;
+}) {
   return (
     <Modal isOpen={showFixTasks} onClose={() => setShowFixTasks(false)} {...MODAL_SIZE_PROPS}>
       {showFixTasks && <FixCycleTaskList onClose={() => setShowFixTasks(false)} />}

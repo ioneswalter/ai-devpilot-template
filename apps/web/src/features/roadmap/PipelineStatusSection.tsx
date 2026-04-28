@@ -16,7 +16,12 @@ import type { PipelineRun, CIResults, DeployResults, ReadinessResults } from '@/
 interface PipelineStatusSectionProps {
   isPipelineRunning: boolean;
   pipelineProgress: { completed: number; total: number; failed: number } | null;
-  pipelineCurrentTask: { id: string; title: string; file_path: string; implementation_status: string } | null;
+  pipelineCurrentTask: {
+    id: string;
+    title: string;
+    file_path: string;
+    implementation_status: string;
+  } | null;
   isCancellingPipeline: boolean;
   onCancelPipeline: () => void;
   isCIRunning: boolean;
@@ -67,10 +72,13 @@ export function PipelineStatusSection({
     queryKey: ['test-counts', featureId],
     queryFn: async () => {
       if (!featureId) return { total: 0, passed: 0, failed: 0 };
-      const { data } = await supabase.from('test_cases').select('passed').eq('feature_id', featureId);
+      const { data } = await supabase
+        .from('test_cases')
+        .select('passed')
+        .eq('feature_id', featureId);
       const total = data?.length ?? 0;
-      const passed = data?.filter(t => t.passed === true).length ?? 0;
-      const failed = data?.filter(t => t.passed === false).length ?? 0;
+      const passed = data?.filter((t) => t.passed === true).length ?? 0;
+      const failed = data?.filter((t) => t.passed === false).length ?? 0;
       return { total, passed, failed };
     },
     enabled: !!featureId && (featureStatus === 'in_testing' || featureStatus === 'released'),
@@ -79,16 +87,18 @@ export function PipelineStatusSection({
   const testCounts = testCountsQuery.data ?? { total: 0, passed: 0, failed: 0 };
 
   // FR-142: Use deploy progress hook for real-time step data
-  const showDeployPanel = isDeploying || !!deployResults || pipeline?.current_stage === 'escalated'
-    || featureStatus === 'in_testing' || featureStatus === 'released';
-  const deployProgress = useDeployProgress(
-    pipeline?.id ?? null,
-    showDeployPanel,
-  );
+  const showDeployPanel =
+    isDeploying ||
+    !!deployResults ||
+    pipeline?.current_stage === 'escalated' ||
+    featureStatus === 'in_testing' ||
+    featureStatus === 'released';
+  const deployProgress = useDeployProgress(pipeline?.id ?? null, showDeployPanel);
 
   const currentStage = deployProgress.data?.current_stage ?? pipeline?.current_stage ?? '';
   const escalations = deployProgress.data?.escalations ?? [];
-  const hasDeployResults = !!deployResults || deployProgress.data?.deploy_results?.overall_status === 'success';
+  const hasDeployResults =
+    !!deployResults || deployProgress.data?.deploy_results?.overall_status === 'success';
 
   return (
     <>
@@ -110,11 +120,15 @@ export function PipelineStatusSection({
           <div className="w-full bg-indigo-200 rounded-full h-2">
             <div
               className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${Math.max(5, (pipelineProgress.completed / pipelineProgress.total) * 100)}%` }}
+              style={{
+                width: `${Math.max(5, (pipelineProgress.completed / pipelineProgress.total) * 100)}%`,
+              }}
             />
           </div>
           <div className="flex items-center gap-3 text-xs text-indigo-700">
-            <span>{pipelineProgress.completed}/{pipelineProgress.total} tasks</span>
+            <span>
+              {pipelineProgress.completed}/{pipelineProgress.total} tasks
+            </span>
             {pipelineProgress.failed > 0 && (
               <span className="text-red-600">{pipelineProgress.failed} failed</span>
             )}
@@ -134,7 +148,9 @@ export function PipelineStatusSection({
               CI Validation Running
             </h4>
           </div>
-          <p className="text-xs text-violet-600">TypeScript, ESLint, and test validation in progress...</p>
+          <p className="text-xs text-violet-600">
+            TypeScript, ESLint, and test validation in progress...
+          </p>
         </div>
       )}
 
@@ -157,17 +173,21 @@ export function PipelineStatusSection({
           onResolve={deployProgress.resolve}
           isAcknowledging={deployProgress.isAcknowledging}
           isResolving={deployProgress.isResolving}
-          releaseGating={featureId && featureStatus ? {
-            featureStatus,
-            totalTests: testCounts?.total ?? 0,
-            passedTests: testCounts?.passed ?? 0,
-            failedTests: testCounts?.failed ?? 0,
-            hasDeployResults,
-            onRelease: () => releaseFeature.release(featureId),
-            isReleasing: releaseFeature.isReleasing,
-            releaseError: releaseFeature.error,
-            featureUpdatedAt: featureUpdatedAt ?? null,
-          } : undefined}
+          releaseGating={
+            featureId && featureStatus
+              ? {
+                  featureStatus,
+                  totalTests: testCounts?.total ?? 0,
+                  passedTests: testCounts?.passed ?? 0,
+                  failedTests: testCounts?.failed ?? 0,
+                  hasDeployResults,
+                  onRelease: () => releaseFeature.release(featureId),
+                  isReleasing: releaseFeature.isReleasing,
+                  releaseError: releaseFeature.error,
+                  featureUpdatedAt: featureUpdatedAt ?? null,
+                }
+              : undefined
+          }
         />
       )}
 
@@ -176,9 +196,13 @@ export function PipelineStatusSection({
         <div className="bg-teal-50 border border-teal-100 rounded-lg p-3 space-y-2">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-teal-300 border-t-teal-600 rounded-full animate-spin" />
-            <h4 className="text-xs font-semibold text-teal-800 uppercase tracking-wider">Preparing for Testing</h4>
+            <h4 className="text-xs font-semibold text-teal-800 uppercase tracking-wider">
+              Preparing for Testing
+            </h4>
           </div>
-          <p className="text-xs text-teal-600">Seeding test data, generating test cases, updating status...</p>
+          <p className="text-xs text-teal-600">
+            Seeding test data, generating test cases, updating status...
+          </p>
         </div>
       )}
 
@@ -193,12 +217,17 @@ export function PipelineStatusSection({
 
       {/* Pipeline completed/failed status */}
       {pipeline && pipeline.status !== 'running' && pipeline.status !== 'completed' && (
-        <div className={`border rounded-lg p-3 text-xs ${
-          pipeline.status === 'cancelled' ? 'bg-amber-50 border-amber-200 text-amber-800' :
-          pipeline.status === 'failed' ? 'bg-red-50 border-red-200 text-red-800' :
-          'bg-gray-50 border-gray-200 text-gray-700'
-        }`}>
-          Pipeline {pipeline.status}{pipeline.error_message ? `: ${pipeline.error_message}` : ''}
+        <div
+          className={`border rounded-lg p-3 text-xs ${
+            pipeline.status === 'cancelled'
+              ? 'bg-amber-50 border-amber-200 text-amber-800'
+              : pipeline.status === 'failed'
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-gray-50 border-gray-200 text-gray-700'
+          }`}
+        >
+          Pipeline {pipeline.status}
+          {pipeline.error_message ? `: ${pipeline.error_message}` : ''}
         </div>
       )}
     </>

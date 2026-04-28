@@ -20,36 +20,60 @@ const STATUS_ICONS: Record<string, { icon: string; color: string }> = {
 function StepBadge({ status }: { status: string }) {
   const cfg = STATUS_ICONS[status] ?? STATUS_ICONS.skipped;
   return (
-    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${cfg.color} ${
-      status === 'success' ? 'bg-green-50' : status === 'failed' ? 'bg-red-50' : 'bg-gray-50'
-    }`}>
+    <span
+      className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${cfg.color} ${
+        status === 'success' ? 'bg-green-50' : status === 'failed' ? 'bg-red-50' : 'bg-gray-50'
+      }`}
+    >
       {cfg.icon}
     </span>
   );
 }
 
-const EMPTY_STEP = { status: 'skipped' as const, duration_ms: 0, errors: [], records: 0, created: 0, skipped: 0 };
+const EMPTY_STEP = {
+  status: 'skipped' as const,
+  duration_ms: 0,
+  errors: [],
+  records: 0,
+  created: 0,
+  skipped: 0,
+};
 const EMPTY_STATUS = { status: 'skipped' as const, from: '', to: '' };
 
-export function ReadinessStatusPanel({ readinessResults, onRerunReadiness, isRerunning }: ReadinessStatusPanelProps) {
+export function ReadinessStatusPanel({
+  readinessResults,
+  onRerunReadiness,
+  isRerunning,
+}: ReadinessStatusPanelProps) {
   const seed_data = readinessResults.seed_data ?? EMPTY_STEP;
   const test_cases = readinessResults.test_cases ?? EMPTY_STEP;
   const status_update = readinessResults.status_update ?? EMPTY_STATUS;
   const overall_status = readinessResults.overall_status ?? 'failed';
 
-  const overallColor = overall_status === 'success' ? 'border-green-200 bg-green-50'
-    : overall_status === 'partial' ? 'border-amber-200 bg-amber-50'
-    : 'border-red-200 bg-red-50';
+  const overallColor =
+    overall_status === 'success'
+      ? 'border-green-200 bg-green-50'
+      : overall_status === 'partial'
+        ? 'border-amber-200 bg-amber-50'
+        : 'border-red-200 bg-red-50';
 
-  const overallText = overall_status === 'success' ? 'text-green-800'
-    : overall_status === 'partial' ? 'text-amber-800'
-    : 'text-red-800';
+  const overallText =
+    overall_status === 'success'
+      ? 'text-green-800'
+      : overall_status === 'partial'
+        ? 'text-amber-800'
+        : 'text-red-800';
 
   return (
     <div className={`border rounded-lg p-3 space-y-2 ${overallColor}`}>
       <div className="flex items-center justify-between">
         <h4 className={`text-xs font-semibold uppercase tracking-wider ${overallText}`}>
-          Test Readiness {overall_status === 'success' ? 'Complete' : overall_status === 'partial' ? 'Partial' : 'Failed'}
+          Test Readiness{' '}
+          {overall_status === 'success'
+            ? 'Complete'
+            : overall_status === 'partial'
+              ? 'Partial'
+              : 'Failed'}
         </h4>
         {overall_status !== 'success' && (
           <button
@@ -70,9 +94,7 @@ export function ReadinessStatusPanel({ readinessResults, onRerunReadiness, isRer
           {seed_data.records > 0 && (
             <span className="text-gray-500">{seed_data.records} records inserted</span>
           )}
-          {seed_data.status === 'skipped' && (
-            <span className="text-gray-400">skipped</span>
-          )}
+          {seed_data.status === 'skipped' && <span className="text-gray-400">skipped</span>}
         </div>
 
         {/* Test Cases */}
@@ -92,7 +114,9 @@ export function ReadinessStatusPanel({ readinessResults, onRerunReadiness, isRer
           <StepBadge status={status_update.status} />
           <span className="text-gray-700 font-medium">Status Update</span>
           {status_update.status === 'success' && status_update.from !== status_update.to && (
-            <span className="text-gray-500">{status_update.from} &rarr; {status_update.to}</span>
+            <span className="text-gray-500">
+              {status_update.from} &rarr; {status_update.to}
+            </span>
           )}
         </div>
       </div>
@@ -101,10 +125,14 @@ export function ReadinessStatusPanel({ readinessResults, onRerunReadiness, isRer
       {((seed_data.errors?.length ?? 0) > 0 || (test_cases.errors?.length ?? 0) > 0) && (
         <div className="mt-2 text-xs text-red-600 space-y-0.5">
           {(seed_data.errors ?? []).slice(0, 2).map((e, i) => (
-            <p key={`seed-${i}`} className="truncate">Seed: {e}</p>
+            <p key={`seed-${i}`} className="truncate">
+              Seed: {e}
+            </p>
           ))}
           {(test_cases.errors ?? []).slice(0, 2).map((e, i) => (
-            <p key={`tc-${i}`} className="truncate">Test case: {e}</p>
+            <p key={`tc-${i}`} className="truncate">
+              Test case: {e}
+            </p>
           ))}
         </div>
       )}

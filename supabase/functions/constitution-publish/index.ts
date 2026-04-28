@@ -81,11 +81,7 @@ Deno.serve(async (req: Request) => {
     const rawBody = await req.json();
     const parsed = PublishBodySchema.safeParse(rawBody);
     if (!parsed.success) {
-      return badRequest(
-        'Invalid publish request',
-        parsed.error.flatten().fieldErrors,
-        req
-      );
+      return badRequest('Invalid publish request', parsed.error.flatten().fieldErrors, req);
     }
     return await handlePublish(supabase, parsed.data, admin.id, req);
   } catch (err) {
@@ -112,15 +108,11 @@ async function handleGetBindings(
       .limit(1);
 
     const activeVersion = activeVersions?.[0];
-    const enriched = (bindings ?? []).map(
-      (b: Record<string, unknown>) => ({
-        ...b,
-        active_version: activeVersion?.version ?? 'unknown',
-        is_outdated: activeVersion
-          ? b.last_synced_version_id !== activeVersion.id
-          : false,
-      })
-    );
+    const enriched = (bindings ?? []).map((b: Record<string, unknown>) => ({
+      ...b,
+      active_version: activeVersion?.version ?? 'unknown',
+      is_outdated: activeVersion ? b.last_synced_version_id !== activeVersion.id : false,
+    }));
 
     return success({ bindings: enriched }, 200, req);
   } catch (err) {
@@ -138,11 +130,7 @@ async function handlePublish(
   const { bump_type, summary_of_changes, rules, expected_version_id } = body;
 
   if (!bump_type || !summary_of_changes || !rules?.length) {
-    return badRequest(
-      'bump_type, summary_of_changes, and rules are required',
-      undefined,
-      req
-    );
+    return badRequest('bump_type, summary_of_changes, and rules are required', undefined, req);
   }
 
   // Optimistic lock: verify expected version is still active (T016)
@@ -166,10 +154,7 @@ async function handlePublish(
   }
 
   // Compute new version
-  const newVersion = bumpVersion(
-    currentActive.version as string,
-    bump_type
-  );
+  const newVersion = bumpVersion(currentActive.version as string, bump_type);
 
   // Check version doesn't already exist
   const { data: existingVersion } = await supabase
@@ -179,11 +164,7 @@ async function handlePublish(
     .limit(1);
 
   if (existingVersion && existingVersion.length > 0) {
-    return badRequest(
-      `Version ${newVersion} already exists`,
-      undefined,
-      req
-    );
+    return badRequest(`Version ${newVersion} already exists`, undefined, req);
   }
 
   // Archive current active version

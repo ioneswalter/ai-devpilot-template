@@ -46,7 +46,7 @@ export const CreateTestCaseSchema = z.object({
 async function isAdmin(
   supabase: SupabaseClient,
   userId: string,
-  userEmail: string | undefined,
+  userEmail: string | undefined
 ): Promise<boolean> {
   const { data: adminById } = await supabase
     .from('admin_users')
@@ -70,7 +70,7 @@ async function isAdmin(
 
 export async function authenticateAdmin(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: SupabaseClient
 ): Promise<{ userId: string } | Response> {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -78,7 +78,10 @@ export async function authenticateAdmin(
   }
 
   const token = authHeader.substring(7);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
 
   if (error || !user) {
     return errorResponse('UNAUTHORIZED', 'Invalid token', 401);

@@ -113,7 +113,7 @@ export async function generateImplementation(
   description: string,
   criteria: string[],
   testCases: TestCaseRow[],
-  notes: string | null,
+  notes: string | null
 ): Promise<ImplementationPlan | null> {
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
@@ -131,7 +131,7 @@ export async function generateImplementation(
 ${criteria.length > 0 ? criteria.map((c, i) => `${i + 1}. ${c}`).join('\n') : 'None defined.'}
 
 ### Test Cases:
-${testCases.length > 0 ? testCases.map(tc => `- ${tc.test_code}: ${tc.title}`).join('\n') : 'None defined.'}
+${testCases.length > 0 ? testCases.map((tc) => `- ${tc.test_code}: ${tc.title}`).join('\n') : 'None defined.'}
 
 ### Implementation Notes:
 ${notes || 'No additional notes.'}
@@ -151,7 +151,11 @@ Generate a detailed implementation plan for this feature.`;
       if (attempt > 1) {
         messages.push(
           { role: 'assistant', content: '(previous attempt had validation errors)' },
-          { role: 'user', content: 'Your previous response was invalid JSON or had missing required fields (title, file_path, task_type). Please return ONLY valid JSON with 5-15 tasks, each having title, description, file_path, and task_type.' },
+          {
+            role: 'user',
+            content:
+              'Your previous response was invalid JSON or had missing required fields (title, file_path, task_type). Please return ONLY valid JSON with 5-15 tasks, each having title, description, file_path, and task_type.',
+          }
         );
       }
 
@@ -167,11 +171,14 @@ Generate a detailed implementation plan for this feature.`;
         ),
       ]);
 
-    logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
-      operationType: 'code_generation', inputTokens: response.usage?.input_tokens ?? 0,
-      outputTokens: response.usage?.output_tokens ?? 0,
-    });
+      logAIUsageFromEnv({
+        featureId: 'pipeline',
+        adminId: 'system',
+        modelId: 'claude-sonnet-4-6',
+        operationType: 'code_generation',
+        inputTokens: response.usage?.input_tokens ?? 0,
+        outputTokens: response.usage?.output_tokens ?? 0,
+      });
 
       const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
       if (!textBlock || textBlock.type !== 'text') {
@@ -185,7 +192,9 @@ Generate a detailed implementation plan for this feature.`;
         return plan;
       }
 
-      console.warn(`[Attempt ${attempt}/${MAX_ATTEMPTS}] Parse failed or too few tasks (${plan?.tasks.length ?? 0})`);
+      console.warn(
+        `[Attempt ${attempt}/${MAX_ATTEMPTS}] Parse failed or too few tasks (${plan?.tasks.length ?? 0})`
+      );
     } catch (error) {
       console.error(`[Attempt ${attempt}/${MAX_ATTEMPTS}] AI implementation failed:`, error);
     }
@@ -216,8 +225,8 @@ function parseImplementationResponse(rawText: string): ImplementationPlan | null
 
     const validTypes = ['create', 'modify', 'test', 'config'];
     const tasks = parsed.tasks
-      .filter(t => t.title && t.file_path && validTypes.includes(t.task_type))
-      .map(t => ({
+      .filter((t) => t.title && t.file_path && validTypes.includes(t.task_type))
+      .map((t) => ({
         title: t.title,
         description: t.description || '',
         file_path: t.file_path,

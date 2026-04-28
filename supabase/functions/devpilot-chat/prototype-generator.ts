@@ -37,10 +37,7 @@ async function callClaude(
   maxTokens = 16384
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
   const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    GENERATION_TIMEOUT_MS
-  );
+  const timeout = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
 
   try {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -75,9 +72,7 @@ async function callClaude(
   }
 }
 
-export async function classifyFeature(
-  description: string
-): Promise<ClassifyResult> {
+export async function classifyFeature(description: string): Promise<ClassifyResult> {
   const { text } = await callClaude(CLASSIFY_PROMPT, description, 256);
   try {
     return JSON.parse(text.trim());
@@ -147,8 +142,6 @@ function stripCodeFences(text: string): string {
     .trim();
 }
 
-export function isGenerateError(
-  result: GenerateResult | GenerateError
-): result is GenerateError {
+export function isGenerateError(result: GenerateResult | GenerateError): result is GenerateError {
   return 'error_code' in result;
 }

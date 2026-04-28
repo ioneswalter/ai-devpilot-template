@@ -55,7 +55,11 @@ export function TestDataActions({ featureId, featureCode }: TestDataActionsProps
               <span className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
             ) : (
               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
               </svg>
             )}
             {generateMut.isPending ? 'Regenerating...' : `Test Data Ready (${activeCount})`}
@@ -71,7 +75,11 @@ export function TestDataActions({ featureId, featureCode }: TestDataActionsProps
                 <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 Generating...
               </span>
-            ) : datasetsLoading ? 'Checking...' : 'Generate Test Data'}
+            ) : datasetsLoading ? (
+              'Checking...'
+            ) : (
+              'Generate Test Data'
+            )}
           </button>
         )}
 
@@ -157,9 +165,7 @@ function DatasetRow({ dataset }: { dataset: TestDataSet }) {
         </span>
         <span className="text-gray-600">{dataset.records_created} records</span>
       </div>
-      <time className="text-gray-400">
-        {new Date(dataset.created_at).toLocaleDateString()}
-      </time>
+      <time className="text-gray-400">{new Date(dataset.created_at).toLocaleDateString()}</time>
     </div>
   );
 }

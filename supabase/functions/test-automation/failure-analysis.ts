@@ -14,11 +14,13 @@ const AI_MODEL = 'claude-sonnet-4-6-20250514';
 const AnalyzeSchema = z.object({
   test_run_id: z.string(),
   feature_id: z.string(),
-  failures: z.array(z.object({
-    test_case_id: z.string(),
-    tier: z.enum(['api', 'e2e']),
-    evidence: z.unknown(),
-  })),
+  failures: z.array(
+    z.object({
+      test_case_id: z.string(),
+      tier: z.enum(['api', 'e2e']),
+      evidence: z.unknown(),
+    })
+  ),
 });
 
 const corsHeaders = {
@@ -28,7 +30,8 @@ const corsHeaders = {
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
-    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
@@ -39,7 +42,7 @@ function errorResponse(code: string, message: string, status: number): Response 
 export async function handleAnalyzeFailures(
   supabase: SupabaseClient,
   body: unknown,
-  _userId: string,
+  _userId: string
 ): Promise<Response> {
   const validation = AnalyzeSchema.safeParse(body);
   if (!validation.success) return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
@@ -53,7 +56,10 @@ export async function handleAnalyzeFailures(
   // Analyze each failure
   for (const failure of failures) {
     const { data: tc } = await supabase
-      .from('test_cases').select('title, steps, expected_result').eq('id', failure.test_case_id).single();
+      .from('test_cases')
+      .select('title, steps, expected_result')
+      .eq('id', failure.test_case_id)
+      .single();
 
     const prompt = `Analyze this test failure and provide actionable fix guidance.
 
@@ -74,12 +80,15 @@ Respond with JSON:
 
     try {
       const response = await anthropic.messages.create({
-        model: AI_MODEL, max_tokens: 500,
+        model: AI_MODEL,
+        max_tokens: 500,
         messages: [{ role: 'user', content: prompt }],
       });
 
       logAIUsageFromEnv({
-        featureId: 'test-automation', adminId: 'system', modelId: AI_MODEL,
+        featureId: 'test-automation',
+        adminId: 'system',
+        modelId: AI_MODEL,
         operationType: 'failure_analysis',
         inputTokens: response.usage?.input_tokens ?? 0,
         outputTokens: response.usage?.output_tokens ?? 0,
@@ -87,22 +96,34 @@ Respond with JSON:
 
       const text = response.content
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map((b) => b.text).join('');
+        .map((b) => b.text)
+        .join('');
       const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) continue;
 
       const parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      const { data: guidance } = await supabase.from('test_failure_guidance').insert({
-        test_run_id, test_case_id: failure.test_case_id, feature_id,
-        tier: failure.tier, root_cause: parsed.root_cause || 'Unknown',
-        likely_source: parsed.likely_source || { file: '', function: '', line_hint: '' },
-        suggested_fix: parsed.suggested_fix || '', severity: parsed.severity || 'major',
-        category: parsed.category || 'code_bug', evidence: failure.evidence || {},
-        status: 'new',
-      }).select('*').single();
+      const { data: guidance } = await supabase
+        .from('test_failure_guidance')
+        .insert({
+          test_run_id,
+          test_case_id: failure.test_case_id,
+          feature_id,
+          tier: failure.tier,
+          root_cause: parsed.root_cause || 'Unknown',
+          likely_source: parsed.likely_source || { file: '', function: '', line_hint: '' },
+          suggested_fix: parsed.suggested_fix || '',
+          severity: parsed.severity || 'major',
+          category: parsed.category || 'code_bug',
+          evidence: failure.evidence || {},
+          status: 'new',
+        })
+        .select('*')
+        .single();
 
       if (guidance) allGuidance.push(guidance);
-    } catch { /* skip failed analysis */ }
+    } catch {
+      /* skip failed analysis */
+    }
   }
 
   // Group related failures by similar root causes
@@ -117,7 +138,9 @@ Respond with JSON:
   return jsonResponse({ data: { guidance_count: allGuidance.length, guidance: allGuidance } }, 201);
 }
 
-function groupBySimilarRootCause(guidance: Array<Record<string, unknown>>): Array<Array<Record<string, unknown>>> {
+function groupBySimilarRootCause(
+  guidance: Array<Record<string, unknown>>
+): Array<Array<Record<string, unknown>>> {
   const groups: Array<Array<Record<string, unknown>>> = [];
   const used = new Set<number>();
   for (let i = 0; i < guidance.length; i++) {
@@ -128,7 +151,10 @@ function groupBySimilarRootCause(guidance: Array<Record<string, unknown>>): Arra
     for (let j = i + 1; j < guidance.length; j++) {
       if (used.has(j)) continue;
       const otherSrc = (guidance[j].likely_source as Record<string, string>)?.file || '';
-      if (src && src === otherSrc) { group.push(guidance[j]); used.add(j); }
+      if (src && src === otherSrc) {
+        group.push(guidance[j]);
+        used.add(j);
+      }
     }
     if (group.length > 1) groups.push(group);
   }
@@ -139,9 +165,10 @@ function groupBySimilarRootCause(guidance: Array<Record<string, unknown>>): Arra
 export async function handleGetGuidance(
   supabase: SupabaseClient,
   featureId: string,
-  status?: string,
+  status?: string
 ): Promise<Response> {
-  let query = supabase.from('test_failure_guidance')
+  let query = supabase
+    .from('test_failure_guidance')
     .select('*, test_cases!inner(title)')
     .eq('feature_id', featureId)
     .order('created_at', { ascending: false });
@@ -164,7 +191,9 @@ export async function handleGetGuidance(
     }
   }
   const groups = [...groupMap.entries()].map(([id, v]) => ({
-    group_id: id, shared_root_cause: v.cause, affected_test_count: v.count,
+    group_id: id,
+    shared_root_cause: v.cause,
+    affected_test_count: v.count,
   }));
 
   return jsonResponse({ data: { guidance, groups } });
@@ -173,12 +202,17 @@ export async function handleGetGuidance(
 /** PATCH handler: update guidance status */
 export async function handleUpdateGuidance(
   supabase: SupabaseClient,
-  body: unknown,
+  body: unknown
 ): Promise<Response> {
   const { guidance_id, status } = body as { guidance_id: string; status: string };
-  if (!guidance_id || !status) return errorResponse('VALIDATION_ERROR', 'guidance_id and status required', 400);
-  const { data } = await supabase.from('test_failure_guidance')
-    .update({ status }).eq('id', guidance_id).select('id, status').single();
+  if (!guidance_id || !status)
+    return errorResponse('VALIDATION_ERROR', 'guidance_id and status required', 400);
+  const { data } = await supabase
+    .from('test_failure_guidance')
+    .update({ status })
+    .eq('id', guidance_id)
+    .select('id, status')
+    .single();
   if (!data) return errorResponse('NOT_FOUND', 'Guidance not found', 404);
   return jsonResponse({ data });
 }

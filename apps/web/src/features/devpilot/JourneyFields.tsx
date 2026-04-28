@@ -42,7 +42,9 @@ export function JourneyFields({ journey, index, disabled, isAdmin, onUpdate }: J
         </div>
         <svg
           className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
@@ -91,7 +93,8 @@ export function JourneyFields({ journey, index, disabled, isAdmin, onUpdate }: J
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-              Acceptance Scenarios <span className="text-gray-400">(Given/When/Then, one per line)</span>
+              Acceptance Scenarios{' '}
+              <span className="text-gray-400">(Given/When/Then, one per line)</span>
             </label>
             <textarea
               value={journey.acceptance_scenarios}

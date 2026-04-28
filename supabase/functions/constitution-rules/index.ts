@@ -8,12 +8,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import {
-  success,
-  badRequest,
-  internalError,
-  corsResponse,
-} from '../_shared/response.ts';
+import { success, badRequest, internalError, corsResponse } from '../_shared/response.ts';
 import { verifyAdmin } from '../_shared/admin-auth.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';

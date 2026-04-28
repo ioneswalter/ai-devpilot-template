@@ -7,10 +7,39 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 
 const TrashIcon = ({ className = '' }: { className?: string }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M3 6h18" />
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
 );
 const PlusIcon = ({ className = '' }: { className?: string }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
 );
 
 interface Feature {
@@ -57,7 +86,7 @@ export function ReleaseFeatureList({
   release,
   availableFeatures = [],
   onRemoveFeature,
-  onSelectFeatures
+  onSelectFeatures,
 }: ReleaseFeatureListProps) {
   const isDraft = release.status === 'draft';
   const hasFeatures = release.features && release.features.length > 0;
@@ -120,9 +149,7 @@ export function ReleaseFeatureList({
                       {feature.status.replace('_', ' ')}
                     </span>
                   </div>
-                  <h4 className="font-medium text-gray-900 line-clamp-1">
-                    {feature.title}
-                  </h4>
+                  <h4 className="font-medium text-gray-900 line-clamp-1">{feature.title}</h4>
                 </div>
                 {isDraft && onRemoveFeature && (
                   <Button

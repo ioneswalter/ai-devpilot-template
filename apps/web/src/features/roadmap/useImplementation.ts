@@ -131,16 +131,24 @@ export function useImplementation(featureId: string | null) {
   });
 
   const updateItemMutation = useMutation({
-    mutationFn: (data: { item_id: string; decision?: string; title?: string; description?: string; comment?: string }) =>
-      adminApi.updateTaskItem(data),
+    mutationFn: (data: {
+      item_id: string;
+      decision?: string;
+      title?: string;
+      description?: string;
+      comment?: string;
+    }) => adminApi.updateTaskItem(data),
     onMutate: async (data) => {
       await queryClient.cancelQueries({ queryKey: [...IMPL_KEY, featureId] });
-      const previous = queryClient.getQueryData<ImplementationRequestWithItems>([...IMPL_KEY, featureId]);
+      const previous = queryClient.getQueryData<ImplementationRequestWithItems>([
+        ...IMPL_KEY,
+        featureId,
+      ]);
       if (previous) {
         queryClient.setQueryData([...IMPL_KEY, featureId], {
           ...previous,
           task_items: previous.task_items.map((t) =>
-            t.id === data.item_id ? { ...t, ...data, item_id: undefined } : t,
+            t.id === data.item_id ? { ...t, ...data, item_id: undefined } : t
           ),
         });
       }
@@ -157,29 +165,40 @@ export function useImplementation(featureId: string | null) {
   });
 
   const addItemMutation = useMutation({
-    mutationFn: (data: { title: string; description?: string; file_path: string; task_type: string }) =>
-      adminApi.addTaskItem({ request_id: implQuery.data?.id ?? '', ...data }),
+    mutationFn: (data: {
+      title: string;
+      description?: string;
+      file_path: string;
+      task_type: string;
+    }) => adminApi.addTaskItem({ request_id: implQuery.data?.id ?? '', ...data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });
     },
   });
 
   const taskItems: ImplementationTaskItem[] = implQuery.data?.task_items ?? [];
-  const activeItems = taskItems.filter(t => (t.implementation_status as string) !== 'split');
-  const acceptedItems = activeItems.filter(t => t.decision === 'accepted' || t.decision === 'modified');
-  const pendingItems = activeItems.filter(t => t.decision === 'pending');
+  const activeItems = taskItems.filter((t) => (t.implementation_status as string) !== 'split');
+  const acceptedItems = activeItems.filter(
+    (t) => t.decision === 'accepted' || t.decision === 'modified'
+  );
+  const pendingItems = activeItems.filter((t) => t.decision === 'pending');
 
   // Pipeline state (FR-113)
   const activePipeline: PipelineRun | null = pipelineQuery.data?.active ?? null;
   const isPipelineRunning = activePipeline?.status === 'running';
   const pipelineCurrentTask = pipelineQuery.data?.current_task ?? null;
-  const ciResults: CIResults | null = activePipeline?.ci_results ?? pipelineQuery.data?.history?.[0]?.ci_results ?? null;
+  const ciResults: CIResults | null =
+    activePipeline?.ci_results ?? pipelineQuery.data?.history?.[0]?.ci_results ?? null;
   const isCIRunning = activePipeline?.current_stage === 'build_check';
-  const deployResults: DeployResults | null = activePipeline?.deploy_results ?? pipelineQuery.data?.history?.[0]?.deploy_results ?? null;
+  const deployResults: DeployResults | null =
+    activePipeline?.deploy_results ?? pipelineQuery.data?.history?.[0]?.deploy_results ?? null;
   const isDeploying = activePipeline?.current_stage === 'deploying';
 
   // FR-116: Readiness state
-  const readinessResults: ReadinessResults | null = activePipeline?.readiness_results ?? pipelineQuery.data?.history?.[0]?.readiness_results ?? null;
+  const readinessResults: ReadinessResults | null =
+    activePipeline?.readiness_results ??
+    pipelineQuery.data?.history?.[0]?.readiness_results ??
+    null;
   const isReadying = activePipeline?.current_stage === 'readying';
 
   // FR-116: Rerun readiness mutation
@@ -201,16 +220,17 @@ export function useImplementation(featureId: string | null) {
     error: implQuery.error,
 
     // Counts (exclude split parent tasks)
-    pendingCount: activeItems.filter(t => t.decision === 'pending').length,
+    pendingCount: activeItems.filter((t) => t.decision === 'pending').length,
     acceptedCount: acceptedItems.length,
-    rejectedCount: activeItems.filter(t => t.decision === 'rejected').length,
+    rejectedCount: activeItems.filter((t) => t.decision === 'rejected').length,
 
     // Implementation progress (exclude split parent tasks)
     isImplementing: isPipelineRunning,
-    implementedCount: activeItems.filter(t => t.implementation_status === 'completed').length,
-    generatingCount: activeItems.filter(t => t.implementation_status === 'generating').length,
-    failedImplCount: activeItems.filter(t => t.implementation_status === 'failed').length,
-    canImplement: acceptedItems.length > 0 && acceptedItems.some(t => t.implementation_status === 'pending'),
+    implementedCount: activeItems.filter((t) => t.implementation_status === 'completed').length,
+    generatingCount: activeItems.filter((t) => t.implementation_status === 'generating').length,
+    failedImplCount: activeItems.filter((t) => t.implementation_status === 'failed').length,
+    canImplement:
+      acceptedItems.length > 0 && acceptedItems.some((t) => t.implementation_status === 'pending'),
 
     // Pipeline state (FR-113)
     pipeline: activePipeline,
@@ -218,7 +238,11 @@ export function useImplementation(featureId: string | null) {
     pipelineLogs: activePipeline?.logs ?? [],
     isPipelineRunning,
     pipelineProgress: activePipeline
-      ? { completed: activePipeline.completed_tasks, total: activePipeline.total_tasks, failed: activePipeline.failed_tasks }
+      ? {
+          completed: activePipeline.completed_tasks,
+          total: activePipeline.total_tasks,
+          failed: activePipeline.failed_tasks,
+        }
       : null,
 
     // Actions
@@ -259,30 +283,39 @@ export function useImplementation(featureId: string | null) {
 
     isUpdating: updateItemMutation.isPending,
     updateError: updateItemMutation.error,
-    updateTaskItem: (itemId: string, data: { decision?: string; title?: string; description?: string; comment?: string }) =>
-      updateItemMutation.mutateAsync({ item_id: itemId, ...data }),
+    updateTaskItem: (
+      itemId: string,
+      data: { decision?: string; title?: string; description?: string; comment?: string }
+    ) => updateItemMutation.mutateAsync({ item_id: itemId, ...data }),
 
     isAdding: addItemMutation.isPending,
-    addTaskItem: (data: { title: string; description?: string; file_path: string; task_type: string }) =>
-      addItemMutation.mutateAsync(data),
+    addTaskItem: (data: {
+      title: string;
+      description?: string;
+      file_path: string;
+      task_type: string;
+    }) => addItemMutation.mutateAsync(data),
 
     acceptAllTasks: async () => {
       if (pendingItems.length === 0) return;
       await queryClient.cancelQueries({ queryKey: [...IMPL_KEY, featureId] });
-      const previous = queryClient.getQueryData<ImplementationRequestWithItems>([...IMPL_KEY, featureId]);
+      const previous = queryClient.getQueryData<ImplementationRequestWithItems>([
+        ...IMPL_KEY,
+        featureId,
+      ]);
       if (previous) {
         queryClient.setQueryData([...IMPL_KEY, featureId], {
           ...previous,
           task_items: previous.task_items.map((t) =>
             t.decision === 'pending' && (t.implementation_status as string) !== 'split'
               ? { ...t, decision: 'accepted' }
-              : t,
+              : t
           ),
         });
       }
       try {
         await Promise.all(
-          pendingItems.map(t => adminApi.updateTaskItem({ item_id: t.id, decision: 'accepted' })),
+          pendingItems.map((t) => adminApi.updateTaskItem({ item_id: t.id, decision: 'accepted' }))
         );
       } finally {
         queryClient.invalidateQueries({ queryKey: [...IMPL_KEY, featureId] });

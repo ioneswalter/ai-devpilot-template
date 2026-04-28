@@ -21,17 +21,13 @@ export async function handleCreateFeature(
   req: Request,
   supabase: SupabaseClient,
   userId: string,
-  userEmail: string | undefined,
+  userEmail: string | undefined
 ): Promise<Response> {
   const rawBody = await req.json();
   const validation = CreateFeatureSchema.safeParse(rawBody);
 
   if (!validation.success) {
-    return errorResponse(
-      'VALIDATION_ERROR',
-      validation.error.errors[0].message,
-      400,
-    );
+    return errorResponse('VALIDATION_ERROR', validation.error.errors[0].message, 400);
   }
 
   const {
@@ -56,16 +52,14 @@ export async function handleCreateFeature(
   }
 
   // Get existing feature codes to generate next one
-  const { data: existingFeatures } = await supabase
-    .from('product_features')
-    .select('feature_code');
+  const { data: existingFeatures } = await supabase.from('product_features').select('feature_code');
 
   const existingCodes = (existingFeatures || []).map(
-    (f: { feature_code: string }) => f.feature_code,
+    (f: { feature_code: string }) => f.feature_code
   );
   const featureCode = generateFeatureCode(
     existingCodes,
-    feature_type === 'journey' ? 'journey' : 'feature',
+    feature_type === 'journey' ? 'journey' : 'feature'
   );
 
   const now = new Date().toISOString();
@@ -98,14 +92,7 @@ export async function handleCreateFeature(
 
   // Create test cases if provided
   if (test_cases_text.trim()) {
-    await createTestCasesForFeature(
-      supabase,
-      feature,
-      featureCode,
-      test_cases_text,
-      userId,
-      now,
-    );
+    await createTestCasesForFeature(supabase, feature, featureCode, test_cases_text, userId, now);
   }
 
   console.log('Admin created feature:', featureCode, 'by', userEmail);
@@ -120,7 +107,7 @@ async function createTestCasesForFeature(
   featureCode: string,
   testCasesText: string,
   userId: string,
-  now: string,
+  now: string
 ): Promise<void> {
   const parsedTestCases = parseTestCasesText(testCasesText);
   if (parsedTestCases.length === 0) return;
@@ -133,15 +120,15 @@ async function createTestCasesForFeature(
     .eq('feature_id', feature.id);
 
   const existingTCCodes = (existingTestCases || []).map(
-    (tc: { test_code: string }) => tc.test_code,
+    (tc: { test_code: string }) => tc.test_code
   );
-  const existingTitles = (existingTestCases || []).map(
-    (tc: { title: string }) => ({ title: tc.title }),
-  );
+  const existingTitles = (existingTestCases || []).map((tc: { title: string }) => ({
+    title: tc.title,
+  }));
 
   const { unique: uniqueTestCases, duplicates } = filterDuplicateTestCases(
     parsedTestCases,
-    existingTitles,
+    existingTitles
   );
 
   if (duplicates.length > 0) {

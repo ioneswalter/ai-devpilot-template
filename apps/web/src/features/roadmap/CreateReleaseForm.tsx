@@ -3,24 +3,49 @@
  * Collects name, version, description, feature selection, and schedule
  */
 
-import { useState, useCallback, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { useCreateRelease } from './useReleases'
-import { FeatureSelector } from './FeatureSelector'
-import { generateVersionSuggestions } from './version-utils'
-import { productApi } from '../../lib/api/product-api'
+import { useState, useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useCreateRelease } from './useReleases';
+import { FeatureSelector } from './FeatureSelector';
+import { generateVersionSuggestions } from './version-utils';
+import { productApi } from '../../lib/api/product-api';
 
 const ArrowLeftIcon = ({ className = '' }: { className?: string }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-)
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m12 19-7-7 7-7" />
+    <path d="M19 12H5" />
+  </svg>
+);
 const LoaderIcon = ({ className = '' }: { className?: string }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-)
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+  </svg>
+);
 
 interface CreateReleaseFormProps {
-  onBack: () => void
-  onReleaseCreated: (id: string) => void
-  existingVersions?: string[]
+  onBack: () => void;
+  onReleaseCreated: (id: string) => void;
+  existingVersions?: string[];
 }
 
 export function CreateReleaseForm({
@@ -28,73 +53,80 @@ export function CreateReleaseForm({
   onReleaseCreated,
   existingVersions = [],
 }: CreateReleaseFormProps) {
-  const suggestions = generateVersionSuggestions(existingVersions)
+  const suggestions = generateVersionSuggestions(existingVersions);
 
-  const [name, setName] = useState('')
-  const [version, setVersion] = useState(suggestions.minor)
-  const [description, setDescription] = useState('')
-  const [featureIds, setFeatureIds] = useState<string[]>([])
-  const [scheduledFor, setScheduledFor] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [showFeatureSelector, setShowFeatureSelector] = useState(false)
+  const [name, setName] = useState('');
+  const [version, setVersion] = useState(suggestions.minor);
+  const [description, setDescription] = useState('');
+  const [featureIds, setFeatureIds] = useState<string[]>([]);
+  const [scheduledFor, setScheduledFor] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [showFeatureSelector, setShowFeatureSelector] = useState(false);
 
-  const createMutation = useCreateRelease()
+  const createMutation = useCreateRelease();
 
   // Fetch all features and map to FeatureSelector's expected shape
   const { data: allFeatures = [], isLoading: featuresLoading } = useQuery({
     queryKey: ['product-features-for-release'],
     queryFn: async () => {
-      const response = await productApi.getFeatures()
-      return response.data ?? []
+      const response = await productApi.getFeatures();
+      return response.data ?? [];
     },
-  })
+  });
 
   const releasableFeatures = useMemo(() => {
     return allFeatures
-      .filter(f => f.status === 'released')
-      .map(f => ({
+      .filter((f) => f.status === 'released')
+      .map((f) => ({
         id: f.id,
         title: `${f.feature_code} — ${f.title}`,
         description: f.description,
         status: 'released' as const,
         category: f.category ?? 'Uncategorised',
         section: f.spec_section ?? 'Other',
-        impact_level: (f.priority === 'P1 - MVP' ? 'high' : f.priority === 'P2' ? 'medium' : 'low') as 'low' | 'medium' | 'high',
+        impact_level: (f.priority === 'P1 - MVP'
+          ? 'high'
+          : f.priority === 'P2'
+            ? 'medium'
+            : 'low') as 'low' | 'medium' | 'high',
         created_at: f.created_at,
-      }))
-  }, [allFeatures])
+      }));
+  }, [allFeatures]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError(null);
 
-    if (!name.trim()) {
-      setError('Release name is required')
-      return
-    }
-    if (!version.trim()) {
-      setError('Version is required')
-      return
-    }
-    if (featureIds.length === 0) {
-      setError('Select at least one feature')
-      return
-    }
+      if (!name.trim()) {
+        setError('Release name is required');
+        return;
+      }
+      if (!version.trim()) {
+        setError('Version is required');
+        return;
+      }
+      if (featureIds.length === 0) {
+        setError('Select at least one feature');
+        return;
+      }
 
-    try {
-      const result = await createMutation.mutateAsync({
-        title: name.trim(),
-        version: version.trim(),
-        description: description.trim() || undefined,
-        feature_ids: featureIds,
-        scheduled_for: scheduledFor || undefined,
-      })
-      const releaseId = (result as { id?: string })?.id ?? ''
-      onReleaseCreated(releaseId)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create release')
-    }
-  }, [name, version, description, featureIds, scheduledFor, createMutation, onReleaseCreated])
+      try {
+        const result = await createMutation.mutateAsync({
+          title: name.trim(),
+          version: version.trim(),
+          description: description.trim() || undefined,
+          feature_ids: featureIds,
+          scheduled_for: scheduledFor || undefined,
+        });
+        const releaseId = (result as { id?: string })?.id ?? '';
+        onReleaseCreated(releaseId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create release');
+      }
+    },
+    [name, version, description, featureIds, scheduledFor, createMutation, onReleaseCreated]
+  );
 
   return (
     <div className="p-6 overflow-y-auto max-h-[70vh]">
@@ -159,7 +191,9 @@ export function CreateReleaseForm({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Description (optional)
+          </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -171,7 +205,9 @@ export function CreateReleaseForm({
 
         {/* Schedule */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled For (optional)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Scheduled For (optional)
+          </label>
           <input
             type="datetime-local"
             value={scheduledFor}
@@ -218,7 +254,7 @@ export function CreateReleaseForm({
                     <div className="h-8 w-28 bg-gray-200 rounded-lg" />
                     <div className="h-8 w-28 bg-gray-200 rounded-lg" />
                   </div>
-                  {[1, 2, 3].map(i => (
+                  {[1, 2, 3].map((i) => (
                     <div key={i} className="h-16 w-full bg-gray-200 rounded-lg" />
                   ))}
                 </div>
@@ -253,5 +289,5 @@ export function CreateReleaseForm({
         </div>
       </form>
     </div>
-  )
+  );
 }

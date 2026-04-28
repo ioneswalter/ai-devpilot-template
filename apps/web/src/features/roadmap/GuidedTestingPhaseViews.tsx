@@ -81,8 +81,8 @@ export function CompletedView({ stepsTotal, passed, failed }: CompletedViewProps
     <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
       <p className="font-medium text-green-800 mb-1">Guided Testing Complete</p>
       <p className="text-xs text-green-700">
-        {passed} passed, {failed} failed, {stepsTotal - passed - failed} skipped
-        out of {stepsTotal} steps.
+        {passed} passed, {failed} failed, {stepsTotal - passed - failed} skipped out of {stepsTotal}{' '}
+        steps.
       </p>
     </div>
   );

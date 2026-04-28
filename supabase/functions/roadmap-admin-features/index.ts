@@ -36,7 +36,10 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.substring(7);
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
       return errorResponse('UNAUTHORIZED', 'Invalid token', 401);
@@ -78,7 +81,6 @@ Deno.serve(async (req) => {
     }
 
     return errorResponse('METHOD_NOT_ALLOWED', 'Method not allowed', 405);
-
   } catch (error) {
     console.error('roadmap-admin-features error:', error);
     return errorResponse('INTERNAL_ERROR', 'An unexpected error occurred', 500);

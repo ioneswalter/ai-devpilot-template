@@ -28,7 +28,7 @@ export async function handleGetRequest(url: URL, ctx: AuthContext): Promise<Resp
 
   // Resolve version labels for requests that have feature_version_id
   const versionIds = allRequests
-    .map(r => r.feature_version_id)
+    .map((r) => r.feature_version_id)
     .filter((id): id is string => !!id);
 
   let versionMap: Record<string, string> = {};
@@ -38,7 +38,7 @@ export async function handleGetRequest(url: URL, ctx: AuthContext): Promise<Resp
       .select('id, version_label')
       .in('id', versionIds);
     if (versions) {
-      versionMap = Object.fromEntries(versions.map(v => [v.id, v.version_label]));
+      versionMap = Object.fromEntries(versions.map((v) => [v.id, v.version_label]));
     }
   }
 
@@ -55,7 +55,7 @@ export async function handleGetRequest(url: URL, ctx: AuthContext): Promise<Resp
       ? (versionMap[req.feature_version_id] ?? 'v1.0')
       : 'v1.0';
 
-    for (const item of (taskItems || [])) {
+    for (const item of taskItems || []) {
       allTaskItems.push({ ...item, version_label: versionLabel });
     }
   }

@@ -15,13 +15,13 @@ export interface TaskForScoring {
 }
 
 export interface FactorResult {
-  score: number;         // 0-100
+  score: number; // 0-100
   value: number | string[];
   detail: string;
 }
 
 export interface ComplexityScore {
-  total: number;           // 0-100 weighted composite
+  total: number; // 0-100 weighted composite
   threshold: number;
   split_recommended: boolean;
   factors: {
@@ -36,7 +36,7 @@ export interface ComplexityScore {
 // ── Configuration ──
 
 const DEFAULT_THRESHOLD = 60;
-const WEIGHTS = { file_count: 0.30, line_estimate: 0.30, layer_span: 0.20, dependency_depth: 0.20 };
+const WEIGHTS = { file_count: 0.3, line_estimate: 0.3, layer_span: 0.2, dependency_depth: 0.2 };
 
 // ── Factor Scorers ──
 
@@ -79,9 +79,8 @@ function scoreLayerSpan(task: TaskForScoring): FactorResult {
   else if (layers.length === 2) score = 60;
   else score = 100;
 
-  const detail = layers.length > 1
-    ? `Spans ${layers.join(' and ')}`
-    : `Single layer: ${layers[0] || 'unknown'}`;
+  const detail =
+    layers.length > 1 ? `Spans ${layers.join(' and ')}` : `Single layer: ${layers[0] || 'unknown'}`;
 
   return { score, value: layers, detail };
 }
@@ -96,7 +95,11 @@ function scoreDependencyDepth(task: TaskForScoring): FactorResult {
   else if (depth === 4) score = 75;
   else score = 100;
 
-  return { score, value: depth, detail: `${depth} inter-file dependenc${depth !== 1 ? 'ies' : 'y'}` };
+  return {
+    score,
+    value: depth,
+    detail: `${depth} inter-file dependenc${depth !== 1 ? 'ies' : 'y'}`,
+  };
 }
 
 // ── Helpers ──
@@ -166,8 +169,10 @@ function detectLayers(task: TaskForScoring): string[] {
     }
   }
 
-  if (text.includes('ui') || text.includes('component') || text.includes('panel')) layers.add('frontend');
-  if (text.includes('api') || text.includes('endpoint') || text.includes('handler')) layers.add('backend');
+  if (text.includes('ui') || text.includes('component') || text.includes('panel'))
+    layers.add('frontend');
+  if (text.includes('api') || text.includes('endpoint') || text.includes('handler'))
+    layers.add('backend');
 
   if (layers.size === 0) layers.add('unknown');
   return Array.from(layers);
@@ -179,14 +184,18 @@ function analyzeDependencies(task: TaskForScoring): number {
 
   for (const sp of task.siblingPaths) {
     const sibDir = sp.split('/').slice(0, -1).join('/');
-    if (sibDir === taskDir) depth += 1;        // Co-located = related
+    if (sibDir === taskDir)
+      depth += 1; // Co-located = related
     else if (sharePrefix(taskDir, sibDir, 2)) depth += 1; // Near siblings
   }
 
   const text = `${task.title} ${task.description || ''}`.toLowerCase();
   const depKeywords = ['import', 'depend', 'require', 'use', 'integrate', 'connect'];
   for (const kw of depKeywords) {
-    if (text.includes(kw)) { depth += 1; break; }
+    if (text.includes(kw)) {
+      depth += 1;
+      break;
+    }
   }
 
   return Math.min(depth, 8);
@@ -215,9 +224,9 @@ export function scoreTask(task: TaskForScoring, threshold = DEFAULT_THRESHOLD): 
 
   const total = Math.round(
     factors.file_count.score * WEIGHTS.file_count +
-    factors.line_estimate.score * WEIGHTS.line_estimate +
-    factors.layer_span.score * WEIGHTS.layer_span +
-    factors.dependency_depth.score * WEIGHTS.dependency_depth
+      factors.line_estimate.score * WEIGHTS.line_estimate +
+      factors.layer_span.score * WEIGHTS.layer_span +
+      factors.dependency_depth.score * WEIGHTS.dependency_depth
   );
 
   return {

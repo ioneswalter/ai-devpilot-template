@@ -47,25 +47,38 @@ const VERDICT_BUTTONS: { value: StepVerdict; label: string; active: string; inac
 ];
 
 function StepBadge({ number, verdict }: { number: number; verdict: StepVerdict | null }) {
-  const bg = verdict === 'passed'
-    ? 'bg-green-500 text-white'
-    : verdict === 'failed'
-      ? 'bg-red-500 text-white'
-      : verdict === 'skipped'
-        ? 'bg-gray-400 text-white'
-        : 'bg-blue-100 text-blue-700';
+  const bg =
+    verdict === 'passed'
+      ? 'bg-green-500 text-white'
+      : verdict === 'failed'
+        ? 'bg-red-500 text-white'
+        : verdict === 'skipped'
+          ? 'bg-gray-400 text-white'
+          : 'bg-blue-100 text-blue-700';
 
   return (
-    <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${bg}`}>
+    <span
+      className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${bg}`}
+    >
       {number}
     </span>
   );
 }
 
 export function GuidedStepCard({
-  step, isActive, evidence, onMarkComplete, onCapture,
-  capturing, extensionAvailable, captureError, lastCaptureSuccess,
-  lastCapture, isOnAnotherPage = false, onUploadScreenshot, onClearEvidence,
+  step,
+  isActive,
+  evidence,
+  onMarkComplete,
+  onCapture,
+  capturing,
+  extensionAvailable,
+  captureError,
+  lastCaptureSuccess,
+  lastCapture,
+  isOnAnotherPage = false,
+  onUploadScreenshot,
+  onClearEvidence,
 }: GuidedStepCardProps) {
   const [verdict, setVerdict] = useState<StepVerdict | null>(evidence?.verdict ?? null);
   const [notes, setNotes] = useState('');
@@ -96,9 +109,7 @@ export function GuidedStepCard({
           <p className="text-sm font-medium text-gray-900">{step.action}</p>
 
           {step.target_element && (
-            <p className="mt-0.5 text-xs text-blue-600 font-mono">
-              Target: {step.target_element}
-            </p>
+            <p className="mt-0.5 text-xs text-blue-600 font-mono">Target: {step.target_element}</p>
           )}
 
           <p className="mt-1 text-xs text-gray-600">
@@ -117,7 +128,12 @@ export function GuidedStepCard({
             >
               Open {step.requires_navigation}
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
               </svg>
             </button>
           )}

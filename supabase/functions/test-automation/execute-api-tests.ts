@@ -43,10 +43,7 @@ interface NegativeCaseResult {
 }
 
 /** Execute setup SQL statements */
-async function runSqlStatements(
-  supabase: SupabaseClient,
-  statements: string[],
-): Promise<boolean> {
+async function runSqlStatements(supabase: SupabaseClient, statements: string[]): Promise<boolean> {
   for (const sql of statements) {
     if (!sql?.trim()) continue;
     const { error } = await supabase.rpc('exec_sql', { sql_text: sql });
@@ -64,7 +61,7 @@ async function callEndpoint(
   endpoint: string,
   method: string,
   body: Record<string, unknown>,
-  authToken: string,
+  authToken: string
 ): Promise<{ status: number; body: unknown; duration_ms: number }> {
   // For GET endpoints with query params already in the endpoint string, append body as query params
   let url = `${baseUrl}/functions/v1/${endpoint.replace(/^\//, '')}`;
@@ -75,13 +72,14 @@ async function callEndpoint(
   }
   const start = Date.now();
 
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const anonKey =
+    Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
   const response = await fetch(url, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${authToken}`,
-      'apikey': anonKey,
+      Authorization: `Bearer ${authToken}`,
+      apikey: anonKey,
     },
     body: method !== 'GET' ? JSON.stringify(body) : undefined,
   });
@@ -92,8 +90,12 @@ async function callEndpoint(
 
 /** Check assertions against API response */
 function checkResponseAssertions(
-  assertions: { status: number; response_match: Record<string, unknown>; db_assertions?: unknown[] },
-  actual: { status: number; body: unknown },
+  assertions: {
+    status: number;
+    response_match: Record<string, unknown>;
+    db_assertions?: unknown[];
+  },
+  actual: { status: number; body: unknown }
 ): AssertionResult[] {
   const results: AssertionResult[] = [];
 
@@ -141,7 +143,7 @@ function getNestedValue(obj: unknown, path: string): unknown {
 /** Check database assertions */
 async function checkDbAssertions(
   supabase: SupabaseClient,
-  dbAssertions: Array<{ query: string; expected: unknown; description: string }>,
+  dbAssertions: Array<{ query: string; expected: unknown; description: string }>
 ): Promise<AssertionResult[]> {
   const results: AssertionResult[] = [];
   for (const assertion of dbAssertions) {
@@ -150,9 +152,10 @@ async function checkDbAssertions(
       const actual = error ? `ERROR: ${error.message}` : data;
 
       // null expected = "exists" check (result is defined and not error)
-      const passed = assertion.expected === null
-        ? actual !== undefined && actual !== null && !String(actual).startsWith('ERROR:')
-        : JSON.stringify(actual) === JSON.stringify(assertion.expected);
+      const passed =
+        assertion.expected === null
+          ? actual !== undefined && actual !== null && !String(actual).startsWith('ERROR:')
+          : JSON.stringify(actual) === JSON.stringify(assertion.expected);
 
       results.push({
         description: assertion.description,
@@ -182,12 +185,13 @@ async function runNegativeCases(
     auth_context: { type: string };
     request_body: Record<string, unknown>;
     expected_status: number;
-  }>,
+  }>
 ): Promise<NegativeCaseResult[]> {
   const results: NegativeCaseResult[] = [];
   for (const nc of negativeCases) {
     try {
-      const token = nc.auth_context.type === 'anon' ? '' : Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+      const token =
+        nc.auth_context.type === 'anon' ? '' : Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
       const resp = await callEndpoint(baseUrl, endpoint, method, nc.request_body, token);
       results.push({
         description: nc.description,
@@ -211,7 +215,7 @@ export async function handleExecuteApiTest(
   supabase: SupabaseClient,
   body: unknown,
   _userId: string,
-  callerToken?: string,
+  callerToken?: string
 ): Promise<Response> {
   const validation = ExecuteSchema.safeParse(body);
   if (!validation.success) return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
@@ -243,7 +247,13 @@ export async function handleExecuteApiTest(
     setupSuccess = await runSqlStatements(supabase, injectPrefix(test.setup_sql || []));
 
     // 2. Call the endpoint
-    const apiResult = await callEndpoint(baseUrl, test.endpoint, test.method, test.request_body || {}, serviceToken);
+    const apiResult = await callEndpoint(
+      baseUrl,
+      test.endpoint,
+      test.method,
+      test.request_body || {},
+      serviceToken
+    );
 
     // 3. Check response assertions
     const responseAssertions = checkResponseAssertions(test.assertions, apiResult);
@@ -253,22 +263,32 @@ export async function handleExecuteApiTest(
     const allAssertions = [...responseAssertions, ...dbAssertions];
 
     // 5. Run negative cases
-    const negativeCaseResults = await runNegativeCases(baseUrl, test.endpoint, test.method, test.negative_cases || []);
+    const negativeCaseResults = await runNegativeCases(
+      baseUrl,
+      test.endpoint,
+      test.method,
+      test.negative_cases || []
+    );
 
     // 6. Determine overall result
-    const allPassed = allAssertions.every((a) => a.passed) && negativeCaseResults.every((n) => n.passed);
+    const allPassed =
+      allAssertions.every((a) => a.passed) && negativeCaseResults.every((n) => n.passed);
     const result = allPassed ? 'passed' : 'failed';
 
     // 7. Record result
     const failureCount = result === 'passed' ? 0 : (test.failure_count || 0) + 1;
-    await supabase.from('api_verification_tests').update({
-      last_run_result: result,
-      last_run_at: new Date().toISOString(),
-      failure_count: failureCount,
-    }).eq('id', test_id);
+    await supabase
+      .from('api_verification_tests')
+      .update({
+        last_run_result: result,
+        last_run_at: new Date().toISOString(),
+        failure_count: failureCount,
+      })
+      .eq('id', test_id);
 
     // Sync test_cases.passed so the status view reflects the API result
-    await supabase.from('test_cases')
+    await supabase
+      .from('test_cases')
       .update({ passed: result === 'passed' })
       .eq('id', test.test_case_id);
 

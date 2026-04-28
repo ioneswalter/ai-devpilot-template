@@ -12,11 +12,13 @@ export function useBudgetStatus(enabled = true) {
   });
 
   const budget = data?.data ?? null;
-  const warning: 'none' | 'approaching' | 'exceeded' =
-    !budget ? 'none'
-    : budget.is_over_budget ? 'exceeded'
-    : budget.percent_used >= 70 ? 'approaching'
-    : 'none';
+  const warning: 'none' | 'approaching' | 'exceeded' = !budget
+    ? 'none'
+    : budget.is_over_budget
+      ? 'exceeded'
+      : budget.percent_used >= 70
+        ? 'approaching'
+        : 'none';
 
   return { budget, warning, isLoading };
 }

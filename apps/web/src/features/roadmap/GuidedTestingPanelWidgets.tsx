@@ -28,7 +28,8 @@ export function TestDataPrompt({
     <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
       <p className="font-medium text-amber-800 mb-2">Test Data Required</p>
       <p className="text-amber-700 text-xs mb-3">
-        No active test data found. Generate test data for more accurate guidance, or skip to proceed without it.
+        No active test data found. Generate test data for more accurate guidance, or skip to proceed
+        without it.
       </p>
       <div className="flex gap-2">
         <button
@@ -41,7 +42,9 @@ export function TestDataPrompt({
               <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
               Generating...
             </span>
-          ) : 'Generate Test Data'}
+          ) : (
+            'Generate Test Data'
+          )}
         </button>
         <button
           onClick={onSkip}
@@ -57,8 +60,8 @@ export function TestDataPrompt({
 export function ExtensionWarning() {
   return (
     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800">
-      <span className="font-medium">Browser extension not detected.</span>{' '}
-      Evidence will not be auto-captured. Install the OwnYourGig extension for full co-pilot features.
+      <span className="font-medium">Browser extension not detected.</span> Evidence will not be
+      auto-captured. Install the OwnYourGig extension for full co-pilot features.
     </div>
   );
 }
@@ -82,7 +85,9 @@ export function ValidationWarningPanel({
       <p className="text-amber-700 mb-1">{validationWarning.explanation}</p>
       {validationWarning.mismatches.length > 0 && (
         <ul className="list-disc list-inside text-amber-600 mb-2">
-          {validationWarning.mismatches.map((m, i) => <li key={i}>{m}</li>)}
+          {validationWarning.mismatches.map((m, i) => (
+            <li key={i}>{m}</li>
+          ))}
         </ul>
       )}
       {validationWarning.console_issues.length > 0 && (

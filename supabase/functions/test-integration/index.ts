@@ -51,16 +51,23 @@ interface IntegrationRow {
 
 // ---- Service-specific test functions ----
 
-async function testSupabase(creds: Credentials): Promise<{ ok: boolean; status: number; error?: string }> {
+async function testSupabase(
+  creds: Credentials
+): Promise<{ ok: boolean; status: number; error?: string }> {
   const url = creds.project_url;
   if (!url) return { ok: false, status: 0, error: 'Missing project_url' };
   const res = await fetch(`${url}/rest/v1/`, {
-    headers: { apikey: creds.service_role_key ?? '', Authorization: `Bearer ${creds.service_role_key ?? ''}` },
+    headers: {
+      apikey: creds.service_role_key ?? '',
+      Authorization: `Bearer ${creds.service_role_key ?? ''}`,
+    },
   });
   return { ok: res.ok, status: res.status, error: res.ok ? undefined : await res.text() };
 }
 
-async function testStripe(creds: Credentials): Promise<{ ok: boolean; status: number; error?: string }> {
+async function testStripe(
+  creds: Credentials
+): Promise<{ ok: boolean; status: number; error?: string }> {
   if (!creds.api_key) return { ok: false, status: 0, error: 'Missing api_key' };
   const res = await fetch('https://api.stripe.com/v1/balance', {
     headers: { Authorization: `Bearer ${creds.api_key}` },
@@ -68,7 +75,9 @@ async function testStripe(creds: Credentials): Promise<{ ok: boolean; status: nu
   return { ok: res.ok, status: res.status, error: res.ok ? undefined : await res.text() };
 }
 
-async function testGitHub(creds: Credentials): Promise<{ ok: boolean; status: number; error?: string }> {
+async function testGitHub(
+  creds: Credentials
+): Promise<{ ok: boolean; status: number; error?: string }> {
   const token = creds.token;
   if (!token) return { ok: false, status: 0, error: 'Missing token' };
   const res = await fetch('https://api.github.com/user', {
@@ -77,10 +86,13 @@ async function testGitHub(creds: Credentials): Promise<{ ok: boolean; status: nu
   return { ok: res.ok, status: res.status, error: res.ok ? undefined : await res.text() };
 }
 
-async function testTwilio(creds: Credentials): Promise<{ ok: boolean; status: number; error?: string }> {
+async function testTwilio(
+  creds: Credentials
+): Promise<{ ok: boolean; status: number; error?: string }> {
   const sid = creds.account_sid;
   const authToken = creds.api_key;
-  if (!sid || !authToken) return { ok: false, status: 0, error: 'Missing account_sid or auth token' };
+  if (!sid || !authToken)
+    return { ok: false, status: 0, error: 'Missing account_sid or auth token' };
   const basic = btoa(`${sid}:${authToken}`);
   const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}.json`, {
     headers: { Authorization: `Basic ${basic}` },
@@ -88,8 +100,11 @@ async function testTwilio(creds: Credentials): Promise<{ ok: boolean; status: nu
   return { ok: res.ok, status: res.status, error: res.ok ? undefined : await res.text() };
 }
 
-async function testGoDaddy(creds: Credentials): Promise<{ ok: boolean; status: number; error?: string }> {
-  if (!creds.api_key || !creds.api_secret) return { ok: false, status: 0, error: 'Missing api_key or api_secret' };
+async function testGoDaddy(
+  creds: Credentials
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  if (!creds.api_key || !creds.api_secret)
+    return { ok: false, status: 0, error: 'Missing api_key or api_secret' };
   const res = await fetch('https://api.godaddy.com/v1/domains?limit=1', {
     headers: { Authorization: `sso-key ${creds.api_key}:${creds.api_secret}` },
   });
@@ -98,7 +113,7 @@ async function testGoDaddy(creds: Credentials): Promise<{ ok: boolean; status: n
 
 async function testCustom(
   creds: Credentials,
-  config: Record<string, unknown>,
+  config: Record<string, unknown>
 ): Promise<{ ok: boolean; status: number; error?: string }> {
   const baseUrl = config.base_url as string | undefined;
   if (!baseUrl) return { ok: false, status: 0, error: 'Missing base_url in config' };
@@ -119,7 +134,13 @@ async function testCustom(
   return { ok: res.ok, status: res.status, error: res.ok ? undefined : await res.text() };
 }
 
-const TEST_HANDLERS: Record<string, (c: Credentials, cfg: Record<string, unknown>) => Promise<{ ok: boolean; status: number; error?: string }>> = {
+const TEST_HANDLERS: Record<
+  string,
+  (
+    c: Credentials,
+    cfg: Record<string, unknown>
+  ) => Promise<{ ok: boolean; status: number; error?: string }>
+> = {
   supabase: (c) => testSupabase(c),
   stripe: (c) => testStripe(c),
   github: (c) => testGitHub(c),
@@ -142,7 +163,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
     // Auth check
@@ -150,7 +171,10 @@ Deno.serve(async (req) => {
     if (!authHeader) return errorResponse('UNAUTHORIZED', 401);
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser(token);
     if (authErr || !user) return errorResponse('UNAUTHORIZED', 401);
 
     // Admin check
@@ -196,7 +220,11 @@ Deno.serve(async (req) => {
     try {
       result = await handler(row.credentials, row.config ?? {});
     } catch (err) {
-      result = { ok: false, status: 0, error: err instanceof Error ? err.message : 'Connection failed' };
+      result = {
+        ok: false,
+        status: 0,
+        error: err instanceof Error ? err.message : 'Connection failed',
+      };
     }
     const responseTimeMs = Date.now() - startMs;
 

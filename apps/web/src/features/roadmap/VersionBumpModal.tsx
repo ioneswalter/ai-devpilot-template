@@ -55,16 +55,12 @@ export function VersionBumpModal({
         </p>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Current Version
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Current Version</label>
           <span className="text-sm text-gray-900 font-mono">{displayVersion} (released)</span>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Bump Type
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Bump Type</label>
           <div className="flex gap-3">
             <button
               type="button"

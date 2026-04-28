@@ -51,7 +51,7 @@ async function callClaude(
   apiKey: string,
   model: string,
   systemPrompt: string,
-  messages: { role: string; content: string }[],
+  messages: { role: string; content: string }[]
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -93,7 +93,9 @@ function parseMetadata(content: string): Record<string, unknown> | null {
       if (parsed.proposal) return { type: 'proposal', proposals: [parsed.proposal] };
       return parsed;
     }
-  } catch { /* not metadata */ }
+  } catch {
+    /* not metadata */
+  }
   return null;
 }
 
@@ -126,7 +128,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
     // Auth
@@ -134,11 +136,17 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) {
       return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
     }
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser(authHeader.substring(7));
     if (authErr || !user) return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
 
     const { data: adminRow } = await supabase
-      .from('admin_users').select('id').eq('user_id', user.id).maybeSingle();
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     const isAdmin = !!adminRow;
 
     // Validate request
@@ -148,13 +156,17 @@ Deno.serve(async (req) => {
       return errorResponse('VALIDATION_ERROR', validation.error.errors[0].message, 400);
     }
     const { conversation_id, message } = validation.data;
-    const selectedModel = (validation.data.model && validation.data.model in ALLOWED_MODELS)
-      ? validation.data.model : DEFAULT_MODEL;
+    const selectedModel =
+      validation.data.model && validation.data.model in ALLOWED_MODELS
+        ? validation.data.model
+        : DEFAULT_MODEL;
 
     // Verify conversation access
     const { data: conv, error: convErr } = await supabase
       .from('ideation_conversations')
-      .select('id, status, created_by').eq('id', conversation_id).single();
+      .select('id, status, created_by')
+      .eq('id', conversation_id)
+      .single();
 
     if (convErr || !conv) return errorResponse('NOT_FOUND', 'Conversation not found', 404);
     if (conv.created_by !== user.id && !isAdmin) {
@@ -168,7 +180,8 @@ Deno.serve(async (req) => {
     const { data: userMsg, error: userMsgErr } = await supabase
       .from('conversation_messages')
       .insert({ conversation_id, role: 'user', content: message })
-      .select('id, role, content, metadata, created_at').single();
+      .select('id, role, content, metadata, created_at')
+      .single();
 
     if (userMsgErr) {
       console.error('Save user message error:', userMsgErr);
@@ -179,20 +192,24 @@ Deno.serve(async (req) => {
     const knowledge = await buildKnowledgeContext(supabase);
     const features = knowledge.feature_details as unknown as FeatureContext[];
     const enrichedFeatureList = formatFeatureContext(knowledge.feature_details);
-    const existingSections = [...new Set(
-      knowledge.feature_details.map(f => f.spec_section).filter((s): s is string => !!s),
-    )].sort();
+    const existingSections = [
+      ...new Set(
+        knowledge.feature_details.map((f) => f.spec_section).filter((s): s is string => !!s)
+      ),
+    ].sort();
 
     const { data: history } = await supabase
-      .from('conversation_messages').select('role, content')
-      .eq('conversation_id', conversation_id).order('created_at', { ascending: true });
+      .from('conversation_messages')
+      .select('role, content')
+      .eq('conversation_id', conversation_id)
+      .order('created_at', { ascending: true });
 
-    const systemPrompt = buildSystemPrompt(
-      features, isAdmin, existingSections,
-      { constitution_summary: knowledge.constitution_summary, enrichedFeatureList },
-    );
+    const systemPrompt = buildSystemPrompt(features, isAdmin, existingSections, {
+      constitution_summary: knowledge.constitution_summary,
+      enrichedFeatureList,
+    });
     const messages = trimHistory(
-      (history ?? []).map((m) => ({ role: m.role as string, content: m.content })),
+      (history ?? []).map((m) => ({ role: m.role as string, content: m.content }))
     );
 
     // Check API key
@@ -211,8 +228,11 @@ Deno.serve(async (req) => {
       const convFeature = conv as Record<string, unknown>;
       logAIUsage(supabase, {
         featureId: (convFeature.submitted_feature_id as string) ?? conversation_id,
-        adminId: user.id, modelId: selectedModel, operationType: 'ideation',
-        inputTokens: result.inputTokens, outputTokens: result.outputTokens,
+        adminId: user.id,
+        modelId: selectedModel,
+        operationType: 'ideation',
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
       }).catch(() => {});
     } catch (aiError) {
       console.error('Claude API error:', aiError);
@@ -227,7 +247,8 @@ Deno.serve(async (req) => {
     const { data: assistantMsg, error: assistantMsgErr } = await supabase
       .from('conversation_messages')
       .insert({ conversation_id, role: 'assistant', content: aiContent, metadata })
-      .select('id, role, content, metadata, created_at').single();
+      .select('id, role, content, metadata, created_at')
+      .single();
 
     if (assistantMsgErr) {
       console.error('Save assistant message error:', assistantMsgErr);
@@ -239,19 +260,24 @@ Deno.serve(async (req) => {
     const { count: msgCount } = await supabase
       .from('conversation_messages')
       .select('id', { count: 'exact', head: true })
-      .eq('conversation_id', conversation_id).eq('role', 'user');
+      .eq('conversation_id', conversation_id)
+      .eq('role', 'user');
     if (msgCount === 1) updates.title = message.substring(0, 200);
 
     await supabase.from('ideation_conversations').update(updates).eq('id', conversation_id);
 
     // FR-140 v2.0: Browser-side prototype generation retired — use Claude Code commands
     if (validation.data.generate_prototype) {
-      return jsonResponse({
-        error: {
-          code: 'GONE',
-          message: 'Browser-side prototype generation retired in v2.0. Use \\generate-prototype FR-XXX in Claude Code.',
+      return jsonResponse(
+        {
+          error: {
+            code: 'GONE',
+            message:
+              'Browser-side prototype generation retired in v2.0. Use \\generate-prototype FR-XXX in Claude Code.',
+          },
         },
-      }, 410);
+        410
+      );
     }
 
     return jsonResponse({
@@ -267,4 +293,3 @@ Deno.serve(async (req) => {
     return errorResponse('INTERNAL_ERROR', 'An unexpected error occurred', 500);
   }
 });
-

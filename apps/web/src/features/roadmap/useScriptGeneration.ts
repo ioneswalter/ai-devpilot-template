@@ -13,7 +13,7 @@ type SetState = (updater: (s: UseAutomatedTestsState) => UseAutomatedTestsState)
 export function createGenerateScripts(
   featureId: string,
   setState: SetState,
-  loadScripts: () => Promise<void>,
+  loadScripts: () => Promise<void>
 ) {
   return async (testCaseIds?: string[], force = false) => {
     setState((s) => ({ ...s, generating: true, generatingProgress: null, error: null }));
@@ -28,14 +28,21 @@ export function createGenerateScripts(
       }
 
       if (ids.length === 0) {
-        setState((s) => ({ ...s, generating: false, generatingProgress: null, error: 'No test cases found' }));
+        setState((s) => ({
+          ...s,
+          generating: false,
+          generatingProgress: null,
+          error: 'No test cases found',
+        }));
         return null;
       }
 
       const allApiTests: GenerateScriptsResult['api_tests'] = [];
       const allE2eScripts: GenerateScriptsResult['e2e_scripts'] = [];
       const allSkipped: GenerateScriptsResult['skipped'] = [];
-      let catApi = 0, catE2e = 0, catManual = 0;
+      let catApi = 0,
+        catE2e = 0,
+        catManual = 0;
 
       for (let i = 0; i < ids.length; i++) {
         setState((s) => ({ ...s, generatingProgress: `${i + 1} of ${ids.length}` }));
@@ -60,7 +67,12 @@ export function createGenerateScripts(
         skipped: allSkipped,
       };
 
-      setState((s) => ({ ...s, generating: false, generatingProgress: null, lastGeneration: merged }));
+      setState((s) => ({
+        ...s,
+        generating: false,
+        generatingProgress: null,
+        lastGeneration: merged,
+      }));
       await loadScripts();
       return merged;
     } catch (err) {

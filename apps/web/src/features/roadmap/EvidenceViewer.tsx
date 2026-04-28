@@ -18,11 +18,7 @@ function VerdictBadge({ verdict }: { verdict: StepEvidence['verdict'] }) {
       : verdict === 'failed'
         ? 'bg-red-100 text-red-700'
         : 'bg-gray-100 text-gray-600';
-  return (
-    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${cls}`}>
-      {verdict}
-    </span>
-  );
+  return <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${cls}`}>{verdict}</span>;
 }
 
 function StepDetail({ step }: { step: StepEvidence }) {
@@ -46,21 +42,14 @@ function StepDetail({ step }: { step: StepEvidence }) {
             )}
           </div>
           <p className="text-xs font-medium text-gray-900">{step.action}</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">
-            Expected: {step.expected_outcome}
-          </p>
-          <p className="text-[10px] text-purple-600 mt-0.5">
-            AC: {step.criterion_text}
-          </p>
+          <p className="text-[10px] text-gray-500 mt-0.5">Expected: {step.expected_outcome}</p>
+          <p className="text-[10px] text-purple-600 mt-0.5">AC: {step.criterion_text}</p>
         </div>
       </div>
 
       {/* Screenshot thumbnail */}
       {step.screenshot && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-2 w-full text-left"
-        >
+        <button onClick={() => setExpanded(!expanded)} className="mt-2 w-full text-left">
           <img
             src={`data:image/png;base64,${step.screenshot}`}
             alt={`Step ${step.step_number} screenshot`}
@@ -110,7 +99,9 @@ function StepDetail({ step }: { step: StepEvidence }) {
               <div className="space-y-1">
                 {step.network_log.map((entry, i) => (
                   <div key={i} className="flex items-center gap-2 text-[10px]">
-                    <span className={`font-mono ${entry.status >= 400 ? 'text-red-600' : 'text-gray-600'}`}>
+                    <span
+                      className={`font-mono ${entry.status >= 400 ? 'text-red-600' : 'text-gray-600'}`}
+                    >
                       {entry.status}
                     </span>
                     <span className="font-medium text-gray-500">{entry.method}</span>
@@ -130,7 +121,9 @@ function StepDetail({ step }: { step: StepEvidence }) {
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">{title}</p>
+      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1">
+        {title}
+      </p>
       {children}
     </div>
   );
@@ -148,13 +141,11 @@ export function EvidenceViewer({ evidence, onClose }: EvidenceViewerProps) {
         <div>
           <h4 className="text-sm font-semibold text-gray-900">Guided Test Evidence</h4>
           <p className="text-[10px] text-gray-500 mt-0.5">
-            Session: {evidence.session_id.slice(0, 8)}... — {passed} passed, {failed} failed, {skipped} skipped
+            Session: {evidence.session_id.slice(0, 8)}... — {passed} passed, {failed} failed,{' '}
+            {skipped} skipped
           </p>
         </div>
-        <button
-          onClick={onClose}
-          className="text-xs text-gray-400 hover:text-gray-600"
-        >
+        <button onClick={onClose} className="text-xs text-gray-400 hover:text-gray-600">
           Close
         </button>
       </div>

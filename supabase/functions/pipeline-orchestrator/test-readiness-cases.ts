@@ -23,18 +23,30 @@ export async function generateTestCases(
   pipelineId: string,
   featureId: string,
   feature: Record<string, unknown> | null,
-  specContext: string,
+  specContext: string
 ): Promise<TestCaseResult> {
   const start = Date.now();
   if (!specContext || specContext.length < 20) {
     await appendLog(supabase, pipelineId, 'warn', 'No spec context for test cases — skipping');
-    return { status: 'skipped', duration_ms: Date.now() - start, errors: [], created: 0, skipped: 0 };
+    return {
+      status: 'skipped',
+      duration_ms: Date.now() - start,
+      errors: [],
+      created: 0,
+      skipped: 0,
+    };
   }
 
   try {
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
-      return { status: 'skipped', duration_ms: Date.now() - start, errors: ['ANTHROPIC_API_KEY not set'], created: 0, skipped: 0 };
+      return {
+        status: 'skipped',
+        duration_ms: Date.now() - start,
+        errors: ['ANTHROPIC_API_KEY not set'],
+        created: 0,
+        skipped: 0,
+      };
     }
 
     const anthropic = new Anthropic({ apiKey });
@@ -43,9 +55,10 @@ export async function generateTestCases(
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: `Given this feature context, generate test cases as a JSON array. Each test case should cover a user journey or acceptance scenario.
+      messages: [
+        {
+          role: 'user',
+          content: `Given this feature context, generate test cases as a JSON array. Each test case should cover a user journey or acceptance scenario.
 
 Feature context:
 ${specContext}
@@ -57,13 +70,17 @@ Return a JSON array (no markdown fences) where each object has:
 - "priority": "high" or "medium"
 - "expected_result": what success looks like
 
-Generate 4-10 test cases covering the main user journeys and edge cases.`
-      }],
+Generate 4-10 test cases covering the main user journeys and edge cases.`,
+        },
+      ],
     });
 
     logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
-      operationType: 'test_readiness', inputTokens: msg.usage?.input_tokens ?? 0,
+      featureId: 'pipeline',
+      adminId: 'system',
+      modelId: 'claude-sonnet-4-6',
+      operationType: 'test_readiness',
+      inputTokens: msg.usage?.input_tokens ?? 0,
       outputTokens: msg.usage?.output_tokens ?? 0,
     });
     const rawJson = (msg.content[0] as { text: string }).text.trim();
@@ -77,7 +94,7 @@ Generate 4-10 test cases covering the main user journeys and edge cases.`
       .eq('feature_id', featureId);
 
     const existingTitles = new Set(
-      (existing ?? []).map((t: { title: string }) => t.title.toLowerCase()),
+      (existing ?? []).map((t: { title: string }) => t.title.toLowerCase())
     );
 
     let created = 0;
@@ -115,11 +132,16 @@ Generate 4-10 test cases covering the main user journeys and edge cases.`
       }
     }
 
-    await appendLog(supabase, pipelineId, 'info',
-      `Test cases: ${created} created, ${skippedCount} skipped (existing)`);
+    await appendLog(
+      supabase,
+      pipelineId,
+      'info',
+      `Test cases: ${created} created, ${skippedCount} skipped (existing)`
+    );
 
     return {
-      status: created > 0 || skippedCount > 0 ? 'success' : (errors.length > 0 ? 'failed' : 'skipped'),
+      status:
+        created > 0 || skippedCount > 0 ? 'success' : errors.length > 0 ? 'failed' : 'skipped',
       duration_ms: Date.now() - start,
       errors,
       created,
@@ -128,13 +150,23 @@ Generate 4-10 test cases covering the main user journeys and edge cases.`
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     await appendLog(supabase, pipelineId, 'warn', `Test case generation failed: ${errMsg}`);
-    return { status: 'failed', duration_ms: Date.now() - start, errors: [errMsg], created: 0, skipped: 0 };
+    return {
+      status: 'failed',
+      duration_ms: Date.now() - start,
+      errors: [errMsg],
+      created: 0,
+      skipped: 0,
+    };
   }
 }
 
-function parseTestCasesJson(
-  rawJson: string,
-): Array<{ title: string; description: string; test_type: string; priority: string; expected_result: string }> {
+function parseTestCasesJson(rawJson: string): Array<{
+  title: string;
+  description: string;
+  test_type: string;
+  priority: string;
+  expected_result: string;
+}> {
   try {
     return JSON.parse(rawJson);
   } catch {

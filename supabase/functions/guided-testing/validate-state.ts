@@ -26,7 +26,11 @@ export async function handleValidateState(req: Request): Promise<Response> {
   const { session_id, step_number, expected_outcome, actual_page_state } = body;
 
   if (!session_id || step_number == null || !expected_outcome || !actual_page_state) {
-    return error('VALIDATION_ERROR', 'session_id, step_number, expected_outcome, and actual_page_state required', 400);
+    return error(
+      'VALIDATION_ERROR',
+      'session_id, step_number, expected_outcome, and actual_page_state required',
+      400
+    );
   }
 
   // Verify session exists
@@ -42,7 +46,7 @@ export async function handleValidateState(req: Request): Promise<Response> {
     expected_outcome,
     actual_page_state,
     body.console_errors,
-    body.failed_requests,
+    body.failed_requests
   );
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
@@ -76,7 +80,7 @@ function buildValidationPrompt(
   expected: string,
   pageState: unknown,
   consoleErrors?: string[],
-  failedRequests?: unknown[],
+  failedRequests?: unknown[]
 ): string {
   const parts = [
     `Expected Outcome: ${expected}`,

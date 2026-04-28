@@ -75,50 +75,60 @@ export function FeatureListView({
               return 0;
             })
             .map(([section, sectionFeatures]) => (
-            <div key={section}>
-              <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 flex flex-wrap items-center gap-2">
-                <span className="bg-blue-100 text-blue-800 px-2 lg:px-3 py-1 rounded-lg text-sm lg:text-base">{section}</span>
-                <span className="text-xs lg:text-sm font-normal text-gray-500">{sectionFeatures.length} features</span>
-              </h2>
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                {sectionFeatures.map((feature, index) => (
-                  <div
-                    key={feature.id}
-                    ref={(el) => { featureRowRefs.current[feature.id] = el; }}
-                    className={index > 0 ? 'border-t' : ''}
-                  >
-                    <FeatureRow
-                      feature={feature}
-                      isExpanded={expandedFeature === feature.id}
-                      toggleExpanded={toggleExpanded}
-                      isAdmin={isAdmin}
-                      onEditFeature={onEditFeature}
-                      onDeleteFeature={onDeleteFeature}
-                      onLinkCriteria={onLinkCriteria}
-                      onNewVersion={onNewVersion}
-                      pipeline={getPipeline?.(feature.id)}
-                      onPipelineStageClick={onPipelineStageClick ? (stage) => onPipelineStageClick(feature, stage) : undefined}
-                      aiCost={getFeatureCost?.(feature.id) ?? null}
-                      canAccessPanel={canAccessPanel}
-                      currentVersionLabel={getVersionLabel?.(feature.id) ?? null}
-                    />
-
-                    {/* Expanded Detail */}
-                    {expandedFeature === feature.id && (
-                      <FeatureDetailPanel
+              <div key={section}>
+                <h2 className="text-lg lg:text-xl font-bold text-gray-900 mb-3 lg:mb-4 flex flex-wrap items-center gap-2">
+                  <span className="bg-blue-100 text-blue-800 px-2 lg:px-3 py-1 rounded-lg text-sm lg:text-base">
+                    {section}
+                  </span>
+                  <span className="text-xs lg:text-sm font-normal text-gray-500">
+                    {sectionFeatures.length} features
+                  </span>
+                </h2>
+                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  {sectionFeatures.map((feature, index) => (
+                    <div
+                      key={feature.id}
+                      ref={(el) => {
+                        featureRowRefs.current[feature.id] = el;
+                      }}
+                      className={index > 0 ? 'border-t' : ''}
+                    >
+                      <FeatureRow
                         feature={feature}
-                        features={features}
-                        isMember={isMember}
-                        isAdmin={isAdmin}
+                        isExpanded={expandedFeature === feature.id}
                         toggleExpanded={toggleExpanded}
-                        featureRowRefs={featureRowRefs}
+                        isAdmin={isAdmin}
+                        onEditFeature={onEditFeature}
+                        onDeleteFeature={onDeleteFeature}
+                        onLinkCriteria={onLinkCriteria}
+                        onNewVersion={onNewVersion}
+                        pipeline={getPipeline?.(feature.id)}
+                        onPipelineStageClick={
+                          onPipelineStageClick
+                            ? (stage) => onPipelineStageClick(feature, stage)
+                            : undefined
+                        }
+                        aiCost={getFeatureCost?.(feature.id) ?? null}
+                        canAccessPanel={canAccessPanel}
+                        currentVersionLabel={getVersionLabel?.(feature.id) ?? null}
                       />
-                    )}
-                  </div>
-                ))}
+
+                      {/* Expanded Detail */}
+                      {expandedFeature === feature.id && (
+                        <FeatureDetailPanel
+                          feature={feature}
+                          features={features}
+                          isMember={isMember}
+                          isAdmin={isAdmin}
+                          toggleExpanded={toggleExpanded}
+                          featureRowRefs={featureRowRefs}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {!isLoading && features.length > 0 && filteredFeatures.length === 0 && (
             <div className="text-center py-12 bg-white rounded-xl">

@@ -74,17 +74,44 @@ export function WriteCodeProgress({ files, onComplete }: WriteCodeProgressProps)
     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
       <div className="flex items-center gap-2 mb-3">
         {!done ? (
-          <svg className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          <svg
+            className="w-5 h-5 text-blue-600 animate-spin flex-shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
         ) : (
-          <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-5 h-5 text-green-600 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         )}
         <h4 className="text-sm font-semibold text-blue-900">
-          {done ? `All files written${errors.length > 0 ? ` (${errors.length} failed)` : ''}` : `Writing code... ${currentIndex}/${files.length}`}
+          {done
+            ? `All files written${errors.length > 0 ? ` (${errors.length} failed)` : ''}`
+            : `Writing code... ${currentIndex}/${files.length}`}
         </h4>
       </div>
 
@@ -101,12 +128,32 @@ export function WriteCodeProgress({ files, onComplete }: WriteCodeProgressProps)
           return (
             <div key={i} className="flex items-center gap-2 text-xs animate-fade-in">
               {fileError ? (
-                <svg className="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-3.5 h-3.5 text-red-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               ) : (
-                <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-3.5 h-3.5 text-green-500 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               )}
               <span className={`truncate ${fileError ? 'text-red-600' : 'text-gray-700'}`}>
@@ -121,7 +168,9 @@ export function WriteCodeProgress({ files, onComplete }: WriteCodeProgressProps)
             <div className="w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
             </div>
-            <span className="text-blue-700 font-medium truncate">{files[currentIndex].filePath}</span>
+            <span className="text-blue-700 font-medium truncate">
+              {files[currentIndex].filePath}
+            </span>
           </div>
         )}
       </div>

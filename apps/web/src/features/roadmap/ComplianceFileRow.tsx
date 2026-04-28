@@ -20,9 +20,11 @@ const STATUS_STYLES: Record<FileResult['status'], { bg: string; icon: string; la
 function ViolationRow({ violation }: { violation: Violation }) {
   const rule = RULE_LABELS[violation.rule];
   const severityColor =
-    rule.severity === 'critical' ? 'text-red-700 bg-red-50' :
-    rule.severity === 'high' ? 'text-amber-700 bg-amber-50' :
-    'text-gray-600 bg-gray-50';
+    rule.severity === 'critical'
+      ? 'text-red-700 bg-red-50'
+      : rule.severity === 'high'
+        ? 'text-amber-700 bg-amber-50'
+        : 'text-gray-600 bg-gray-50';
 
   return (
     <div className="flex items-start gap-2 py-1.5 px-3 text-xs border-t border-gray-100">
@@ -47,10 +49,7 @@ export function ComplianceFileRow({ file }: ComplianceFileRowProps) {
   const canExpand = hasViolations || file.error !== null;
 
   return (
-    <div
-      className={`border rounded-lg overflow-hidden ${style.bg}`}
-      role="row"
-    >
+    <div className={`border rounded-lg overflow-hidden ${style.bg}`} role="row">
       <button
         type="button"
         onClick={() => canExpand && setExpanded(!expanded)}
@@ -61,9 +60,7 @@ export function ComplianceFileRow({ file }: ComplianceFileRowProps) {
         <span className="shrink-0 w-4 text-center" aria-hidden="true">
           {style.icon}
         </span>
-        <span className="flex-1 text-xs font-mono text-gray-800 truncate">
-          {file.path}
-        </span>
+        <span className="flex-1 text-xs font-mono text-gray-800 truncate">{file.path}</span>
         {hasViolations && (
           <span className="shrink-0 text-xs text-red-600 font-medium">
             {file.violations.length} violation{file.violations.length > 1 ? 's' : ''}
@@ -83,9 +80,7 @@ export function ComplianceFileRow({ file }: ComplianceFileRowProps) {
         </div>
       )}
       {expanded && file.error && (
-        <div className="bg-white border-t px-3 py-2 text-xs text-amber-700">
-          {file.error}
-        </div>
+        <div className="bg-white border-t px-3 py-2 text-xs text-amber-700">{file.error}</div>
       )}
     </div>
   );

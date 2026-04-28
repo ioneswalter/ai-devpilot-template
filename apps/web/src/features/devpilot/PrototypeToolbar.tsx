@@ -59,7 +59,8 @@ export function PrototypeToolbar({
             </span>
           )}
           <span className="text-gray-400">
-            v{versionNumber}{totalVersions > 1 ? ` of ${totalVersions}` : ''}
+            v{versionNumber}
+            {totalVersions > 1 ? ` of ${totalVersions}` : ''}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -80,9 +81,7 @@ export function PrototypeToolbar({
             </button>
           )}
           {isFinalised && (
-            <span className="px-2 py-1 text-[11px] font-medium text-emerald-600">
-              ✓ Finalised
-            </span>
+            <span className="px-2 py-1 text-[11px] font-medium text-emerald-600">✓ Finalised</span>
           )}
         </div>
       </div>
@@ -93,7 +92,10 @@ export function PrototypeToolbar({
           <PrototypeVersionHistory
             versions={versions}
             currentVersionNumber={versionNumber}
-            onRevert={(id) => { onRevert(id); setShowHistory(false); }}
+            onRevert={(id) => {
+              onRevert(id);
+              setShowHistory(false);
+            }}
             isReverting={isReverting}
           />
         </div>

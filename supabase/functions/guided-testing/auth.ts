@@ -21,10 +21,7 @@ function error(code: string, message: string, status: number) {
 }
 
 export function getSupabase(): SupabaseClient {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 /** Verify auth — accepts user JWT or service-role key. Returns AuthContext or error Response. */
@@ -38,7 +35,10 @@ export async function resolveAuth(req: Request): Promise<AuthContext | Response>
   const supabase = getSupabase();
 
   // Validate token via Supabase Auth — works for both user JWTs and service-role JWTs
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  const {
+    data: { user },
+    error: authErr,
+  } = await supabase.auth.getUser(token);
   if (authErr || !user) {
     // If getUser fails, check if this is a service-role JWT by decoding the role claim
     try {
@@ -46,7 +46,9 @@ export async function resolveAuth(req: Request): Promise<AuthContext | Response>
       if (payload.role === 'service_role') {
         return { supabase, userId: 'service-role', isServiceRole: true };
       }
-    } catch { /* not a valid JWT */ }
+    } catch {
+      /* not a valid JWT */
+    }
     return error('UNAUTHORIZED', 'Invalid token', 401);
   }
 

@@ -71,11 +71,7 @@ const EXPECTED_TABLES = [
 // System tables excluded from audit
 // spatial_ref_sys: PostGIS system table owned by supabase_admin — RLS cannot be enabled
 // (read-only coordinate reference data, no sensitive content; Supabase Security Advisor false positive)
-const EXCLUDED_TABLES = [
-  'spatial_ref_sys',
-  '_prisma_migrations',
-  'schema_migrations',
-];
+const EXCLUDED_TABLES = ['spatial_ref_sys', '_prisma_migrations', 'schema_migrations'];
 
 // Tables that customers/providers access their own data on via authenticated policies
 // These must have at least one authenticated or public SELECT policy
@@ -197,9 +193,7 @@ async function verifyRLS(): Promise<void> {
       const table = tableMap.get(name);
       return table && !table.rowsecurity;
     });
-    const missingTables = EXPECTED_TABLES.filter(
-      (name) => !tableMap.has(name)
-    );
+    const missingTables = EXPECTED_TABLES.filter((name) => !tableMap.has(name));
 
     results.push({
       code: 'TC-FR062-01',
@@ -229,14 +223,11 @@ async function verifyRLS(): Promise<void> {
     results.push({
       code: 'TC-FR062-02',
       title: 'additional_work_escrows RLS fixed',
-      passed:
-        aweTable?.rowsecurity === true && missingAwePolicies.length === 0,
+      passed: aweTable?.rowsecurity === true && missingAwePolicies.length === 0,
       details: [
         `RLS enabled: ${aweTable?.rowsecurity ?? 'TABLE NOT FOUND'}`,
         `Policies found: ${awePolicies.length}`,
-        ...awePolicies.map(
-          (p) => `  - ${p.policyname} (${p.cmd}, roles: ${p.roles})`
-        ),
+        ...awePolicies.map((p) => `  - ${p.policyname} (${p.cmd}, roles: ${p.roles})`),
         ...missingAwePolicies.map((p) => `  MISSING: ${p}`),
       ],
     });
@@ -253,13 +244,10 @@ async function verifyRLS(): Promise<void> {
       const hasAuthenticatedSelect = policies.some(
         (p) =>
           (p.cmd === 'SELECT' || p.cmd === '*') &&
-          (p.roles.includes('authenticated') ||
-            p.roles.includes('{authenticated}'))
+          (p.roles.includes('authenticated') || p.roles.includes('{authenticated}'))
       );
       if (!hasAuthenticatedSelect) {
-        customerPolicyIssues.push(
-          `${tableName}: no authenticated SELECT policy found`
-        );
+        customerPolicyIssues.push(`${tableName}: no authenticated SELECT policy found`);
       }
     }
 
@@ -286,8 +274,7 @@ async function verifyRLS(): Promise<void> {
       const authenticatedSelectCount = policies.filter(
         (p) =>
           (p.cmd === 'SELECT' || p.cmd === '*') &&
-          (p.roles.includes('authenticated') ||
-            p.roles.includes('{authenticated}'))
+          (p.roles.includes('authenticated') || p.roles.includes('{authenticated}'))
       ).length;
       if (tableName === 'additional_work_escrows' && authenticatedSelectCount < 2) {
         providerPolicyIssues.push(
@@ -313,9 +300,7 @@ async function verifyRLS(): Promise<void> {
     const publicReadIssues: string[] = [];
     for (const tableName of PUBLIC_READ_TABLES) {
       const policies = policyMap.get(tableName) || [];
-      const hasPublicSelect = policies.some(
-        (p) => p.cmd === 'SELECT' || p.cmd === '*'
-      );
+      const hasPublicSelect = policies.some((p) => p.cmd === 'SELECT' || p.cmd === '*');
       if (!hasPublicSelect) {
         publicReadIssues.push(`${tableName}: no SELECT policy found`);
       }
@@ -327,9 +312,7 @@ async function verifyRLS(): Promise<void> {
       passed: publicReadIssues.length === 0,
       details: [
         `Tables checked: ${PUBLIC_READ_TABLES.length}`,
-        publicReadIssues.length === 0
-          ? 'All public-read tables have SELECT policies'
-          : '',
+        publicReadIssues.length === 0 ? 'All public-read tables have SELECT policies' : '',
         ...publicReadIssues.map((i) => `  FAIL: ${i}`),
       ].filter(Boolean),
     });
@@ -346,9 +329,7 @@ async function verifyRLS(): Promise<void> {
           (p.qual && p.qual.includes('service_role'))
       );
       if (!hasServiceRole) {
-        serviceRoleIssues.push(
-          `${tableName}: no service_role policy found`
-        );
+        serviceRoleIssues.push(`${tableName}: no service_role policy found`);
       }
     }
 
@@ -358,9 +339,7 @@ async function verifyRLS(): Promise<void> {
       passed: serviceRoleIssues.length === 0,
       details: [
         `Tables checked: ${SERVICE_ROLE_TABLES.length}`,
-        serviceRoleIssues.length === 0
-          ? 'All tables have service_role bypass policies'
-          : '',
+        serviceRoleIssues.length === 0 ? 'All tables have service_role bypass policies' : '',
         ...serviceRoleIssues.map((i) => `  FAIL: ${i}`),
       ].filter(Boolean),
     });

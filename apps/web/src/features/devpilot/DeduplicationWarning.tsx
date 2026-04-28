@@ -9,7 +9,13 @@ import type { DedupMatch } from './types';
 
 export interface DedupDecision {
   feature_code: string;
-  action: 'use_existing' | 'enhance_existing' | 'converge' | 'version_bump' | 'merge_in_flight' | 'different';
+  action:
+    | 'use_existing'
+    | 'enhance_existing'
+    | 'converge'
+    | 'version_bump'
+    | 'merge_in_flight'
+    | 'different';
 }
 
 interface DeduplicationWarningProps {
@@ -36,7 +42,11 @@ const recommendationLabels: Record<string, string> = {
   converge: 'Converge with existing',
 };
 
-export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: DeduplicationWarningProps) {
+export function DeduplicationWarning({
+  matches,
+  onSubmitAnyway,
+  onCancel,
+}: DeduplicationWarningProps) {
   const [decisions, setDecisions] = useState<Record<string, DedupDecision['action'] | null>>({});
   const hasHighSimilarity = matches.some((m) => m.similarity === 'high');
   const allReviewed = matches.length > 0 && matches.every((m) => decisions[m.feature_code] != null);
@@ -95,14 +105,21 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                     <span className="text-sm text-gray-900 truncate">{match.title}</span>
                   </div>
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${similarityColors[match.similarity] ?? ''}`}>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${similarityColors[match.similarity] ?? ''}`}
+                    >
                       {match.similarity}
                     </span>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${statusColors[match.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${statusColors[match.status] ?? 'bg-gray-100 text-gray-600'}`}
+                    >
                       {match.status.replace(/_/g, ' ')}
                     </span>
                     {match.has_in_flight_version && match.in_flight_version_label && (
-                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700" title="Feature has an unreleased version in progress">
+                      <span
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700"
+                        title="Feature has an unreleased version in progress"
+                      >
                         {match.in_flight_version_label} in-flight
                       </span>
                     )}
@@ -122,7 +139,10 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                     />
                     <span className="text-xs font-medium text-blue-700">
                       {recommendationLabels[match.recommendation] ?? match.recommendation}
-                      <span className="text-gray-500 font-normal"> — update {match.feature_code} with this proposal</span>
+                      <span className="text-gray-500 font-normal">
+                        {' '}
+                        — update {match.feature_code} with this proposal
+                      </span>
                     </span>
                   </label>
                   {match.has_in_flight_version && match.in_flight_version_label ? (
@@ -136,23 +156,31 @@ export function DeduplicationWarning({ matches, onSubmitAnyway, onCancel }: Dedu
                       />
                       <span className="text-xs font-medium text-purple-700">
                         Add to in-flight {match.in_flight_version_label}
-                        <span className="text-gray-500 font-normal"> — append criteria to {match.feature_code} {match.in_flight_version_label}</span>
+                        <span className="text-gray-500 font-normal">
+                          {' '}
+                          — append criteria to {match.feature_code} {match.in_flight_version_label}
+                        </span>
                       </span>
                     </label>
-                  ) : match.status === 'released' && (
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="radio"
-                        name={`dedup-${match.feature_code}`}
-                        checked={chosen === 'version_bump'}
-                        onChange={() => setDecision(match.feature_code, 'version_bump')}
-                        className="h-4 w-4 border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
-                      />
-                      <span className="text-xs font-medium text-purple-700">
-                        Create new version
-                        <span className="text-gray-500 font-normal"> — version bump {match.feature_code} with this proposal</span>
-                      </span>
-                    </label>
+                  ) : (
+                    match.status === 'released' && (
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="radio"
+                          name={`dedup-${match.feature_code}`}
+                          checked={chosen === 'version_bump'}
+                          onChange={() => setDecision(match.feature_code, 'version_bump')}
+                          className="h-4 w-4 border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                        />
+                        <span className="text-xs font-medium text-purple-700">
+                          Create new version
+                          <span className="text-gray-500 font-normal">
+                            {' '}
+                            — version bump {match.feature_code} with this proposal
+                          </span>
+                        </span>
+                      </label>
+                    )
                   )}
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input

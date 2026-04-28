@@ -32,8 +32,13 @@ export function usePrototypeAttachment(featureId: string | null): PrototypeAttac
         .eq('feature_id', featureId)
         .maybeSingle();
       if (error || !data) return null;
-      const versions = data.prototype_versions as { content: string } | { content: string }[] | null;
-      const content = Array.isArray(versions) ? versions[0]?.content ?? null : versions?.content ?? null;
+      const versions = data.prototype_versions as
+        | { content: string }
+        | { content: string }[]
+        | null;
+      const content = Array.isArray(versions)
+        ? (versions[0]?.content ?? null)
+        : (versions?.content ?? null);
       if (!content) return null;
       return { content, prototype_type: data.prototype_type as PrototypeType };
     },

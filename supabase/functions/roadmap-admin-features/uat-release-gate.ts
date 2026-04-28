@@ -15,7 +15,7 @@ interface BlockingItem {
 
 export async function checkUatReleaseGate(
   supabase: SupabaseClient,
-  featureId: string,
+  featureId: string
 ): Promise<Response | null> {
   const { data: pkg } = await supabase
     .from('uat_packages')

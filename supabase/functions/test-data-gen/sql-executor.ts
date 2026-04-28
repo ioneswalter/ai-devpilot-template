@@ -12,7 +12,11 @@ export async function getPgClient() {
   const ref = (Deno.env.get('SUPABASE_URL') ?? '').replace('https://', '').split('.')[0];
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const connStr = `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
-  return new pg.Client({ connectionString: connStr, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
+  return new pg.Client({
+    connectionString: connStr,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000,
+  });
 }
 
 /** Fetch database schema as a compact hint string */
@@ -31,7 +35,12 @@ export async function getSchemaHint(): Promise<string> {
     `);
     await client.end();
 
-    type ColRow = { table_name: string; column_name: string; data_type: string; column_default: string | null };
+    type ColRow = {
+      table_name: string;
+      column_name: string;
+      data_type: string;
+      column_default: string | null;
+    };
     const tables = new Map<string, string[]>();
     for (const r of res.rows as ColRow[]) {
       if (!tables.has(r.table_name)) tables.set(r.table_name, []);
@@ -56,8 +65,13 @@ export async function executeSql(input: string | string[], featureId: string) {
 
   const statements = Array.isArray(input)
     ? input
-    : input.replace(/```sql?\s*/gi, '').replace(/```/g, '').trim()
-        .split(';').map((s: string) => s.trim()).filter((s: string) => s.length > 5);
+    : input
+        .replace(/```sql?\s*/gi, '')
+        .replace(/```/g, '')
+        .trim()
+        .split(';')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 5);
 
   let inserted = 0;
   const errors: string[] = [];

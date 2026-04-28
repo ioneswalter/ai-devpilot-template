@@ -16,7 +16,10 @@ function formatTimestamp(iso: string): string {
   try {
     const d = new Date(iso);
     return d.toLocaleDateString(undefined, {
-      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   } catch {
     return iso;
@@ -26,21 +29,26 @@ function formatTimestamp(iso: string): string {
 function AuditRecordCard({ record }: { record: FixAuditRecord }) {
   const [expanded, setExpanded] = useState(false);
   const isBlocked = record.action === 'fix_blocked';
-  const constitutionalResult = record.constitutional_result ?? { status: 'PASS' as const, violations: [] };
+  const constitutionalResult = record.constitutional_result ?? {
+    status: 'PASS' as const,
+    violations: [],
+  };
   const isApiError = constitutionalResult.status === 'API_ERROR';
   const hasViolations = (constitutionalResult.violations ?? []).length > 0;
 
   return (
-    <div className={`border rounded-lg p-3 ${
-      isBlocked ? 'border-red-200 bg-red-50/40' : 'border-green-200 bg-green-50/40'
-    }`}>
+    <div
+      className={`border rounded-lg p-3 ${
+        isBlocked ? 'border-red-200 bg-red-50/40' : 'border-green-200 bg-green-50/40'
+      }`}
+    >
       {/* Header */}
       <div className="flex items-center gap-2 mb-1">
-        <span className={`inline-flex items-center px-1.5 py-0.5 text-xs font-semibold rounded ${
-          isBlocked
-            ? 'bg-red-100 text-red-700'
-            : 'bg-green-100 text-green-700'
-        }`}>
+        <span
+          className={`inline-flex items-center px-1.5 py-0.5 text-xs font-semibold rounded ${
+            isBlocked ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+          }`}
+        >
           {isBlocked ? 'Blocked' : 'Applied'}
         </span>
         {isApiError && (
@@ -48,9 +56,7 @@ function AuditRecordCard({ record }: { record: FixAuditRecord }) {
             API Error
           </span>
         )}
-        <span className="text-xs text-gray-400 ml-auto">
-          {formatTimestamp(record.timestamp)}
-        </span>
+        <span className="text-xs text-gray-400 ml-auto">{formatTimestamp(record.timestamp)}</span>
       </div>
 
       {/* Summary */}
@@ -93,7 +99,9 @@ function AuditRecordCard({ record }: { record: FixAuditRecord }) {
               <p className="text-xs font-medium text-gray-500 mb-1">Files modified:</p>
               <ul className="space-y-0.5">
                 {record.files_modified.map((f) => (
-                  <li key={f} className="text-xs font-mono text-gray-600">{f}</li>
+                  <li key={f} className="text-xs font-mono text-gray-600">
+                    {f}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -103,20 +111,18 @@ function AuditRecordCard({ record }: { record: FixAuditRecord }) {
           <div>
             <p className="text-xs font-medium text-gray-500 mb-1">
               Constitutional check:{' '}
-              <span className={
-                constitutionalResult.status === 'PASS'
-                  ? 'text-green-600'
-                  : 'text-red-600'
-              }>
+              <span
+                className={
+                  constitutionalResult.status === 'PASS' ? 'text-green-600' : 'text-red-600'
+                }
+              >
                 {constitutionalResult.status}
               </span>
             </p>
           </div>
 
           {/* Violations table */}
-          {hasViolations && (
-            <ViolationsTable violations={constitutionalResult.violations} />
-          )}
+          {hasViolations && <ViolationsTable violations={constitutionalResult.violations} />}
         </div>
       )}
     </div>
@@ -144,7 +150,10 @@ function ViolationsTable({ violations }: { violations: ViolationEntry[] }) {
         </thead>
         <tbody>
           {violations.map((v, i) => (
-            <tr key={`${v.file_path}-${v.rule}-${i}`} className="border-b border-red-100 last:border-0">
+            <tr
+              key={`${v.file_path}-${v.rule}-${i}`}
+              className="border-b border-red-100 last:border-0"
+            >
               <td className="py-1 pr-2 font-mono text-gray-600 truncate max-w-[180px]">
                 {v.file_path}
               </td>

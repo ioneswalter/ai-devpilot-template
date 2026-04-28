@@ -32,9 +32,7 @@ export function parseTasksMarkdown(content: string): ParsedTask[] {
     }
 
     // Match task lines: - [ ] T### ... or - [x] T### ...
-    const taskMatch = line.match(
-      /^-\s+\[[ xX]?\]\s+(T\d+)\s+(.*)/
-    );
+    const taskMatch = line.match(/^-\s+\[[ xX]?\]\s+(T\d+)\s+(.*)/);
     if (!taskMatch) continue;
 
     const taskId = taskMatch[1];
@@ -93,7 +91,7 @@ function extractFilePath(text: string): string {
 function inferTaskType(
   text: string,
   filePath: string,
-  phase: string,
+  phase: string
 ): 'create' | 'modify' | 'test' | 'config' {
   const lower = text.toLowerCase();
   const phaseLower = phase.toLowerCase();
@@ -101,10 +99,20 @@ function inferTaskType(
   if (lower.includes('test') || filePath.includes('test') || filePath.includes('spec')) {
     return 'test';
   }
-  if (filePath.includes('schema.prisma') || filePath.includes('migration') || filePath.endsWith('.json') || filePath.endsWith('.yaml')) {
+  if (
+    filePath.includes('schema.prisma') ||
+    filePath.includes('migration') ||
+    filePath.endsWith('.json') ||
+    filePath.endsWith('.yaml')
+  ) {
     return 'config';
   }
-  if (lower.startsWith('create') || lower.startsWith('add') || lower.startsWith('build') || lower.startsWith('implement')) {
+  if (
+    lower.startsWith('create') ||
+    lower.startsWith('add') ||
+    lower.startsWith('build') ||
+    lower.startsWith('implement')
+  ) {
     return 'create';
   }
   if (lower.startsWith('modify') || lower.startsWith('update') || lower.startsWith('fix')) {

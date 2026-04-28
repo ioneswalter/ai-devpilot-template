@@ -77,10 +77,10 @@ export async function validateStage(
   anthropic: Anthropic,
   stage: CIStage,
   files: GeneratedFile[],
-  feature: { title: string; description: string; acceptance_criteria: string[] } | null,
+  feature: { title: string; description: string; acceptance_criteria: string[] } | null
 ): Promise<Array<{ file: string; line: number; message: string; code: string }>> {
   const filesContext = files
-    .map(f => `### ${f.file_path}\n\`\`\`typescript\n${f.code}\n\`\`\``)
+    .map((f) => `### ${f.file_path}\n\`\`\`typescript\n${f.code}\n\`\`\``)
     .join('\n\n');
 
   const featureContext = feature
@@ -93,10 +93,12 @@ export async function validateStage(
         model: AI_MODEL,
         max_tokens: 8192,
         system: `You are validating generated code. ${VALIDATION_PROMPTS[stage]}`,
-        messages: [{
-          role: 'user',
-          content: `${featureContext}\n\n## Generated Code Files\n\n${filesContext}\n\nValidate all files for ${STAGE_LABELS[stage]} issues. Respond with PASS or a JSON error array.`,
-        }],
+        messages: [
+          {
+            role: 'user',
+            content: `${featureContext}\n\n## Generated Code Files\n\n${filesContext}\n\nValidate all files for ${STAGE_LABELS[stage]} issues. Respond with PASS or a JSON error array.`,
+          },
+        ],
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('CI validation timeout')), 90000)
@@ -104,8 +106,11 @@ export async function validateStage(
     ]);
 
     logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: AI_MODEL,
-      operationType: 'ci_check', inputTokens: response.usage?.input_tokens ?? 0,
+      featureId: 'pipeline',
+      adminId: 'system',
+      modelId: AI_MODEL,
+      operationType: 'ci_check',
+      inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
     });
 
@@ -118,7 +123,9 @@ export async function validateStage(
     return parseErrors(content);
   } catch (error) {
     console.error(`CI ${stage} validation error:`, error);
-    return [{ file: '', line: 0, code: stage, message: `Validation error: ${(error as Error).message}` }];
+    return [
+      { file: '', line: 0, code: stage, message: `Validation error: ${(error as Error).message}` },
+    ];
   }
 }
 
@@ -127,11 +134,11 @@ export async function fixErrors(
   anthropic: Anthropic,
   stage: CIStage,
   errors: Array<{ file: string; line: number; message: string; code: string }>,
-  files: GeneratedFile[],
+  files: GeneratedFile[]
 ): Promise<Array<{ path: string; code: string; changes: string }> | null> {
-  const errorList = errors.map(e => `- ${e.file}:${e.line} [${e.code}] ${e.message}`).join('\n');
+  const errorList = errors.map((e) => `- ${e.file}:${e.line} [${e.code}] ${e.message}`).join('\n');
   const filesContext = files
-    .map(f => `### ${f.file_path}\n\`\`\`typescript\n${f.code}\n\`\`\``)
+    .map((f) => `### ${f.file_path}\n\`\`\`typescript\n${f.code}\n\`\`\``)
     .join('\n\n');
 
   try {
@@ -140,10 +147,12 @@ export async function fixErrors(
         model: AI_MODEL,
         max_tokens: 16384,
         system: FIX_PROMPT,
-        messages: [{
-          role: 'user',
-          content: `## ${STAGE_LABELS[stage]} Errors\n${errorList}\n\n## Source Files\n${filesContext}\n\nFix all errors. Return JSON array only.`,
-        }],
+        messages: [
+          {
+            role: 'user',
+            content: `## ${STAGE_LABELS[stage]} Errors\n${errorList}\n\n## Source Files\n${filesContext}\n\nFix all errors. Return JSON array only.`,
+          },
+        ],
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('CI fix timeout')), 120000)
@@ -151,8 +160,11 @@ export async function fixErrors(
     ]);
 
     logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: AI_MODEL,
-      operationType: 'ci_check', inputTokens: response.usage?.input_tokens ?? 0,
+      featureId: 'pipeline',
+      adminId: 'system',
+      modelId: AI_MODEL,
+      operationType: 'ci_check',
+      inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
     });
 
@@ -166,14 +178,20 @@ export async function fixErrors(
   }
 }
 
-function parseErrors(raw: string): Array<{ file: string; line: number; message: string; code: string }> {
+function parseErrors(
+  raw: string
+): Array<{ file: string; line: number; message: string; code: string }> {
   try {
     const parsed = JSON.parse(raw.trim());
     if (Array.isArray(parsed)) return parsed;
   } catch {
     const match = raw.match(/\[[\s\S]*\]/);
     if (match) {
-      try { return JSON.parse(match[0]); } catch { /* fall through */ }
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        /* fall through */
+      }
     }
   }
   return [];
@@ -186,7 +204,11 @@ function parseFixes(raw: string): Array<{ path: string; code: string; changes: s
   } catch {
     const match = raw.match(/\[[\s\S]*\]/);
     if (match) {
-      try { return JSON.parse(match[0]); } catch { return null; }
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
     }
   }
   return null;

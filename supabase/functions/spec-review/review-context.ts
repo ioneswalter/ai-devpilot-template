@@ -46,7 +46,7 @@ export async function buildReviewContext(
   supabase: SupabaseClient,
   featureId: string,
   specSection: string | null,
-  category: string | null,
+  category: string | null
 ): Promise<ReviewContext> {
   // Fetch related features (same section or category)
   const related: RelatedFeature[] = [];

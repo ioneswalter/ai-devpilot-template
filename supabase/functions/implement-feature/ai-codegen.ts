@@ -135,15 +135,24 @@ export async function generateCode(
   siblingFilePaths: string[],
   artifacts: SpecArtifacts = {},
   existingContent?: string,
-  learnedConstraints?: string[],
+  learnedConstraints?: string[]
 ): Promise<CodeGenResult | null> {
-  console.warn('[DEPRECATED] ai-codegen.generateCode called — prefer Claude Code /speckit.implement for higher quality output');
+  console.warn(
+    '[DEPRECATED] ai-codegen.generateCode called — prefer Claude Code /speckit.implement for higher quality output'
+  );
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
     return null;
   }
 
-  const userMessage = buildUserMessage(task, featureContext, siblingFilePaths, artifacts, existingContent, learnedConstraints);
+  const userMessage = buildUserMessage(
+    task,
+    featureContext,
+    siblingFilePaths,
+    artifacts,
+    existingContent,
+    learnedConstraints
+  );
 
   try {
     const anthropic = new Anthropic({ apiKey: anthropicApiKey });
@@ -161,8 +170,11 @@ export async function generateCode(
     ]);
 
     logAIUsageFromEnv({
-      featureId: ctx.feature_code, adminId: 'system', modelId: 'claude-sonnet-4-6',
-      operationType: 'code_generation', inputTokens: response.usage?.input_tokens ?? 0,
+      featureId: ctx.feature_code,
+      adminId: 'system',
+      modelId: 'claude-sonnet-4-6',
+      operationType: 'code_generation',
+      inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
     });
 
@@ -196,7 +208,7 @@ function buildUserMessage(
   siblingFilePaths: string[],
   artifacts: SpecArtifacts,
   existingContent?: string,
-  learnedConstraints?: string[],
+  learnedConstraints?: string[]
 ): string {
   const sections: string[] = [];
 
@@ -225,7 +237,7 @@ ${truncateArtifact(artifacts.data_model, 3000)}`);
   }
 
   if (artifacts.contracts && artifacts.contracts.length > 0) {
-    const contractText = artifacts.contracts.map(c => truncateArtifact(c, 2000)).join('\n---\n');
+    const contractText = artifacts.contracts.map((c) => truncateArtifact(c, 2000)).join('\n---\n');
     sections.push(`## API Contracts (from SpecKit contracts/)
 ${contractText}`);
   }
@@ -251,17 +263,21 @@ ${truncateArtifact(existingContent, 6000)}
   }
 
   sections.push(`## Sibling Files in This Feature
-${siblingFilePaths.length > 0 ? siblingFilePaths.map(p => `- ${p}`).join('\n') : 'None — standalone task.'}`);
+${siblingFilePaths.length > 0 ? siblingFilePaths.map((p) => `- ${p}`).join('\n') : 'None — standalone task.'}`);
 
   if (existingContent) {
-    sections.push('Generate the COMPLETE updated file incorporating your changes into the existing code. Return ONLY raw source code.');
+    sections.push(
+      'Generate the COMPLETE updated file incorporating your changes into the existing code. Return ONLY raw source code.'
+    );
   } else {
     sections.push('Generate the complete code for this task. Return ONLY raw source code.');
   }
 
   // FR-118: Inject learned constraints from adaptive learning engine
   if (learnedConstraints && learnedConstraints.length > 0) {
-    sections.push(`## Learned Constraints (from past failures)\n${learnedConstraints.map((c, i) => `${i + 1}. ${c}`).join('\n')}`);
+    sections.push(
+      `## Learned Constraints (from past failures)\n${learnedConstraints.map((c, i) => `${i + 1}. ${c}`).join('\n')}`
+    );
   }
 
   return sections.join('\n\n');

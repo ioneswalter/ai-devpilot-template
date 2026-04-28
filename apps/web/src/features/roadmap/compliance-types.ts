@@ -41,7 +41,10 @@ export interface ComplianceReport {
 }
 
 /** Rule metadata for UI display */
-export const RULE_LABELS: Record<RuleType, { label: string; severity: 'critical' | 'high' | 'medium' }> = {
+export const RULE_LABELS: Record<
+  RuleType,
+  { label: string; severity: 'critical' | 'high' | 'medium' }
+> = {
   FILE_SIZE: { label: 'File Size', severity: 'high' },
   FUNCTION_SIZE: { label: 'Function Size', severity: 'high' },
   ANY_TYPE: { label: 'Any Type', severity: 'critical' },

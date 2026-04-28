@@ -71,7 +71,7 @@ RULES:
 async function callVisionApi(
   anthropic: Anthropic,
   screenshotBase64: string,
-  prompt: string,
+  prompt: string
 ): Promise<{
   passed: boolean;
   explanation: string;
@@ -86,21 +86,26 @@ async function callVisionApi(
   const response = await anthropic.messages.create({
     model: AI_MODEL,
     max_tokens: 1000,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'image',
-          source: { type: 'base64', media_type: 'image/png', data: base64Data },
-        },
-        { type: 'text', text: prompt },
-      ],
-    }],
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: 'image/png', data: base64Data },
+          },
+          { type: 'text', text: prompt },
+        ],
+      },
+    ],
   });
 
   logAIUsageFromEnv({
-    featureId: 'test-automation', adminId: 'system', modelId: AI_MODEL,
-    operationType: 'visual_assertion', inputTokens: response.usage?.input_tokens ?? 0,
+    featureId: 'test-automation',
+    adminId: 'system',
+    modelId: AI_MODEL,
+    operationType: 'visual_assertion',
+    inputTokens: response.usage?.input_tokens ?? 0,
     outputTokens: response.usage?.output_tokens ?? 0,
   });
 
@@ -127,14 +132,21 @@ async function callVisionApi(
 export async function handleVisualAssert(
   supabase: SupabaseClient,
   body: unknown,
-  _userId: string,
+  _userId: string
 ): Promise<Response> {
   const validation = VisualAssertSchema.safeParse(body);
   if (!validation.success) {
     return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
   }
 
-  const { script_id, step_number, screenshot_base64, expected_outcome, criterion_text, test_run_id } = validation.data;
+  const {
+    script_id,
+    step_number,
+    screenshot_base64,
+    expected_outcome,
+    criterion_text,
+    test_run_id,
+  } = validation.data;
 
   // Verify script exists
   const { data: script } = await supabase

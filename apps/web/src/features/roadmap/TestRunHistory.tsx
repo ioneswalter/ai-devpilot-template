@@ -15,17 +15,23 @@ interface TestRunHistoryProps {
 
 function getResultIcon(result: string): string {
   switch (result) {
-    case 'passed': return '\u2713';
-    case 'failed': return '\u2717';
-    default: return '\u2014';
+    case 'passed':
+      return '\u2713';
+    case 'failed':
+      return '\u2717';
+    default:
+      return '\u2014';
   }
 }
 
 function getResultColor(result: string): string {
   switch (result) {
-    case 'passed': return 'text-green-600';
-    case 'failed': return 'text-red-600';
-    default: return 'text-gray-400';
+    case 'passed':
+      return 'text-green-600';
+    case 'failed':
+      return 'text-red-600';
+    default:
+      return 'text-gray-400';
   }
 }
 
@@ -97,54 +103,63 @@ export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
             </div>
           )}
 
-          {!isLoading && dateKeys.map((date) => (
-            <div key={date} className="mt-2">
-              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                {date}
-              </p>
-              <div className="space-y-1">
-                {grouped[date].map((entry) => (
-                  <div key={entry.id} className="flex items-start gap-2 py-1">
-                    <span className={`text-sm font-bold flex-shrink-0 w-4 text-center ${getResultColor(entry.result)}`}>
-                      {getResultIcon(entry.result)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] text-gray-700 font-medium truncate">
-                          {entry.test_title || entry.test_code || 'Test'}
-                        </span>
-                        <span className="text-[10px] text-gray-400 flex-shrink-0">{formatTime(entry.executed_at)}</span>
+          {!isLoading &&
+            dateKeys.map((date) => (
+              <div key={date} className="mt-2">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  {date}
+                </p>
+                <div className="space-y-1">
+                  {grouped[date].map((entry) => (
+                    <div key={entry.id} className="flex items-start gap-2 py-1">
+                      <span
+                        className={`text-sm font-bold flex-shrink-0 w-4 text-center ${getResultColor(entry.result)}`}
+                      >
+                        {getResultIcon(entry.result)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-gray-700 font-medium truncate">
+                            {entry.test_title || entry.test_code || 'Test'}
+                          </span>
+                          <span className="text-[10px] text-gray-400 flex-shrink-0">
+                            {formatTime(entry.executed_at)}
+                          </span>
+                        </div>
+                        {entry.test_code && entry.test_title && (
+                          <code className="text-[10px] font-mono text-gray-400">
+                            {entry.test_code}
+                          </code>
+                        )}
+                        {isAutomatedEvidence(entry.evidence) && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-medium bg-indigo-50 text-indigo-600 rounded">
+                            Auto
+                          </span>
+                        )}
+                        {isGuidedEvidence(entry.evidence) && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-medium bg-purple-50 text-purple-600 rounded">
+                            Guided
+                          </span>
+                        )}
+                        {entry.notes && (
+                          <p className="text-[10px] text-gray-500 mt-0.5 italic">{entry.notes}</p>
+                        )}
+                        {isGuidedEvidence(entry.evidence) && (
+                          <button
+                            onClick={() =>
+                              setViewingEvidence(entry.evidence as unknown as GuidedTestEvidence)
+                            }
+                            className="text-[10px] text-indigo-600 hover:text-indigo-700 font-medium mt-0.5"
+                          >
+                            View Evidence
+                          </button>
+                        )}
                       </div>
-                      {entry.test_code && entry.test_title && (
-                        <code className="text-[10px] font-mono text-gray-400">{entry.test_code}</code>
-                      )}
-                      {isAutomatedEvidence(entry.evidence) && (
-                        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-medium bg-indigo-50 text-indigo-600 rounded">
-                          Auto
-                        </span>
-                      )}
-                      {isGuidedEvidence(entry.evidence) && (
-                        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-medium bg-purple-50 text-purple-600 rounded">
-                          Guided
-                        </span>
-                      )}
-                      {entry.notes && (
-                        <p className="text-[10px] text-gray-500 mt-0.5 italic">{entry.notes}</p>
-                      )}
-                      {isGuidedEvidence(entry.evidence) && (
-                        <button
-                          onClick={() => setViewingEvidence(entry.evidence as unknown as GuidedTestEvidence)}
-                          className="text-[10px] text-indigo-600 hover:text-indigo-700 font-medium mt-0.5"
-                        >
-                          View Evidence
-                        </button>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
@@ -152,10 +167,7 @@ export function TestRunHistory({ history, isLoading }: TestRunHistoryProps) {
       {viewingEvidence && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-xl w-[480px] max-h-[80vh] overflow-hidden">
-            <EvidenceViewer
-              evidence={viewingEvidence}
-              onClose={() => setViewingEvidence(null)}
-            />
+            <EvidenceViewer evidence={viewingEvidence} onClose={() => setViewingEvidence(null)} />
           </div>
         </div>
       )}

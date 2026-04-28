@@ -23,7 +23,7 @@ function errorResponse(code: string, message: string, status: number): Response 
 
 export async function handleGetCoverage(
   supabase: SupabaseClient,
-  featureId: string,
+  featureId: string
 ): Promise<Response> {
   // Get test case counts
   const { data: testCases } = await supabase
@@ -33,11 +33,11 @@ export async function handleGetCoverage(
 
   const cases = testCases ?? [];
   const total = cases.length;
-  const automated = cases.filter((c: { automation_status: string }) =>
-    c.automation_status === 'automated',
+  const automated = cases.filter(
+    (c: { automation_status: string }) => c.automation_status === 'automated'
   ).length;
-  const stale = cases.filter((c: { automation_status: string }) =>
-    c.automation_status === 'stale',
+  const stale = cases.filter(
+    (c: { automation_status: string }) => c.automation_status === 'stale'
   ).length;
   const manual = total - automated - stale;
 
@@ -75,11 +75,13 @@ export async function handleGetCoverage(
   const { count: apiCount } = await supabase
     .from('api_verification_tests')
     .select('id', { count: 'exact', head: true })
-    .eq('feature_id', featureId).eq('is_stale', false);
+    .eq('feature_id', featureId)
+    .eq('is_stale', false);
   const { count: e2eCount } = await supabase
     .from('automated_test_scripts')
     .select('id', { count: 'exact', head: true })
-    .eq('feature_id', featureId).eq('is_stale', false);
+    .eq('feature_id', featureId)
+    .eq('is_stale', false);
 
   const apiTestCount = apiCount ?? 0;
   const e2eTestCount = e2eCount ?? 0;
@@ -103,9 +105,7 @@ export async function handleGetCoverage(
     last_computed_at: new Date().toISOString(),
   };
 
-  await supabase
-    .from('automation_coverage_cache')
-    .upsert(cacheRow, { onConflict: 'feature_id' });
+  await supabase.from('automation_coverage_cache').upsert(cacheRow, { onConflict: 'feature_id' });
 
   // Load trend data
   const { data: cache } = await supabase
@@ -134,15 +134,17 @@ export async function handleGetCoverage(
 
 export async function handleListScripts(
   supabase: SupabaseClient,
-  featureId: string,
+  featureId: string
 ): Promise<Response> {
   const { data: scripts, error } = await supabase
     .from('automated_test_scripts')
-    .select(`
+    .select(
+      `
       id, test_case_id, generation_source, is_stale, is_custom_modified,
       last_run_result, last_run_at, created_at, script_steps,
       test_cases!inner(title)
-    `)
+    `
+    )
     .eq('feature_id', featureId)
     .order('created_at', { ascending: false });
 
@@ -172,7 +174,7 @@ export async function handleListScripts(
 export async function handleDeleteScript(
   supabase: SupabaseClient,
   scriptId: string,
-  force: boolean,
+  force: boolean
 ): Promise<Response> {
   const { data: script } = await supabase
     .from('automated_test_scripts')
@@ -186,7 +188,7 @@ export async function handleDeleteScript(
     return errorResponse(
       'CUSTOM_MODIFIED',
       'Script has manual edits. Use ?force=true to delete.',
-      409,
+      409
     );
   }
 

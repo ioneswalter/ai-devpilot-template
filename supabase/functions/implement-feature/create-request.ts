@@ -29,7 +29,11 @@ export async function handleCreateRequest(req: Request, ctx: AuthContext): Promi
   }
 
   if (feature.status !== 'specified' && feature.status !== 'in_development') {
-    return errorResponse('INVALID_STATE', `Feature must be "specified" or "in_development", currently "${feature.status}"`, 400);
+    return errorResponse(
+      'INVALID_STATE',
+      `Feature must be "specified" or "in_development", currently "${feature.status}"`,
+      400
+    );
   }
 
   // Check for existing active request
@@ -50,7 +54,9 @@ export async function handleCreateRequest(req: Request, ctx: AuthContext): Promi
     .select('artifact_type, file_name, content')
     .eq('feature_id', feature_id);
 
-  const tasksArtifact = artifacts?.find((a: { artifact_type: string }) => a.artifact_type === 'tasks');
+  const tasksArtifact = artifacts?.find(
+    (a: { artifact_type: string }) => a.artifact_type === 'tasks'
+  );
 
   // Create request record
   const criteria = feature.acceptance_criteria || [];
@@ -91,8 +97,12 @@ export async function handleCreateRequest(req: Request, ctx: AuthContext): Promi
     .eq('feature_id', feature_id);
 
   const aiPlan = await generateImplementation(
-    feature.feature_code, feature.title, feature.description,
-    criteria, testCases || [], implementation_notes || null,
+    feature.feature_code,
+    feature.title,
+    feature.description,
+    criteria,
+    testCases || [],
+    implementation_notes || null
   );
 
   if (aiPlan) {
@@ -107,7 +117,7 @@ async function saveSpecKitTasks(
   ctx: AuthContext,
   implRequest: Record<string, unknown>,
   feature: Record<string, unknown>,
-  tasksContent: string,
+  tasksContent: string
 ): Promise<Response> {
   const tasks = parseTasksMarkdown(tasksContent);
 
@@ -120,7 +130,10 @@ async function saveSpecKitTasks(
     .from('implementation_requests')
     .update({
       status: 'completed',
-      ai_response: { summary: `Loaded ${tasks.length} tasks from SpecKit tasks.md`, architecture_notes: 'Tasks sourced from SpecKit workflow artifacts.' },
+      ai_response: {
+        summary: `Loaded ${tasks.length} tasks from SpecKit tasks.md`,
+        architecture_notes: 'Tasks sourced from SpecKit workflow artifacts.',
+      },
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -149,27 +162,41 @@ async function saveSpecKitTasks(
   const code = (feature as Record<string, string>).feature_code;
   console.log(`SpecKit tasks: ${code} — ${savedItems?.length ?? 0}/${tasks.length} tasks saved`);
 
-  return jsonResponse({
-    data: {
-      ...implRequest,
-      status: 'completed',
-      ai_response: { summary: `Loaded ${tasks.length} tasks from SpecKit`, architecture_notes: 'SpecKit-sourced' },
-      task_items: savedItems || [],
+  return jsonResponse(
+    {
+      data: {
+        ...implRequest,
+        status: 'completed',
+        ai_response: {
+          summary: `Loaded ${tasks.length} tasks from SpecKit`,
+          architecture_notes: 'SpecKit-sourced',
+        },
+        task_items: savedItems || [],
+      },
     },
-  }, 201);
+    201
+  );
 }
 
 async function saveAiPlan(
   ctx: AuthContext,
   implRequest: Record<string, unknown>,
   feature: Record<string, unknown>,
-  aiPlan: { summary: string; architecture_notes: string; tasks: Array<{ title: string; description?: string; file_path: string; task_type: string }> },
+  aiPlan: {
+    summary: string;
+    architecture_notes: string;
+    tasks: Array<{ title: string; description?: string; file_path: string; task_type: string }>;
+  }
 ): Promise<Response> {
   await ctx.supabase
     .from('implementation_requests')
     .update({
       status: 'completed',
-      ai_response: { summary: aiPlan.summary, architecture_notes: aiPlan.architecture_notes, tasks: aiPlan.tasks },
+      ai_response: {
+        summary: aiPlan.summary,
+        architecture_notes: aiPlan.architecture_notes,
+        tasks: aiPlan.tasks,
+      },
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -196,21 +223,26 @@ async function saveAiPlan(
   }
 
   const code = (feature as Record<string, string>).feature_code;
-  console.log(`AI fallback: ${code} — ${savedItems?.length ?? 0}/${aiPlan.tasks.length} tasks saved`);
+  console.log(
+    `AI fallback: ${code} — ${savedItems?.length ?? 0}/${aiPlan.tasks.length} tasks saved`
+  );
 
-  return jsonResponse({
-    data: {
-      ...implRequest,
-      status: 'completed',
-      ai_response: { summary: aiPlan.summary, architecture_notes: aiPlan.architecture_notes },
-      task_items: savedItems || [],
+  return jsonResponse(
+    {
+      data: {
+        ...implRequest,
+        status: 'completed',
+        ai_response: { summary: aiPlan.summary, architecture_notes: aiPlan.architecture_notes },
+        task_items: savedItems || [],
+      },
     },
-  }, 201);
+    201
+  );
 }
 
 async function saveManualFallback(
   ctx: AuthContext,
-  implRequest: Record<string, unknown>,
+  implRequest: Record<string, unknown>
 ): Promise<Response> {
   await ctx.supabase
     .from('implementation_requests')
@@ -222,20 +254,29 @@ async function saveManualFallback(
     })
     .eq('id', implRequest.id);
 
-  return jsonResponse({
-    data: {
-      ...implRequest,
-      status: 'completed',
-      task_items: [],
-      error_message: 'No SpecKit artifacts found and AI unavailable. Add tasks manually.',
+  return jsonResponse(
+    {
+      data: {
+        ...implRequest,
+        status: 'completed',
+        task_items: [],
+        error_message: 'No SpecKit artifacts found and AI unavailable. Add tasks manually.',
+      },
     },
-  }, 201);
+    201
+  );
 }
 
 function buildPrompt(
-  feature: { feature_code: string; title: string; description: string; priority: string; feature_type: string },
+  feature: {
+    feature_code: string;
+    title: string;
+    description: string;
+    priority: string;
+    feature_type: string;
+  },
   criteria: string[],
-  notes: string | undefined,
+  notes: string | undefined
 ): string {
   return `## Feature: ${feature.feature_code} — ${feature.title}
 ${feature.description}

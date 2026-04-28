@@ -40,7 +40,7 @@ export async function appendLog(
   pipelineId: string,
   level: PipelineLogEntry['level'],
   message: string,
-  taskId?: string,
+  taskId?: string
 ): Promise<void> {
   const entry: PipelineLogEntry = {
     timestamp: new Date().toISOString(),
@@ -63,14 +63,21 @@ export async function appendLog(
 
   await supabase
     .from('pipeline_runs')
-    .update({ logs, last_heartbeat: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({
+      logs,
+      last_heartbeat: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', pipelineId);
 }
 
 /** Update pipeline heartbeat to signal it's still alive */
 export async function updateHeartbeat(supabase: SupabaseClient, pipelineId: string): Promise<void> {
   const now = new Date().toISOString();
-  await supabase.from('pipeline_runs').update({ last_heartbeat: now, updated_at: now }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({ last_heartbeat: now, updated_at: now })
+    .eq('id', pipelineId);
   // FR-119: Also update deploy lock heartbeat if this pipeline holds one
   await supabase.from('deploy_locks').update({ last_heartbeat: now }).eq('pipeline_id', pipelineId);
 }
@@ -88,13 +95,24 @@ export function triggerNextTask(pipelineId: string, requestId: string, retryCoun
 
   fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
-    body: JSON.stringify({ action: 'next', pipeline_id: pipelineId, request_id: requestId, retry_count: retryCount }),
-  }).catch(err => { console.error('Failed to trigger next task:', err); });
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+    body: JSON.stringify({
+      action: 'next',
+      pipeline_id: pipelineId,
+      request_id: requestId,
+      retry_count: retryCount,
+    }),
+  }).catch((err) => {
+    console.error('Failed to trigger next task:', err);
+  });
 }
 
 /** FR-119: Promote queue and release deploy lock on pipeline completion */
-export async function onPipelineComplete(supabase: SupabaseClient, pipelineId: string, status: 'completed' | 'failed'): Promise<void> {
+export async function onPipelineComplete(
+  supabase: SupabaseClient,
+  pipelineId: string,
+  status: 'completed' | 'failed'
+): Promise<void> {
   // Lazy import to avoid circular deps at module level
   const { completeQueueEntry } = await import('./queue-manager.ts');
   const { releaseDeployLock } = await import('./deploy-lock.ts');
@@ -105,7 +123,7 @@ export async function onPipelineComplete(supabase: SupabaseClient, pipelineId: s
 /** Load SpecKit artifacts for a feature from the DB */
 export async function loadSpecArtifacts(
   supabase: SupabaseClient,
-  featureId: string,
+  featureId: string
 ): Promise<Record<string, unknown>> {
   const { data: rows } = await supabase
     .from('feature_spec_artifacts')
@@ -119,11 +137,21 @@ export async function loadSpecArtifacts(
 
   for (const row of rows) {
     switch (row.artifact_type) {
-      case 'plan': artifacts.plan = row.content; break;
-      case 'data_model': artifacts.data_model = row.content; break;
-      case 'spec': artifacts.spec = row.content; break;
-      case 'research': artifacts.research = row.content; break;
-      case 'contract': contracts.push(row.content); break;
+      case 'plan':
+        artifacts.plan = row.content;
+        break;
+      case 'data_model':
+        artifacts.data_model = row.content;
+        break;
+      case 'spec':
+        artifacts.spec = row.content;
+        break;
+      case 'research':
+        artifacts.research = row.content;
+        break;
+      case 'contract':
+        contracts.push(row.content);
+        break;
     }
   }
   if (contracts.length > 0) artifacts.contracts = contracts;

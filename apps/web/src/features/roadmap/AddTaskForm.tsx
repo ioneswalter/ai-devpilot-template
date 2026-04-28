@@ -6,7 +6,12 @@ import { useState } from 'react';
 
 interface AddTaskFormProps {
   isAdding: boolean;
-  onAdd: (task: { title: string; description?: string; file_path: string; task_type: string }) => Promise<void>;
+  onAdd: (task: {
+    title: string;
+    description?: string;
+    file_path: string;
+    task_type: string;
+  }) => Promise<void>;
   onCancel: () => void;
 }
 

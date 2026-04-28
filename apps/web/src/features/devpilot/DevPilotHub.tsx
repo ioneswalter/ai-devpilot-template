@@ -26,7 +26,9 @@ export function DevPilotHub({
   onArchive,
   onBack,
 }: DevPilotHubProps) {
-  const draftCount = conversations.filter((c) => c.status === 'draft' && c.message_count > 0).length;
+  const draftCount = conversations.filter(
+    (c) => c.status === 'draft' && c.message_count > 0
+  ).length;
   const submittedCount = conversations.filter((c) => c.status === 'submitted').length;
 
   return (
@@ -64,11 +66,15 @@ export function DevPilotHub({
         {!isLoading && (draftCount > 0 || submittedCount > 0) && (
           <div className="flex gap-4 mb-6">
             <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">{draftCount}</span>
+              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold">
+                {draftCount}
+              </span>
               <span className="text-gray-500">in progress</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 text-xs font-bold">{submittedCount}</span>
+              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-600 text-xs font-bold">
+                {submittedCount}
+              </span>
               <span className="text-gray-500">submitted</span>
             </div>
           </div>

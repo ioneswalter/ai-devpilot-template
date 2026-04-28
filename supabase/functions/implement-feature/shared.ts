@@ -28,7 +28,10 @@ export interface AuthContext {
 }
 
 /** Count remaining implementable tasks for a request */
-export async function countRemainingTasks(supabase: SupabaseClient, requestId: string): Promise<number> {
+export async function countRemainingTasks(
+  supabase: SupabaseClient,
+  requestId: string
+): Promise<number> {
   const { count } = await supabase
     .from('implementation_task_items')
     .select('id', { count: 'exact', head: true })
@@ -46,7 +49,7 @@ export async function finalizeRequest(supabase: SupabaseClient, requestId: strin
     .eq('request_id', requestId)
     .in('decision', ['accepted', 'modified']);
 
-  const allDone = allItems?.every(t => t.implementation_status === 'completed');
+  const allDone = allItems?.every((t) => t.implementation_status === 'completed');
   await supabase
     .from('implementation_requests')
     .update({

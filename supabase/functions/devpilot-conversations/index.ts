@@ -40,7 +40,10 @@ async function verifyAuth(req: Request, supabase: ReturnType<typeof createClient
   if (!authHeader?.startsWith('Bearer ')) return null;
 
   const token = authHeader.substring(7);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
   if (error || !user) return null;
 
   const { data: adminRow } = await supabase
@@ -154,7 +157,12 @@ Deno.serve(async (req) => {
       const title = validation.data.title || 'New Ideation';
       const { data: conv, error: insertErr } = await supabase
         .from('ideation_conversations')
-        .insert({ title, status: 'draft', created_by: userId, updated_at: new Date().toISOString() })
+        .insert({
+          title,
+          status: 'draft',
+          created_by: userId,
+          updated_at: new Date().toISOString(),
+        })
         .select()
         .single();
 

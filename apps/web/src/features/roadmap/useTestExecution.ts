@@ -6,11 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
-import type {
-  TestExecutionEntry,
-  ReleaseReadiness,
-  TestResultInput,
-} from './test-execution-types';
+import type { TestExecutionEntry, ReleaseReadiness, TestResultInput } from './test-execution-types';
 
 const TEST_RUNS_KEY = ['test-runs'];
 const READINESS_KEY = ['release-readiness'];
@@ -72,13 +68,8 @@ export function useTestExecution(featureId: string | null) {
   });
 
   const submitMutation = useMutation({
-    mutationFn: ({
-      environment,
-      results,
-    }: {
-      environment: string;
-      results: TestResultInput[];
-    }) => adminApi.submitTestRun(featureId!, environment, results),
+    mutationFn: ({ environment, results }: { environment: string; results: TestResultInput[] }) =>
+      adminApi.submitTestRun(featureId!, environment, results),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [...TEST_RUNS_KEY, featureId],

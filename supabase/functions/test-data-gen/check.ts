@@ -19,10 +19,7 @@ function error(code: string, message: string, status: number) {
 }
 
 function getSupabase() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 /** Verify auth — accepts user JWT or service-role key */

@@ -64,7 +64,14 @@ function CoverageBar({ counts }: { counts: UatStageDetail['decisionCounts'] }) {
   );
 }
 
-function TileButton({ status, isClickable, overdue, canShowAudit, onClick, onContextMenu }: {
+function TileButton({
+  status,
+  isClickable,
+  overdue,
+  canShowAudit,
+  onClick,
+  onContextMenu,
+}: {
   status: UatStageDetail;
   isClickable: boolean;
   overdue: boolean;
@@ -72,12 +79,16 @@ function TileButton({ status, isClickable, overdue, canShowAudit, onClick, onCon
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }) {
-  const styles = STATE_STYLES[status.status as keyof typeof STATE_STYLES] ?? STATE_STYLES.not_started;
+  const styles =
+    STATE_STYLES[status.status as keyof typeof STATE_STYLES] ?? STATE_STYLES.not_started;
   const isDone = status.status === 'completed';
   return (
     <button
       type="button"
-      onClick={(e) => { e.stopPropagation(); if (isClickable) onClick(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (isClickable) onClick();
+      }}
       onContextMenu={onContextMenu}
       disabled={!isClickable}
       className={`inline-flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded-md border text-[11px] sm:text-xs font-medium transition-all duration-150 shrink-0 ${styles.bg} ${styles.text} ${styles.border} ${isClickable ? 'cursor-pointer hover:shadow-sm active:scale-95' : 'cursor-default'} disabled:cursor-default`}
@@ -90,7 +101,9 @@ function TileButton({ status, isClickable, overdue, canShowAudit, onClick, onCon
       {isDone ? <CheckIcon /> : <CircleIcon />}
       <span>UAT</span>
       {status.cycleNumber > 1 && (
-        <span className="hidden lg:inline text-[10px] opacity-75">· Cycle {status.cycleNumber}</span>
+        <span className="hidden lg:inline text-[10px] opacity-75">
+          · Cycle {status.cycleNumber}
+        </span>
       )}
       <CoverageBar counts={status.decisionCounts} />
       {overdue && (
@@ -107,15 +120,27 @@ function TileButton({ status, isClickable, overdue, canShowAudit, onClick, onCon
 }
 
 const DEFAULT_STATUS: UatStageDetail = {
-  status: 'not_started', label: 'Not Started',
-  packageStatus: null, cycleNumber: 0, decisionCounts: { pass: 0, fail: 0, defer: 0, pending: 0 }, dueAt: null,
+  status: 'not_started',
+  label: 'Not Started',
+  packageStatus: null,
+  cycleNumber: 0,
+  decisionCounts: { pass: 0, fail: 0, defer: 0, pending: 0 },
+  dueAt: null,
 };
 
-export function UatPipelineTile({ status, isAdmin, onClick, featureId, featureCode }: UatPipelineTileProps) {
+export function UatPipelineTile({
+  status,
+  isAdmin,
+  onClick,
+  featureId,
+  featureCode,
+}: UatPipelineTileProps) {
   const safeStatus = status ?? DEFAULT_STATUS;
   const isClickable = isAdmin && !!onClick;
-  const overdue = safeStatus.packageStatus === 'in_review' && safeStatus.dueAt !== null
-    && new Date(safeStatus.dueAt).getTime() < Date.now();
+  const overdue =
+    safeStatus.packageStatus === 'in_review' &&
+    safeStatus.dueAt !== null &&
+    new Date(safeStatus.dueAt).getTime() < Date.now();
   const [auditOpen, setAuditOpen] = useState(false);
   const canShowAudit = isAdmin && !!featureId && !!featureCode;
 
@@ -137,7 +162,11 @@ export function UatPipelineTile({ status, isAdmin, onClick, featureId, featureCo
         onContextMenu={handleContextMenu}
       />
       {auditOpen && featureId && featureCode && (
-        <UatAuditLogModal featureId={featureId} featureCode={featureCode} onClose={() => setAuditOpen(false)} />
+        <UatAuditLogModal
+          featureId={featureId}
+          featureCode={featureCode}
+          onClose={() => setAuditOpen(false)}
+        />
       )}
     </>
   );

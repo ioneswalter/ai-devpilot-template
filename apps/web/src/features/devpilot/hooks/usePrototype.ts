@@ -42,24 +42,27 @@ export function usePrototype(conversationId: string | null) {
   });
 
   /** Process metadata from a chat message to update prototype state */
-  const processMessage = useCallback((msg: ConversationMessage) => {
-    const meta = msg.metadata as Record<string, unknown> | null;
-    if (!meta?.type) return;
+  const processMessage = useCallback(
+    (msg: ConversationMessage) => {
+      const meta = msg.metadata as Record<string, unknown> | null;
+      if (!meta?.type) return;
 
-    if (meta.type === 'prototype_generated') {
-      setState((s) => ({
-        ...s,
-        content: null, // Will be loaded via fetchVersions
-        prototypeType: meta.prototype_type as PrototypeType,
-        isLoading: true,
-        versionNumber: meta.version_number as number,
-        totalVersions: Math.max(s.totalVersions, meta.version_number as number),
-      }));
-      if (conversationId) {
-        fetchVersions(conversationId);
+      if (meta.type === 'prototype_generated') {
+        setState((s) => ({
+          ...s,
+          content: null, // Will be loaded via fetchVersions
+          prototypeType: meta.prototype_type as PrototypeType,
+          isLoading: true,
+          versionNumber: meta.version_number as number,
+          totalVersions: Math.max(s.totalVersions, meta.version_number as number),
+        }));
+        if (conversationId) {
+          fetchVersions(conversationId);
+        }
       }
-    }
-  }, [conversationId]);
+    },
+    [conversationId]
+  );
 
   /** Fetch all versions for the conversation */
   const fetchVersions = useCallback(async (convId: string) => {
@@ -72,9 +75,7 @@ export function usePrototype(conversationId: string | null) {
         return;
       }
 
-      const current = data.versions.find(
-        (v: VersionInfo) => v.is_current,
-      );
+      const current = data.versions.find((v: VersionInfo) => v.is_current);
       setState((s) => ({
         ...s,
         versions: data.versions,
@@ -91,30 +92,33 @@ export function usePrototype(conversationId: string | null) {
 
   /** Revert to a specific version */
   const [isReverting, setIsReverting] = useState(false);
-  const revertToVersion = useCallback(async (versionId: string) => {
-    if (!conversationId) return;
-    setIsReverting(true);
-    try {
-      const result = await devpilotApi.revertPrototypeVersion(conversationId, versionId);
-      if (result?.data?.reverted_to) {
-        const reverted = result.data.reverted_to;
-        setState((s) => ({
-          ...s,
-          content: reverted.content,
-          prototypeType: reverted.prototype_type as PrototypeType,
-          versionNumber: result.data.new_current_version,
-          versions: s.versions.map((v) => ({
-            ...v,
-            is_current: v.id === versionId,
-          })),
-        }));
+  const revertToVersion = useCallback(
+    async (versionId: string) => {
+      if (!conversationId) return;
+      setIsReverting(true);
+      try {
+        const result = await devpilotApi.revertPrototypeVersion(conversationId, versionId);
+        if (result?.data?.reverted_to) {
+          const reverted = result.data.reverted_to;
+          setState((s) => ({
+            ...s,
+            content: reverted.content,
+            prototypeType: reverted.prototype_type as PrototypeType,
+            versionNumber: result.data.new_current_version,
+            versions: s.versions.map((v) => ({
+              ...v,
+              is_current: v.id === versionId,
+            })),
+          }));
+        }
+      } catch {
+        // Silently fail
+      } finally {
+        setIsReverting(false);
       }
-    } catch {
-      // Silently fail
-    } finally {
-      setIsReverting(false);
-    }
-  }, [conversationId]);
+    },
+    [conversationId]
+  );
 
   /** Finalise the current prototype (locks it for proposal attachment) */
   const [isFinalised, setIsFinalised] = useState(false);

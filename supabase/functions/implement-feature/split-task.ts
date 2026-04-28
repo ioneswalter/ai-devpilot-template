@@ -47,7 +47,7 @@ Return ONLY JSON: [{"title":"...","description":"...","file_path":"...","task_ty
 export async function intelligentSplit(
   ctx: AuthContext,
   task: TaskInput,
-  score: ComplexityScore,
+  score: ComplexityScore
 ): Promise<number> {
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!apiKey) return 0;
@@ -95,15 +95,16 @@ function buildIntelligentPrompt(
   task: TaskInput,
   score: ComplexityScore,
   layers: string[],
-  depContext: string,
+  depContext: string
 ): string {
   const factorBreakdown = Object.entries(score.factors)
     .map(([k, v]) => `  ${k}: ${v.score}/100 — ${v.detail}`)
     .join('\n');
 
-  const layerInstruction = layers.length > 1
-    ? `\nIMPORTANT: This task spans ${layers.join(' + ')} layers. Create separate subtasks for each layer. Backend subtasks should come first (dependency order).`
-    : '';
+  const layerInstruction =
+    layers.length > 1
+      ? `\nIMPORTANT: This task spans ${layers.join(' + ')} layers. Create separate subtasks for each layer. Backend subtasks should come first (dependency order).`
+      : '';
 
   return `You are splitting a complex implementation task (complexity score: ${score.total}/${score.threshold}).
 
@@ -127,11 +128,11 @@ Description: ${task.description || 'N/A'}`;
 function validateSubtasks(subtasks: SubtaskDef[]): SubtaskDef[] {
   if (subtasks.length < 2 || subtasks.length > 5) return [];
 
-  return subtasks.filter(st => {
+  return subtasks.filter((st) => {
     if (!st.title || !st.file_path || !st.task_type) return false;
     if (!['create', 'modify', 'test', 'config'].includes(st.task_type)) return false;
     const blocked = ['admin-api.ts', 'RoadmapContent.tsx', 'schema.prisma'];
-    if (blocked.some(b => st.file_path.includes(b))) return false;
+    if (blocked.some((b) => st.file_path.includes(b))) return false;
     return true;
   });
 }
@@ -141,11 +142,12 @@ async function insertSplitResults(
   task: TaskInput,
   subtasks: SubtaskDef[],
   score: ComplexityScore,
-  layers: string[],
+  layers: string[]
 ): Promise<number> {
-  const reasoning = `Intelligent split (score ${score.total}/${score.threshold}). ` +
+  const reasoning =
+    `Intelligent split (score ${score.total}/${score.threshold}). ` +
     `Layers: ${layers.join(', ')}. ` +
-    `Created ${subtasks.length} subtasks: ${subtasks.map(s => s.title).join('; ')}`;
+    `Created ${subtasks.length} subtasks: ${subtasks.map((s) => s.title).join('; ')}`;
 
   const inserts = subtasks.map((st, i) => ({
     request_id: task.request_id,
@@ -160,7 +162,10 @@ async function insertSplitResults(
   }));
 
   const { error } = await ctx.supabase.from('implementation_task_items').insert(inserts);
-  if (error) { console.error('Failed to insert intelligent subtasks:', error); return 0; }
+  if (error) {
+    console.error('Failed to insert intelligent subtasks:', error);
+    return 0;
+  }
 
   await ctx.supabase
     .from('implementation_task_items')
@@ -198,11 +203,18 @@ export async function autoSplitTask(ctx: AuthContext, task: TaskInput): Promise<
   }));
 
   const { error } = await ctx.supabase.from('implementation_task_items').insert(inserts);
-  if (error) { console.error('Failed to insert subtasks:', error); return 0; }
+  if (error) {
+    console.error('Failed to insert subtasks:', error);
+    return 0;
+  }
 
   await ctx.supabase
     .from('implementation_task_items')
-    .update({ implementation_status: 'split', ai_log: `Auto-split into ${subtasks.length} subtasks`, updated_at: new Date().toISOString() })
+    .update({
+      implementation_status: 'split',
+      ai_log: `Auto-split into ${subtasks.length} subtasks`,
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', task.id);
 
   return subtasks.length;
@@ -223,8 +235,11 @@ async function callAiForSplit(apiKey: string, prompt: string): Promise<SubtaskDe
     ]);
 
     logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: 'claude-haiku-4-5-20251001',
-      operationType: 'task_splitting', inputTokens: res.usage?.input_tokens ?? 0,
+      featureId: 'pipeline',
+      adminId: 'system',
+      modelId: 'claude-haiku-4-5-20251001',
+      operationType: 'task_splitting',
+      inputTokens: res.usage?.input_tokens ?? 0,
       outputTokens: res.usage?.output_tokens ?? 0,
     });
 

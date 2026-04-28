@@ -19,16 +19,14 @@ const STAGE_REQUIRED_ACTIONS: Record<PipelineStageName, readonly string[]> = {
 /** Check if a set of allowed actions grants access to a pipeline stage */
 export function canAccessStage(
   allowedActions: readonly string[],
-  stage: PipelineStageName,
+  stage: PipelineStageName
 ): boolean {
   const required = STAGE_REQUIRED_ACTIONS[stage];
   return required.some((action) => allowedActions.includes(action));
 }
 
 /** Check access for all stages at once */
-export function getAccessibleStages(
-  allowedActions: readonly string[],
-): Set<PipelineStageName> {
+export function getAccessibleStages(allowedActions: readonly string[]): Set<PipelineStageName> {
   const stages: PipelineStageName[] = ['spec', 'build', 'test', 'uat', 'deploy'];
   return new Set(stages.filter((s) => canAccessStage(allowedActions, s)));
 }

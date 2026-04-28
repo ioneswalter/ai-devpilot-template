@@ -26,7 +26,9 @@ export function useDeployProgress(pipelineId: string | null, enabled = true) {
       if (!data) return POLL_INTERVAL;
       // Stop polling if deploy is complete and no active escalations
       const stage = data.current_stage;
-      const hasActiveEscalation = data.escalations.some(e => e.status === 'open' || e.status === 'acknowledged');
+      const hasActiveEscalation = data.escalations.some(
+        (e) => e.status === 'open' || e.status === 'acknowledged'
+      );
       if (stage === 'deployed' && !hasActiveEscalation) return false;
       if (stage === 'deploy_failed' && !hasActiveEscalation) return false;
       // Keep polling during deploying, escalated, or active escalations

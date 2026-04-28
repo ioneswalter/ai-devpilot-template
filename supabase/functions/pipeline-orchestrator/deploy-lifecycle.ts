@@ -20,32 +20,38 @@ export async function completeDeploy(
   supabase: ReturnType<typeof createClient>,
   pipelineId: string,
   requestId: string,
-  results: DeployResults,
+  results: DeployResults
 ): Promise<void> {
   results.completed_at = new Date().toISOString();
   results.overall_status = 'success';
 
   await releaseDeployLock(supabase, pipelineId);
 
-  await supabase.from('pipeline_runs').update({
-    status: 'completed',
-    current_stage: 'deployed',
-    current_task_id: null,
-    deploy_results: results,
-    completed_at: new Date().toISOString(),
-  }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      status: 'completed',
+      current_stage: 'deployed',
+      current_task_id: null,
+      deploy_results: results,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', pipelineId);
 
-  await supabase.from('implementation_requests').update({
-    status: 'implemented',
-    updated_at: new Date().toISOString(),
-  }).eq('id', requestId);
+  await supabase
+    .from('implementation_requests')
+    .update({
+      status: 'implemented',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', requestId);
 
-  const migCount = results.migrations.filter(m => m.status === 'success').length;
-  const fnCount = results.functions.filter(f => f.status === 'success').length;
-  const summary = [
-    migCount > 0 ? `${migCount} migration(s)` : '',
-    fnCount > 0 ? `${fnCount} function(s)` : '',
-  ].filter(Boolean).join(', ') || 'no server-side artifacts';
+  const migCount = results.migrations.filter((m) => m.status === 'success').length;
+  const fnCount = results.functions.filter((f) => f.status === 'success').length;
+  const summary =
+    [migCount > 0 ? `${migCount} migration(s)` : '', fnCount > 0 ? `${fnCount} function(s)` : '']
+      .filter(Boolean)
+      .join(', ') || 'no server-side artifacts';
 
   await appendLog(supabase, pipelineId, 'info', `Deployment complete: ${summary}`);
 
@@ -62,13 +68,14 @@ export async function failDeploy(
   supabase: ReturnType<typeof createClient>,
   pipelineId: string,
   requestId: string,
-  results: DeployResults,
+  results: DeployResults
 ): Promise<void> {
   results.completed_at = new Date().toISOString();
 
   // FR-142: Create escalation for the failed step
-  const failedStep = [...results.migrations, ...results.functions]
-    .find(s => s.status === 'failed');
+  const failedStep = [...results.migrations, ...results.functions].find(
+    (s) => s.status === 'failed'
+  );
   if (failedStep && failedStep.retry_count >= MAX_RETRIES) {
     await supabase.from('deploy_escalations').insert({
       pipeline_id: pipelineId,
@@ -79,23 +86,34 @@ export async function failDeploy(
       fix_attempts_detail: failedStep.fix_attempts,
       status: 'open',
     });
-    await appendLog(supabase, pipelineId, 'error', `SE Escalation created for ${failedStep.artifact}`);
+    await appendLog(
+      supabase,
+      pipelineId,
+      'error',
+      `SE Escalation created for ${failedStep.artifact}`
+    );
   }
 
   await releaseDeployLock(supabase, pipelineId);
 
-  await supabase.from('pipeline_runs').update({
-    status: 'completed',
-    current_stage: 'deploy_failed',
-    current_task_id: null,
-    deploy_results: results,
-    completed_at: new Date().toISOString(),
-  }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      status: 'completed',
+      current_stage: 'deploy_failed',
+      current_task_id: null,
+      deploy_results: results,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', pipelineId);
 
-  await supabase.from('implementation_requests').update({
-    status: 'completed',
-    updated_at: new Date().toISOString(),
-  }).eq('id', requestId);
+  await supabase
+    .from('implementation_requests')
+    .update({
+      status: 'completed',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', requestId);
 
   await appendLog(supabase, pipelineId, 'warn', 'Deployment failed — manual intervention required');
 }

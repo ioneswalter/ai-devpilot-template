@@ -15,7 +15,7 @@ interface DeployProgressResult {
 
 export async function getDeployProgress(
   supabase: ReturnType<typeof createClient>,
-  pipelineId: string,
+  pipelineId: string
 ): Promise<DeployProgressResult | null> {
   // Get pipeline run with feature info
   const { data: run } = await supabase
@@ -67,7 +67,9 @@ export async function getDeployProgress(
     current_stage: run.current_stage,
     deploy_results: run.deploy_results as Record<string, unknown> | null,
     escalations: (escalations ?? []) as Record<string, unknown>[],
-    deploy_lock: lock ? { acquired: true, acquired_at: lock.acquired_at, expires_at: lock.expires_at } : null,
+    deploy_lock: lock
+      ? { acquired: true, acquired_at: lock.acquired_at, expires_at: lock.expires_at }
+      : null,
     queue_position: queuePosition,
     last_heartbeat: run.last_heartbeat,
   };

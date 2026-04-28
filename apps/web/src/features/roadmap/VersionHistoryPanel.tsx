@@ -27,8 +27,8 @@ export function VersionHistoryPanel({ featureId }: VersionHistoryPanelProps) {
   const versions = data?.data?.versions ?? [];
 
   const toggleSelect = (id: string) => {
-    setSelected(prev => {
-      if (prev.includes(id)) return prev.filter(v => v !== id);
+    setSelected((prev) => {
+      if (prev.includes(id)) return prev.filter((v) => v !== id);
       if (prev.length >= 2) return [prev[1], id];
       return [...prev, id];
     });
@@ -37,7 +37,10 @@ export function VersionHistoryPanel({ featureId }: VersionHistoryPanelProps) {
   if (versions.length === 0 && !isLoading && isOpen) {
     return (
       <div className="border-t pt-3 mt-3">
-        <button onClick={() => setIsOpen(false)} className="text-sm font-medium text-gray-700 flex items-center gap-1">
+        <button
+          onClick={() => setIsOpen(false)}
+          className="text-sm font-medium text-gray-700 flex items-center gap-1"
+        >
           <ChevronIcon open={true} /> Version History
         </button>
         <p className="text-xs text-gray-400 mt-2 ml-5">No version history available.</p>
@@ -85,7 +88,10 @@ export function VersionHistoryPanel({ featureId }: VersionHistoryPanelProps) {
             <VersionDiffView
               v1Id={selected[0]}
               v2Id={selected[1]}
-              onClose={() => { setShowDiff(false); setSelected([]); }}
+              onClose={() => {
+                setShowDiff(false);
+                setSelected([]);
+              }}
             />
           )}
         </div>
@@ -94,17 +100,25 @@ export function VersionHistoryPanel({ featureId }: VersionHistoryPanelProps) {
   );
 }
 
-function VersionRow({ version, isSelected, onToggle }: {
+function VersionRow({
+  version,
+  isSelected,
+  onToggle,
+}: {
   version: FeatureVersionDB;
   isSelected: boolean;
   onToggle: () => void;
 }) {
   const date = new Date(version.created_at).toLocaleDateString('en-AU', {
-    year: 'numeric', month: 'short', day: 'numeric',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
   });
 
   return (
-    <label className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
+    <label
+      className={`flex items-start gap-2 p-2 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
+    >
       <input
         type="checkbox"
         checked={isSelected}
@@ -117,9 +131,7 @@ function VersionRow({ version, isSelected, onToggle }: {
             {version.version_label ?? `v${version.version_number}`}
           </span>
           {version.status && getStatusBadge(version.status)}
-          {version.superseded_by && (
-            <span className="text-[10px] text-gray-400">archived</span>
-          )}
+          {version.superseded_by && <span className="text-[10px] text-gray-400">archived</span>}
         </div>
         {version.change_summary && (
           <p className="text-xs text-gray-500 mt-0.5 truncate">{version.change_summary}</p>
@@ -132,7 +144,12 @@ function VersionRow({ version, isSelected, onToggle }: {
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
-    <svg className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      className={`w-4 h-4 transition-transform ${open ? 'rotate-90' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
     </svg>
   );

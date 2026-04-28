@@ -51,7 +51,7 @@ const requestSchema = z.object({
 
 async function deleteThrowawayFeature(
   supabase: ReturnType<typeof createClient>,
-  featureId: string,
+  featureId: string
 ): Promise<void> {
   const r1 = await supabase.from('test_cases').delete().eq('feature_id', featureId);
   if (r1.error) throw new Error(`Cleanup failed (test_cases): ${r1.error.message}`);
@@ -79,7 +79,10 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) {
       return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
     }
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser(authHeader.substring(7));
     if (authErr || !user) return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
 
     const { data: adminRow } = await supabase
@@ -94,11 +97,14 @@ Deno.serve(async (req) => {
     if (!validation.success) {
       return errorResponse('VALIDATION_ERROR', validation.error.errors[0].message, 400);
     }
-    const { feature_code, conversation_id, throwaway_feature_id, proposal, bump_type } = validation.data;
+    const { feature_code, conversation_id, throwaway_feature_id, proposal, bump_type } =
+      validation.data;
 
     const { data: target, error: tErr } = await supabase
       .from('product_features')
-      .select('id, feature_code, title, description, acceptance_criteria, status, priority, category')
+      .select(
+        'id, feature_code, title, description, acceptance_criteria, status, priority, category'
+      )
       .eq('feature_code', feature_code)
       .single();
     if (tErr || !target) {
@@ -108,7 +114,7 @@ Deno.serve(async (req) => {
       return errorResponse(
         'FEATURE_NOT_RELEASED',
         `${feature_code} is ${target.status}, not released. Use merge_in_flight if it has an in-flight version.`,
-        400,
+        400
       );
     }
 
@@ -119,7 +125,7 @@ Deno.serve(async (req) => {
         target.id as string,
         bump_type,
         `New version from Ideation: ${proposal.title}`,
-        user.id,
+        user.id
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Bump failed';
@@ -151,7 +157,7 @@ Deno.serve(async (req) => {
       return errorResponse(
         'MERGE_FAILED',
         `Merge failed and bump was rolled back: ${updateErr?.message ?? 'no data returned'}`,
-        500,
+        500
       );
     }
 
@@ -177,10 +183,12 @@ Deno.serve(async (req) => {
           version_label: bump.new_version_label,
           version_number: bump.new_version_number,
         },
-        archived_version: bump.archived_version_id ? {
-          id: bump.archived_version_id,
-          version_label: bump.archived_version_label,
-        } : null,
+        archived_version: bump.archived_version_id
+          ? {
+              id: bump.archived_version_id,
+              version_label: bump.archived_version_label,
+            }
+          : null,
       },
     });
   } catch (err) {

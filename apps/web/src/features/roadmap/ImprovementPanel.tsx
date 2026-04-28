@@ -30,9 +30,8 @@ const PRIORITY_STYLES = {
 export function ImprovementPanel({ recommendations, onUpdateStatus }: ImprovementPanelProps) {
   const [filter, setFilter] = useState<RecommendationCategory | 'all'>('all');
 
-  const filtered = filter === 'all'
-    ? recommendations
-    : recommendations.filter((r) => r.category === filter);
+  const filtered =
+    filter === 'all' ? recommendations : recommendations.filter((r) => r.category === filter);
 
   const activeRecs = filtered.filter((r) => r.status === 'new' || r.status === 'deferred');
 
@@ -51,7 +50,12 @@ export function ImprovementPanel({ recommendations, onUpdateStatus }: Improvemen
 
       {/* Category filter */}
       <div className="flex gap-1 flex-wrap">
-        <FilterTab label="All" active={filter === 'all'} onClick={() => setFilter('all')} count={recommendations.length} />
+        <FilterTab
+          label="All"
+          active={filter === 'all'}
+          onClick={() => setFilter('all')}
+          count={recommendations.length}
+        />
         {(Object.keys(CATEGORY_CONFIG) as RecommendationCategory[]).map((cat) => {
           const count = recommendations.filter((r) => r.category === cat).length;
           if (count === 0) return null;
@@ -73,20 +77,32 @@ export function ImprovementPanel({ recommendations, onUpdateStatus }: Improvemen
       ))}
 
       {activeRecs.length === 0 && (
-        <p className="text-xs text-gray-400 text-center py-2">No active recommendations in this category.</p>
+        <p className="text-xs text-gray-400 text-center py-2">
+          No active recommendations in this category.
+        </p>
       )}
     </div>
   );
 }
 
-function FilterTab({ label, active, onClick, count }: {
-  label: string; active: boolean; onClick: () => void; count: number;
+function FilterTab({
+  label,
+  active,
+  onClick,
+  count,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  count: number;
 }) {
   return (
     <button
       onClick={onClick}
       className={`px-2 py-1 text-[10px] rounded transition-colors ${
-        active ? 'bg-indigo-100 text-indigo-700 font-medium' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+        active
+          ? 'bg-indigo-100 text-indigo-700 font-medium'
+          : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
       }`}
     >
       {label} ({count})

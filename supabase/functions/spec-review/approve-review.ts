@@ -22,20 +22,27 @@ function generateTestCaseCode(existingCodes: string[], featureCode: string): str
   const prefix = `TC-${featureNum}-`;
 
   const numbers = existingCodes
-    .filter(c => c.startsWith(prefix))
-    .map(c => {
+    .filter((c) => c.startsWith(prefix))
+    .map((c) => {
       const match = c.match(new RegExp(`^${prefix}(\\d+)$`));
       return match ? parseInt(match[1], 10) : 0;
     })
-    .filter(n => !isNaN(n) && n > 0);
+    .filter((n) => !isNaN(n) && n > 0);
 
   const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
   return `${prefix}${String(maxNumber + 1).padStart(3, '0')}`;
 }
 
-export async function handleApproveReview(
-  { reviewId, version, userId, supabase }: ApproveReviewParams
-): Promise<{ data?: unknown; error?: { code: string; message: string }; status: number }> {
+export async function handleApproveReview({
+  reviewId,
+  version,
+  userId,
+  supabase,
+}: ApproveReviewParams): Promise<{
+  data?: unknown;
+  error?: { code: string; message: string };
+  status: number;
+}> {
   // 1. Fetch review
   const { data: review, error: reviewErr } = await supabase
     .from('spec_reviews')
@@ -70,19 +77,22 @@ export async function handleApproveReview(
 
   if (!items || items.length === 0) {
     return {
-      error: { code: 'NO_ACCEPTED_ITEMS', message: 'No items were accepted — cannot approve with empty spec' },
+      error: {
+        code: 'NO_ACCEPTED_ITEMS',
+        message: 'No items were accepted — cannot approve with empty spec',
+      },
       status: 422,
     };
   }
 
   // 3. Separate criteria and test cases
   const acceptedCriteria = items
-    .filter(i => i.item_type === 'criterion' || i.item_type === 'description')
-    .map(i => i.content);
+    .filter((i) => i.item_type === 'criterion' || i.item_type === 'description')
+    .map((i) => i.content);
 
   const acceptedTestCases = items
-    .filter(i => i.item_type === 'test_case' || i.item_type === 'edge_case')
-    .map(i => ({ title: i.content, type: i.item_type }));
+    .filter((i) => i.item_type === 'test_case' || i.item_type === 'edge_case')
+    .map((i) => ({ title: i.content, type: i.item_type }));
 
   // 4. Get feature details
   const { data: feature, error: featureErr } = await supabase
@@ -121,7 +131,7 @@ export async function handleApproveReview(
       .select('test_code')
       .eq('feature_id', feature.id);
 
-    const existingCodes = (existingTC || []).map(tc => tc.test_code);
+    const existingCodes = (existingTC || []).map((tc) => tc.test_code);
 
     for (const tc of acceptedTestCases) {
       const testCode = generateTestCaseCode(existingCodes, feature.feature_code);
@@ -151,7 +161,9 @@ export async function handleApproveReview(
     .update({ status: 'approved', updated_at: now })
     .eq('id', reviewId);
 
-  console.log(`Review ${reviewId} approved — ${acceptedCriteria.length} criteria, ${testCasesCreated} test cases created`);
+  console.log(
+    `Review ${reviewId} approved — ${acceptedCriteria.length} criteria, ${testCasesCreated} test cases created`
+  );
 
   return {
     data: {

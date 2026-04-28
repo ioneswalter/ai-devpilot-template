@@ -26,10 +26,12 @@ Deno.serve(async (req) => {
     // Get all product features with test cases
     const { data: features, error: featuresError } = await supabase
       .from('product_features')
-      .select(`
+      .select(
+        `
         *,
         test_cases:test_cases(*)
-      `)
+      `
+      )
       .order('feature_code', { ascending: true })
       .order('test_code', { ascending: true, referencedTable: 'test_cases' });
 
@@ -72,10 +74,10 @@ Deno.serve(async (req) => {
       })),
     }));
 
-    return new Response(
-      JSON.stringify({ data: formattedFeatures }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ data: formattedFeatures }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('product-features error:', error);
     return new Response(

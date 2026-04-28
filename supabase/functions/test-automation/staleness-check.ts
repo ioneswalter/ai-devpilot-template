@@ -38,7 +38,7 @@ function hashText(text: string): string {
 
 export async function handleCheckStaleness(
   supabase: SupabaseClient,
-  body: unknown,
+  body: unknown
 ): Promise<Response> {
   const validation = StalenessSchema.safeParse(body);
   if (!validation.success) {
@@ -95,10 +95,7 @@ export async function handleCheckStaleness(
 
   // Batch update stale scripts
   if (staleIds.length > 0) {
-    await supabase
-      .from('automated_test_scripts')
-      .update({ is_stale: true })
-      .in('id', staleIds);
+    await supabase.from('automated_test_scripts').update({ is_stale: true }).in('id', staleIds);
 
     // Update test case status
     const staleTestCaseIds = staleScripts.map((s) => s.test_case_id);
@@ -113,7 +110,9 @@ export async function handleCheckStaleness(
       .select('id, title')
       .in('id', staleTestCaseIds);
 
-    const titleMap = new Map((titles ?? []).map((t: { id: string; title: string }) => [t.id, t.title]));
+    const titleMap = new Map(
+      (titles ?? []).map((t: { id: string; title: string }) => [t.id, t.title])
+    );
     for (const ss of staleScripts) {
       ss.test_case_title = titleMap.get(ss.test_case_id) || 'Unknown';
     }
@@ -121,10 +120,7 @@ export async function handleCheckStaleness(
 
   // Un-stale scripts that are now fresh
   if (freshIds.length > 0) {
-    await supabase
-      .from('automated_test_scripts')
-      .update({ is_stale: false })
-      .in('id', freshIds);
+    await supabase.from('automated_test_scripts').update({ is_stale: false }).in('id', freshIds);
   }
 
   // v2: Also check API verification tests for staleness
@@ -139,8 +135,10 @@ export async function handleCheckStaleness(
     if (apiTest.generated_from_hash !== currentHash) {
       staleApiIds.push(apiTest.id);
       staleScripts.push({
-        script_id: apiTest.id, test_case_id: apiTest.test_case_id,
-        test_case_title: '', criterion_changed: 'Criteria modified (API test)',
+        script_id: apiTest.id,
+        test_case_id: apiTest.test_case_id,
+        test_case_title: '',
+        criterion_changed: 'Criteria modified (API test)',
       });
     } else if (apiTest.is_stale) {
       freshApiIds.push(apiTest.id);
@@ -148,8 +146,13 @@ export async function handleCheckStaleness(
   }
   if (staleApiIds.length > 0) {
     await supabase.from('api_verification_tests').update({ is_stale: true }).in('id', staleApiIds);
-    const tcIds = staleScripts.filter(s => staleApiIds.includes(s.script_id)).map(s => s.test_case_id);
-    await supabase.from('test_cases').update({ automation_status: 'stale', test_tier: 'unassigned' }).in('id', tcIds);
+    const tcIds = staleScripts
+      .filter((s) => staleApiIds.includes(s.script_id))
+      .map((s) => s.test_case_id);
+    await supabase
+      .from('test_cases')
+      .update({ automation_status: 'stale', test_tier: 'unassigned' })
+      .in('id', tcIds);
   }
   if (freshApiIds.length > 0) {
     await supabase.from('api_verification_tests').update({ is_stale: false }).in('id', freshApiIds);

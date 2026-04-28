@@ -54,7 +54,12 @@ export function RoadmapFilters({
   totalCount,
   onClearFilters,
 }: RoadmapFiltersProps) {
-  const hasActiveFilters = filterStatus !== 'all' || filterType !== 'all' || filterPriority !== 'all' || filterCategory !== 'all' || filterSection !== 'all';
+  const hasActiveFilters =
+    filterStatus !== 'all' ||
+    filterType !== 'all' ||
+    filterPriority !== 'all' ||
+    filterCategory !== 'all' ||
+    filterSection !== 'all';
 
   return (
     <section className="py-3 lg:py-4 bg-white border-b sticky top-[73px] z-40">
@@ -79,7 +84,9 @@ export function RoadmapFilters({
               value={filterStatus}
               onChange={(e) => onFilterStatusChange(e.target.value as FilterStatus)}
               className={`px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                filterStatus !== 'all' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white text-gray-700'
+                filterStatus !== 'all'
+                  ? 'bg-blue-50 border-blue-300 text-blue-700'
+                  : 'bg-white text-gray-700'
               }`}
             >
               <option value="all">All Statuses</option>
@@ -96,7 +103,9 @@ export function RoadmapFilters({
               value={filterType}
               onChange={(e) => onFilterTypeChange(e.target.value as FilterType)}
               className={`px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                filterType !== 'all' ? 'bg-purple-50 border-purple-300 text-purple-700' : 'bg-white text-gray-700'
+                filterType !== 'all'
+                  ? 'bg-purple-50 border-purple-300 text-purple-700'
+                  : 'bg-white text-gray-700'
               }`}
             >
               <option value="all">All Types</option>
@@ -109,7 +118,9 @@ export function RoadmapFilters({
               value={filterPriority}
               onChange={(e) => onFilterPriorityChange(e.target.value as FilterPriority)}
               className={`px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                filterPriority !== 'all' ? 'bg-orange-50 border-orange-300 text-orange-700' : 'bg-white text-gray-700'
+                filterPriority !== 'all'
+                  ? 'bg-orange-50 border-orange-300 text-orange-700'
+                  : 'bg-white text-gray-700'
               }`}
             >
               <option value="all">All Priorities</option>
@@ -125,7 +136,9 @@ export function RoadmapFilters({
               value={filterCategory}
               onChange={(e) => onFilterCategoryChange(e.target.value as FilterCategory)}
               className={`px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                filterCategory !== 'all' ? 'bg-cyan-50 border-cyan-300 text-cyan-700' : 'bg-white text-gray-700'
+                filterCategory !== 'all'
+                  ? 'bg-cyan-50 border-cyan-300 text-cyan-700'
+                  : 'bg-white text-gray-700'
               }`}
             >
               <option value="all">All Categories</option>
@@ -140,12 +153,16 @@ export function RoadmapFilters({
               value={filterSection}
               onChange={(e) => onFilterSectionChange(e.target.value as FilterSection)}
               className={`px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                filterSection !== 'all' ? 'bg-green-50 border-green-300 text-green-700' : 'bg-white text-gray-700'
+                filterSection !== 'all'
+                  ? 'bg-green-50 border-green-300 text-green-700'
+                  : 'bg-white text-gray-700'
               }`}
             >
               <option value="all">All Sections</option>
               {availableSections.map((section) => (
-                <option key={section} value={section}>{section}</option>
+                <option key={section} value={section}>
+                  {section}
+                </option>
               ))}
             </select>
           </div>
@@ -153,7 +170,9 @@ export function RoadmapFilters({
           {/* Active filters summary + clear */}
           {hasActiveFilters && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span>{filteredCount} of {totalCount} features</span>
+              <span>
+                {filteredCount} of {totalCount} features
+              </span>
               <button
                 onClick={onClearFilters}
                 className="text-blue-600 hover:text-blue-800 font-medium"

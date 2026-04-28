@@ -40,12 +40,21 @@ export function loadDraft(featureId: string): TestRunDraft | null {
 
 export function saveDraft(featureId: string, draft: Omit<TestRunDraft, 'savedAt'>): void {
   try {
-    sessionStorage.setItem(getDraftKey(featureId), JSON.stringify({ ...draft, savedAt: Date.now() }));
-  } catch { /* sessionStorage full or unavailable */ }
+    sessionStorage.setItem(
+      getDraftKey(featureId),
+      JSON.stringify({ ...draft, savedAt: Date.now() })
+    );
+  } catch {
+    /* sessionStorage full or unavailable */
+  }
 }
 
 export function clearDraft(featureId: string): void {
-  try { sessionStorage.removeItem(getDraftKey(featureId)); } catch { /* ignore */ }
+  try {
+    sessionStorage.removeItem(getDraftKey(featureId));
+  } catch {
+    /* ignore */
+  }
 }
 
 // --- Gate views ---
@@ -57,12 +66,31 @@ interface BuildRequiredGateProps {
   onClose: () => void;
 }
 
-export function BuildRequiredGate({ featureCode, featureTitle, featureStatus, onClose }: BuildRequiredGateProps) {
-  const stepMsg = featureStatus === 'proposed'
-    ? <>Run <CopyableCommand command={`\\review-proposal ${featureCode}`} className="bg-amber-100" /> → <CopyableCommand command={'\\spec'} className="bg-amber-100" /> → <CopyableCommand command={'\\build'} className="bg-amber-100" /> first.</>
-    : featureStatus === 'reviewed'
-      ? <>Run <CopyableCommand command={`\\spec ${featureCode}`} className="bg-amber-100" /> → <CopyableCommand command={'\\build'} className="bg-amber-100" /> first.</>
-      : <>Run <CopyableCommand command={`\\build ${featureCode}`} className="bg-amber-100" /> first, then accept the build in the Roadmap UI.</>;
+export function BuildRequiredGate({
+  featureCode,
+  featureTitle,
+  featureStatus,
+  onClose,
+}: BuildRequiredGateProps) {
+  const stepMsg =
+    featureStatus === 'proposed' ? (
+      <>
+        Run{' '}
+        <CopyableCommand command={`\\review-proposal ${featureCode}`} className="bg-amber-100" /> →{' '}
+        <CopyableCommand command={'\\spec'} className="bg-amber-100" /> →{' '}
+        <CopyableCommand command={'\\build'} className="bg-amber-100" /> first.
+      </>
+    ) : featureStatus === 'reviewed' ? (
+      <>
+        Run <CopyableCommand command={`\\spec ${featureCode}`} className="bg-amber-100" /> →{' '}
+        <CopyableCommand command={'\\build'} className="bg-amber-100" /> first.
+      </>
+    ) : (
+      <>
+        Run <CopyableCommand command={`\\build ${featureCode}`} className="bg-amber-100" /> first,
+        then accept the build in the Roadmap UI.
+      </>
+    );
 
   return (
     <div className="flex flex-col h-full">
@@ -73,8 +101,18 @@ export function BuildRequiredGate({ featureCode, featureTitle, featureStatus, on
         </div>
       </div>
       <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
-        <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        <svg
+          className="w-5 h-5 text-amber-500 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+          />
         </svg>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-amber-800">Build Required</p>
@@ -83,7 +121,9 @@ export function BuildRequiredGate({ featureCode, featureTitle, featureStatus, on
       </div>
       <div className="flex-1" />
       <div className="border-t p-3 flex justify-end">
-        <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
+        <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">
+          Close
+        </button>
       </div>
     </div>
   );
@@ -97,10 +137,26 @@ interface BuildReviewGateProps {
   onClose: () => void;
 }
 
-export function BuildReviewGate({ featureCode, featureTitle, buildPending, buildRejected, onClose }: BuildReviewGateProps) {
-  const msg = buildRejected > 0
-    ? <>{buildRejected} build task(s) were rejected. Run <code className="font-mono bg-amber-100 px-1 rounded">\fix-build {featureCode}</code> to address feedback, then accept in the Build panel.</>
-    : <>{buildPending} build task(s) are pending review. Go to the Build panel to accept or reject each task before testing.</>;
+export function BuildReviewGate({
+  featureCode,
+  featureTitle,
+  buildPending,
+  buildRejected,
+  onClose,
+}: BuildReviewGateProps) {
+  const msg =
+    buildRejected > 0 ? (
+      <>
+        {buildRejected} build task(s) were rejected. Run{' '}
+        <code className="font-mono bg-amber-100 px-1 rounded">\fix-build {featureCode}</code> to
+        address feedback, then accept in the Build panel.
+      </>
+    ) : (
+      <>
+        {buildPending} build task(s) are pending review. Go to the Build panel to accept or reject
+        each task before testing.
+      </>
+    );
 
   return (
     <div className="flex flex-col h-full">
@@ -111,8 +167,18 @@ export function BuildReviewGate({ featureCode, featureTitle, buildPending, build
         </div>
       </div>
       <div className="px-4 py-3 border-b bg-amber-50 border-amber-200 flex items-center gap-3">
-        <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        <svg
+          className="w-5 h-5 text-amber-500 shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"
+          />
         </svg>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-amber-800">Build Review Required</p>
@@ -121,7 +187,9 @@ export function BuildReviewGate({ featureCode, featureTitle, buildPending, build
       </div>
       <div className="flex-1" />
       <div className="border-t p-3 flex justify-end">
-        <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
+        <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">
+          Close
+        </button>
       </div>
     </div>
   );

@@ -46,7 +46,7 @@ const requestSchema = z.object({
 
 async function deleteThrowawayFeature(
   supabase: ReturnType<typeof createClient>,
-  featureId: string,
+  featureId: string
 ): Promise<void> {
   const r1 = await supabase.from('test_cases').delete().eq('feature_id', featureId);
   if (r1.error) throw new Error(`Cleanup failed (test_cases): ${r1.error.message}`);
@@ -74,7 +74,10 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) {
       return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
     }
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser(authHeader.substring(7));
     if (authErr || !user) return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
 
     const { data: adminRow } = await supabase
@@ -105,22 +108,22 @@ Deno.serve(async (req) => {
       return errorResponse(
         'NO_IN_FLIGHT_VERSION',
         `${feature_code} has no in-flight version to merge into. Use version_bump instead.`,
-        409,
+        409
       );
     }
 
-    const { merged_criteria } = await mergeIntoInFlightVersion(
-      supabase,
-      inFlight.id,
-      criteria,
-    );
+    const { merged_criteria } = await mergeIntoInFlightVersion(supabase, inFlight.id, criteria);
 
     const { error: relinkErr } = await supabase
       .from('ideation_conversations')
       .update({ submitted_feature_id: target.id, status: 'submitted' })
       .eq('id', conversation_id);
     if (relinkErr) {
-      return errorResponse('DATABASE_ERROR', `Failed to re-link conversation: ${relinkErr.message}`, 500);
+      return errorResponse(
+        'DATABASE_ERROR',
+        `Failed to re-link conversation: ${relinkErr.message}`,
+        500
+      );
     }
 
     await deleteThrowawayFeature(supabase, throwaway_feature_id);

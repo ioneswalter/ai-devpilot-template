@@ -72,10 +72,7 @@ export function loadDismissedWarnings(featureId: string): GateWarningState {
 /**
  * Dismiss a gate warning for a specific script.
  */
-export function dismissGateWarning(
-  featureId: string,
-  scriptId: string,
-): void {
+export function dismissGateWarning(featureId: string, scriptId: string): void {
   const current = loadDismissedWarnings(featureId);
   current[scriptId] = {
     dismissed: true,
@@ -83,17 +80,14 @@ export function dismissGateWarning(
   };
   sessionStorage.setItem(
     getStorageKey(featureId),
-    JSON.stringify({ ...current, savedAt: new Date().toISOString() }),
+    JSON.stringify({ ...current, savedAt: new Date().toISOString() })
   );
 }
 
 /**
  * Check if a gate warning has been dismissed for a specific script.
  */
-export function isWarningDismissed(
-  featureId: string,
-  scriptId: string,
-): boolean {
+export function isWarningDismissed(featureId: string, scriptId: string): boolean {
   const state = loadDismissedWarnings(featureId);
   return state[scriptId]?.dismissed === true;
 }

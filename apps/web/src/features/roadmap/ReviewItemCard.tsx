@@ -34,7 +34,12 @@ const decisionStyles: Record<string, string> = {
   modified: 'border-blue-300 bg-blue-50/50',
 };
 
-export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: ReviewItemCardProps) {
+export function ReviewItemCard({
+  item,
+  isReviewActive,
+  onDecision,
+  onComment,
+}: ReviewItemCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(item.content);
   const [showComments, setShowComments] = useState(false);
@@ -90,11 +95,15 @@ export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: 
           <p className={`text-xs text-gray-600 flex-1 min-w-0 ${expanded ? '' : 'truncate'}`}>
             {item.content}
           </p>
-          <span className={`text-[10px] font-medium shrink-0 ${
-            item.decision === 'accepted' ? 'text-green-600' :
-            item.decision === 'rejected' ? 'text-red-500' :
-            'text-blue-600'
-          }`}>
+          <span
+            className={`text-[10px] font-medium shrink-0 ${
+              item.decision === 'accepted'
+                ? 'text-green-600'
+                : item.decision === 'rejected'
+                  ? 'text-red-500'
+                  : 'text-blue-600'
+            }`}
+          >
             {item.decision === 'accepted' ? '✓' : item.decision === 'rejected' ? '✗' : '~'}
           </span>
         </div>
@@ -109,11 +118,15 @@ export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: 
               {sourceBadge.label}
             </span>
             {isDecided && (
-              <span className={`ml-auto text-xs font-medium ${
-                item.decision === 'accepted' ? 'text-green-600' :
-                item.decision === 'rejected' ? 'text-red-500' :
-                'text-blue-600'
-              }`}>
+              <span
+                className={`ml-auto text-xs font-medium ${
+                  item.decision === 'accepted'
+                    ? 'text-green-600'
+                    : item.decision === 'rejected'
+                      ? 'text-red-500'
+                      : 'text-blue-600'
+                }`}
+              >
                 {item.decision.charAt(0).toUpperCase() + item.decision.slice(1)}
               </span>
             )}
@@ -183,7 +196,10 @@ export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: 
             Reject
           </button>
           <button
-            onClick={() => { setEditContent(item.content); setIsEditing(true); }}
+            onClick={() => {
+              setEditContent(item.content);
+              setIsEditing(true);
+            }}
             className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-blue-100 hover:text-blue-700 transition-colors"
             aria-label={`Edit ${typeBadge.label}`}
           >
@@ -194,7 +210,12 @@ export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: 
             className="ml-auto px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors flex items-center gap-1"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+              />
             </svg>
             {comments.length > 0 && <span>{comments.length}</span>}
           </button>
@@ -225,7 +246,9 @@ export function ReviewItemCard({ item, isReviewActive, onDecision, onComment }: 
                 onChange={(e) => setCommentText(e.target.value)}
                 placeholder="Add a comment..."
                 className="flex-1 text-xs border rounded px-2 py-1.5 focus:ring-1 focus:ring-blue-300 focus:border-blue-300"
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddComment();
+                }}
               />
               <button
                 onClick={handleAddComment}

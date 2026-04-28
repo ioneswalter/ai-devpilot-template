@@ -38,7 +38,7 @@ function errorResponse(code: string, message: string, status: number): Response 
 
 async function authenticateAdmin(
   req: Request,
-  supabase: SupabaseClient,
+  supabase: SupabaseClient
 ): Promise<{ userId: string } | Response> {
   const authHeader = req.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
@@ -50,12 +50,21 @@ async function authenticateAdmin(
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload.role === 'service_role') {
-      const { data: admin } = await supabase.from('admin_users').select('user_id').limit(1).single();
+      const { data: admin } = await supabase
+        .from('admin_users')
+        .select('user_id')
+        .limit(1)
+        .single();
       return { userId: admin?.user_id || 'service-role' };
     }
-  } catch { /* not a parseable JWT, continue */ }
+  } catch {
+    /* not a parseable JWT, continue */
+  }
 
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
   if (error || !user) {
     return errorResponse('UNAUTHORIZED', 'Invalid token', 401);
   }

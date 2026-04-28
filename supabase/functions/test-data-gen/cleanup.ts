@@ -27,7 +27,11 @@ async function getPgClient() {
   const ref = (Deno.env.get('SUPABASE_URL') ?? '').replace('https://', '').split('.')[0];
   const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   const connStr = `postgresql://postgres.${ref}:${key}@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres`;
-  return new pg.Client({ connectionString: connStr, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 5000 });
+  return new pg.Client({
+    connectionString: connStr,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 5000,
+  });
 }
 
 /** Verify auth — accepts user JWT or service-role key */
@@ -43,7 +47,7 @@ function resolveAuth(req: Request): { token: string; isServiceRole: boolean } | 
 export async function handleCleanup(req: Request): Promise<Response> {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
   // Auth — support both user JWT and service-role key (for pipeline cleanup)
@@ -143,8 +147,9 @@ function extractInsertedIds(sqlStatements: string, featureId: string): string[] 
   // within the last hour that have gen_random_uuid() style IDs
   // This is a best-effort cleanup since we can't track exact IDs
   // from ON CONFLICT DO NOTHING inserts
-  return Array.from(tables).map((table) =>
-    `/* cleanup:${featureId} */ DELETE FROM "${table}" WHERE id IN (
+  return Array.from(tables).map(
+    (table) =>
+      `/* cleanup:${featureId} */ DELETE FROM "${table}" WHERE id IN (
       SELECT id FROM "${table}"
       WHERE created_at > NOW() - INTERVAL '24 hours'
       AND id::text LIKE '________-____-____-____-____________'

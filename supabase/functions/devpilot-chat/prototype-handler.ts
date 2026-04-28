@@ -19,7 +19,7 @@ export async function handlePrototypeGeneration(
   conversationId: string,
   description: string,
   forceType: 'ui' | 'flowchart' | 'process' | undefined,
-  messageId: string,
+  messageId: string
 ): Promise<Record<string, unknown> | null> {
   try {
     // Check if a prototype already exists (iteration mode)
@@ -33,14 +33,16 @@ export async function handlePrototypeGeneration(
     // If prototype exists, iterate on it with the new feedback
     if (currentVersion) {
       return await handleIteration(
-        supabase, conversationId, description, messageId, currentVersion,
+        supabase,
+        conversationId,
+        description,
+        messageId,
+        currentVersion
       );
     }
 
     // First-time generation: classify and generate
-    return await handleFirstGeneration(
-      supabase, conversationId, description, forceType, messageId,
-    );
+    return await handleFirstGeneration(supabase, conversationId, description, forceType, messageId);
   } catch (err) {
     console.error('Prototype generation error:', err);
     return {
@@ -56,7 +58,7 @@ async function handleFirstGeneration(
   conversationId: string,
   description: string,
   forceType: 'ui' | 'flowchart' | 'process' | undefined,
-  messageId: string,
+  messageId: string
 ): Promise<Record<string, unknown>> {
   let protoType = forceType;
   let confidence = 1.0;
@@ -79,7 +81,15 @@ async function handleFirstGeneration(
     return { type: 'prototype_error', error_code: result.error_code, message: result.message };
   }
 
-  return await insertVersion(supabase, conversationId, messageId, protoType, result.html, confidence, null);
+  return await insertVersion(
+    supabase,
+    conversationId,
+    messageId,
+    protoType,
+    result.html,
+    confidence,
+    null
+  );
 }
 
 async function handleIteration(
@@ -87,7 +97,7 @@ async function handleIteration(
   conversationId: string,
   feedback: string,
   messageId: string,
-  current: { content: string; prototype_type: string; version_number: number },
+  current: { content: string; prototype_type: string; version_number: number }
 ): Promise<Record<string, unknown>> {
   const result = await iteratePrototype(current.content, feedback);
   if (isGenerateError(result)) {
@@ -95,7 +105,15 @@ async function handleIteration(
   }
 
   const protoType = current.prototype_type as 'ui' | 'flowchart' | 'process';
-  return await insertVersion(supabase, conversationId, messageId, protoType, result.html, 1.0, feedback);
+  return await insertVersion(
+    supabase,
+    conversationId,
+    messageId,
+    protoType,
+    result.html,
+    1.0,
+    feedback
+  );
 }
 
 async function insertVersion(
@@ -105,7 +123,7 @@ async function insertVersion(
   protoType: 'ui' | 'flowchart' | 'process',
   html: string,
   confidence: number,
-  feedbackPrompt: string | null,
+  feedbackPrompt: string | null
 ): Promise<Record<string, unknown>> {
   const { count } = await supabase
     .from('prototype_versions')
@@ -114,20 +132,26 @@ async function insertVersion(
   const versionNum = (count ?? 0) + 1;
 
   if (versionNum > 1) {
-    await supabase.from('prototype_versions')
-      .update({ is_current: false }).eq('conversation_id', conversationId);
+    await supabase
+      .from('prototype_versions')
+      .update({ is_current: false })
+      .eq('conversation_id', conversationId);
   }
 
-  const { data: version } = await supabase.from('prototype_versions').insert({
-    conversation_id: conversationId,
-    message_id: messageId,
-    prototype_type: protoType,
-    content: html,
-    version_number: versionNum,
-    is_current: true,
-    confidence,
-    feedback_prompt: feedbackPrompt,
-  }).select('id, version_number').single();
+  const { data: version } = await supabase
+    .from('prototype_versions')
+    .insert({
+      conversation_id: conversationId,
+      message_id: messageId,
+      prototype_type: protoType,
+      content: html,
+      version_number: versionNum,
+      is_current: true,
+      confidence,
+      feedback_prompt: feedbackPrompt,
+    })
+    .select('id, version_number')
+    .single();
 
   return {
     type: 'prototype_generated',

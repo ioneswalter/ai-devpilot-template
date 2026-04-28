@@ -29,9 +29,21 @@ export const ACTION_ICONS: Record<string, string> = {
 };
 
 export function TierBadge({ tier }: { tier?: string }) {
-  if (tier === 'api') return <span className="px-1 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-700 rounded">API</span>;
-  if (tier === 'e2e') return <span className="px-1 py-0.5 text-[9px] font-bold bg-purple-100 text-purple-700 rounded">E2E</span>;
-  return <span className="px-1 py-0.5 text-[9px] font-bold bg-gray-100 text-gray-500 rounded">MAN</span>;
+  if (tier === 'api')
+    return (
+      <span className="px-1 py-0.5 text-[9px] font-bold bg-blue-100 text-blue-700 rounded">
+        API
+      </span>
+    );
+  if (tier === 'e2e')
+    return (
+      <span className="px-1 py-0.5 text-[9px] font-bold bg-purple-100 text-purple-700 rounded">
+        E2E
+      </span>
+    );
+  return (
+    <span className="px-1 py-0.5 text-[9px] font-bold bg-gray-100 text-gray-500 rounded">MAN</span>
+  );
 }
 
 export function StatusBadge({ result, stale }: { result: string | null; stale: boolean }) {
@@ -62,12 +74,19 @@ export function GateWarningBadge({
       <button
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onDismiss();
+        }}
         className="w-4 h-4 text-amber-500 hover:text-amber-600"
         title="Gate warning — click to dismiss"
       >
         <svg viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+          <path
+            fillRule="evenodd"
+            d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+            clipRule="evenodd"
+          />
         </svg>
       </button>
       {showTooltip && (
@@ -86,7 +105,12 @@ export function ScriptStepsViewer({
   stepResults,
 }: {
   script: ScriptListItem;
-  stepResults?: Array<{ step_number: number; passed: boolean; actual_outcome: string; duration_ms: number }>;
+  stepResults?: Array<{
+    step_number: number;
+    passed: boolean;
+    actual_outcome: string;
+    duration_ms: number;
+  }>;
 }) {
   const steps = script.script_steps;
   if (!steps || steps.length === 0) {
@@ -109,9 +133,11 @@ export function ScriptStepsViewer({
               {step.step_number}
             </span>
             {result ? (
-              <span className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${
-                result.passed ? 'bg-green-500' : 'bg-red-500'
-              }`} />
+              <span
+                className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${
+                  result.passed ? 'bg-green-500' : 'bg-red-500'
+                }`}
+              />
             ) : (
               <span className="flex-shrink-0 w-4 text-center">
                 {ACTION_ICONS[step.action] ?? '\u2022'}
@@ -124,13 +150,9 @@ export function ScriptStepsViewer({
                   {step.target.strategy}:{step.target.value}
                 </span>
               )}
-              {step.value && (
-                <span className="ml-1 text-gray-500">"{step.value}"</span>
-              )}
+              {step.value && <span className="ml-1 text-gray-500">"{step.value}"</span>}
               {result && !result.passed && (
-                <span className="ml-1 text-red-600 text-[10px]">
-                  {result.actual_outcome}
-                </span>
+                <span className="ml-1 text-red-600 text-[10px]">{result.actual_outcome}</span>
               )}
               {!result && step.expected_outcome && (
                 <span className="ml-1 text-green-600 text-[10px]">
@@ -191,13 +213,13 @@ export function ScriptRow({
     <div className="px-3 py-2">
       <div className="flex items-center gap-2">
         <button onClick={onToggle} className="flex-1 min-w-0 text-left flex items-center gap-2">
-          <StatusBadge result={scriptResult?.result ?? script.last_run_result} stale={script.is_stale} />
+          <StatusBadge
+            result={scriptResult?.result ?? script.last_run_result}
+            stale={script.is_stale}
+          />
           <TierBadge tier={script.tier} />
           {showWarningBadge && (
-            <GateWarningBadge
-              warnings={activeWarnings}
-              onDismiss={onDismissWarning}
-            />
+            <GateWarningBadge warnings={activeWarnings} onDismiss={onDismissWarning} />
           )}
           <span className="text-xs font-medium text-gray-800 truncate">
             {script.test_case_title}
@@ -205,7 +227,9 @@ export function ScriptRow({
         </button>
         <span className="text-xs text-gray-400 whitespace-nowrap">{script.step_count} steps</span>
         {scriptResult && (
-          <span className={`text-[10px] ${scriptResult.result === 'passed' ? 'text-green-600' : 'text-red-600'}`}>
+          <span
+            className={`text-[10px] ${scriptResult.result === 'passed' ? 'text-green-600' : 'text-red-600'}`}
+          >
             {(scriptResult.duration_ms / 1000).toFixed(1)}s
           </span>
         )}

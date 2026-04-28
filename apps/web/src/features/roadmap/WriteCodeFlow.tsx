@@ -39,7 +39,7 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
 
   // Check which files already exist on disk
   useEffect(() => {
-    checkFiles(files.map(f => f.filePath)).then(results => {
+    checkFiles(files.map((f) => f.filePath)).then((results) => {
       setFileStatus(results);
       // Pre-select all new files; deselect existing files by default
       const preSelected = new Set<string>();
@@ -52,7 +52,7 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
   }, [files]);
 
   const toggleFile = useCallback((path: string) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
@@ -61,17 +61,17 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
   }, []);
 
   const selectAll = useCallback(() => {
-    setSelected(new Set(files.map(f => f.filePath)));
+    setSelected(new Set(files.map((f) => f.filePath)));
   }, [files]);
 
   const deselectExisting = useCallback(() => {
-    setSelected(new Set(fileStatus.filter(f => !f.exists).map(f => f.path)));
+    setSelected(new Set(fileStatus.filter((f) => !f.exists).map((f) => f.path)));
   }, [fileStatus]);
 
   const startWrite = useCallback(async () => {
     // Pause HMR so Vite doesn't reload the page while we write files
     await controlHMR('pause');
-    const selectedPaths = files.filter(f => selected.has(f.filePath)).map(f => f.filePath);
+    const selectedPaths = files.filter((f) => selected.has(f.filePath)).map((f) => f.filePath);
     await backupFiles(selectedPaths);
     setPhase('writing');
   }, [files, selected]);
@@ -94,10 +94,10 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
     onCancel();
   }, [onCancel]);
 
-  const selectedFiles = files.filter(f => selected.has(f.filePath));
-  const newCount = fileStatus.filter(f => !f.exists).length;
-  const existingCount = fileStatus.filter(f => f.exists).length;
-  const selectedExisting = fileStatus.filter(f => f.exists && selected.has(f.path)).length;
+  const selectedFiles = files.filter((f) => selected.has(f.filePath));
+  const newCount = fileStatus.filter((f) => !f.exists).length;
+  const existingCount = fileStatus.filter((f) => f.exists).length;
+  const selectedExisting = fileStatus.filter((f) => f.exists && selected.has(f.path)).length;
 
   if (phase === 'checking') {
     return <LoadingState text="Checking files on disk..." />;
@@ -113,7 +113,10 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
         <p className="text-xs text-amber-700 mb-3">
           All files have been restored to their previous state.
         </p>
-        <button onClick={handleCancel} className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50">
+        <button
+          onClick={handleCancel}
+          className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50"
+        >
           Close
         </button>
       </div>
@@ -121,12 +124,7 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
   }
 
   if (phase === 'writing') {
-    return (
-      <WriteCodeProgress
-        files={selectedFiles}
-        onComplete={() => setPhase('build-check')}
-      />
-    );
+    return <WriteCodeProgress files={selectedFiles} onComplete={() => setPhase('build-check')} />;
   }
 
   if (phase === 'build-check') {
@@ -135,7 +133,7 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
         onBuildPass={handleComplete}
         onRollback={handleRollback}
         isRollingBack={isRollingBack}
-        writtenFiles={selectedFiles.map(f => f.filePath)}
+        writtenFiles={selectedFiles.map((f) => f.filePath)}
       />
     );
   }
@@ -146,14 +144,20 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-semibold text-gray-900">Review Files to Write</h4>
         <div className="flex gap-2 text-xs">
-          <button onClick={selectAll} className="text-blue-600 hover:underline">Select all</button>
-          <button onClick={deselectExisting} className="text-blue-600 hover:underline">New only</button>
+          <button onClick={selectAll} className="text-blue-600 hover:underline">
+            Select all
+          </button>
+          <button onClick={deselectExisting} className="text-blue-600 hover:underline">
+            New only
+          </button>
         </div>
       </div>
 
       <div className="flex gap-3 text-xs">
         <span className="text-green-700 bg-green-50 px-2 py-0.5 rounded">{newCount} new</span>
-        <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{existingCount} existing</span>
+        <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+          {existingCount} existing
+        </span>
         <span className="text-gray-500">{selected.size} selected</span>
       </div>
 
@@ -161,24 +165,31 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
         <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
           <WarningIcon />
           <span>
-            <strong>{selectedExisting} existing file{selectedExisting > 1 ? 's' : ''}</strong> will be overwritten.
-            AI-generated code may not be compatible with the current codebase.
+            <strong>
+              {selectedExisting} existing file{selectedExisting > 1 ? 's' : ''}
+            </strong>{' '}
+            will be overwritten. AI-generated code may not be compatible with the current codebase.
           </span>
         </div>
       )}
 
       <div className="max-h-64 overflow-y-auto divide-y">
-        {fileStatus.map(f => {
+        {fileStatus.map((f) => {
           const isSelected = selected.has(f.path);
           return (
-            <label key={f.path} className="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-gray-50 px-1 rounded">
+            <label
+              key={f.path}
+              className="flex items-center gap-2 py-1.5 cursor-pointer hover:bg-gray-50 px-1 rounded"
+            >
               <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => toggleFile(f.path)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className={`flex-1 text-xs truncate ${f.exists ? 'text-amber-700' : 'text-gray-700'}`}>
+              <span
+                className={`flex-1 text-xs truncate ${f.exists ? 'text-amber-700' : 'text-gray-700'}`}
+              >
                 {f.path}
               </span>
               {f.exists ? (
@@ -186,7 +197,9 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
                   {f.lines} lines
                 </span>
               ) : (
-                <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded shrink-0">new</span>
+                <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded shrink-0">
+                  new
+                </span>
               )}
             </label>
           );
@@ -194,7 +207,10 @@ export function WriteCodeFlow({ files, onComplete, onCancel }: WriteCodeFlowProp
       </div>
 
       <div className="flex items-center justify-between pt-2 border-t">
-        <button onClick={onCancel} className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800">
+        <button
+          onClick={onCancel}
+          className="px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800"
+        >
           Cancel
         </button>
         <button
@@ -222,7 +238,7 @@ async function checkFiles(paths: string[]): Promise<FileCheckResult[]> {
     const data = await res.json();
     return data.results ?? [];
   } catch {
-    return paths.map(p => ({ path: p, exists: false, lines: 0 }));
+    return paths.map((p) => ({ path: p, exists: false, lines: 0 }));
   }
 }
 
@@ -252,26 +268,50 @@ const LoadingState = ({ text }: { text: string }) => (
   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 flex items-center gap-3">
     <svg className="w-5 h-5 text-blue-600 animate-spin" viewBox="0 0 24 24" fill="none">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+      />
     </svg>
     <span className="text-sm text-blue-800">{text}</span>
   </div>
 );
 
 const WarningIcon = () => (
-  <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+  <svg
+    className="w-4 h-4 text-amber-600 shrink-0 mt-0.5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+    />
   </svg>
 );
 
 const RollbackIcon = () => (
   <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+    />
   </svg>
 );
 
 const WriteIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+    />
   </svg>
 );

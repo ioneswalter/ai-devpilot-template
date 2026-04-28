@@ -19,7 +19,7 @@ export interface PromptContext {
  */
 export async function fetchPromptContext(
   supabase: SupabaseClient,
-  templateSlug: string,
+  templateSlug: string
 ): Promise<PromptContext | null> {
   try {
     const { data: template } = await supabase
@@ -44,14 +44,17 @@ export async function fetchPromptContext(
 
       if (items && items.length > 0) {
         const lines = items.map(
-          (l) => `- [${(l.severity as string).toUpperCase()}] ${l.title}: ${l.correction}`,
+          (l) => `- [${(l.severity as string).toUpperCase()}] ${l.title}: ${l.correction}`
         );
         learnings = `\n## Known Learnings (avoid these mistakes)\n${lines.join('\n')}`;
       }
     }
 
     // Increment usage count (fire-and-forget)
-    supabase.rpc('increment_prompt_usage', { slug: templateSlug }).then().catch(() => {});
+    supabase
+      .rpc('increment_prompt_usage', { slug: templateSlug })
+      .then()
+      .catch(() => {});
 
     return {
       systemPrompt: template.system_prompt as string,
@@ -80,7 +83,7 @@ export async function ratePrompt(
     modelUsed?: string;
     featureId?: string;
     ratedBy?: string;
-  },
+  }
 ): Promise<void> {
   try {
     const { data: template } = await supabase

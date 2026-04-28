@@ -70,7 +70,7 @@ async function handleMarkApplied(req: Request, ctx: AuthContext): Promise<Respon
 async function authenticate(req: Request): Promise<AuthContext | Response> {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
   const authHeader = req.headers.get('Authorization');
@@ -78,7 +78,10 @@ async function authenticate(req: Request): Promise<AuthContext | Response> {
     return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
   }
 
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
+  const {
+    data: { user },
+    error: authErr,
+  } = await supabase.auth.getUser(authHeader.substring(7));
   if (authErr || !user) {
     return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
   }

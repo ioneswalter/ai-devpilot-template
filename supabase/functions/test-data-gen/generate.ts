@@ -24,10 +24,7 @@ function error(code: string, message: string, status: number) {
 }
 
 function getSupabase() {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 type TriggerSource = 'manual' | 'copilot' | 'pipeline';
@@ -50,7 +47,10 @@ export async function handleGenerate(req: Request): Promise<Response> {
 
   let userId = 'service-role';
   if (!auth.isServiceRole) {
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(auth.token);
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser(auth.token);
     if (authErr || !user) return error('UNAUTHORIZED', 'Invalid token', 401);
     userId = user.id;
   }
@@ -88,17 +88,27 @@ export async function handleGenerate(req: Request): Promise<Response> {
   if (feature.category === 'toolkit') {
     const datasetId = crypto.randomUUID();
     await supabase.from('test_data_sets').upsert({
-      id: datasetId, feature_id: featureId, generated_by: userId,
+      id: datasetId,
+      feature_id: featureId,
+      generated_by: userId,
       sql_statements: '-- Toolkit feature: no test data needed',
-      records_created: 0, status: 'active', trigger_source: triggerSource,
-      pipeline_run_id: pipelineRunId, created_at: new Date().toISOString(),
+      records_created: 0,
+      status: 'active',
+      trigger_source: triggerSource,
+      pipeline_run_id: pipelineRunId,
+      created_at: new Date().toISOString(),
     });
     return json({
       data: {
-        dataset_id: datasetId, feature_code: feature.feature_code,
-        records_created: 0, total_statements: 0, errors: [],
-        status: 'success', trigger_source: triggerSource,
-        pipeline_run_id: pipelineRunId, skipped_reason: 'Toolkit feature — no data model to seed',
+        dataset_id: datasetId,
+        feature_code: feature.feature_code,
+        records_created: 0,
+        total_statements: 0,
+        errors: [],
+        status: 'success',
+        trigger_source: triggerSource,
+        pipeline_run_id: pipelineRunId,
+        skipped_reason: 'Toolkit feature — no data model to seed',
       },
     });
   }
@@ -118,7 +128,7 @@ export async function handleGenerate(req: Request): Promise<Response> {
       const criteria = (feature.acceptance_criteria as string[]) || [];
       const specContext = buildSpecContext(feature.title, feature.description, criteria);
       const dataModelContext = await getDataModelContext(featureId, supabase);
-      const schemaHint = dataModelContext || await getSchemaHint();
+      const schemaHint = dataModelContext || (await getSchemaHint());
 
       const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
       if (!apiKey) return error('AI_ERROR', 'AI service not configured', 500);
@@ -126,18 +136,22 @@ export async function handleGenerate(req: Request): Promise<Response> {
       const Anthropic = (await import('npm:@anthropic-ai/sdk@0.39.0')).default;
       const anthropic = new Anthropic({ apiKey, timeout: 25_000 });
       const response = await anthropic.messages.create({
-        model: AI_MODEL, max_tokens: 2048,
+        model: AI_MODEL,
+        max_tokens: 2048,
         system: GENERATE_PROMPT,
         messages: [{ role: 'user', content: `${specContext}\n\n${schemaHint}` }],
       });
 
       const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
-      sqlText = textBlock && textBlock.type === 'text'
-        ? (textBlock as { type: 'text'; text: string }).text.trim()
-        : '';
+      sqlText =
+        textBlock && textBlock.type === 'text'
+          ? (textBlock as { type: 'text'; text: string }).text.trim()
+          : '';
 
       logAIUsage(supabase, {
-        featureId, adminId: userId, modelId: AI_MODEL,
+        featureId,
+        adminId: userId,
+        modelId: AI_MODEL,
         operationType: 'test_data_gen',
         inputTokens: response.usage?.input_tokens ?? 0,
         outputTokens: response.usage?.output_tokens ?? 0,
@@ -152,20 +166,27 @@ export async function handleGenerate(req: Request): Promise<Response> {
 
     const datasetId = crypto.randomUUID();
     await supabase.from('test_data_sets').upsert({
-      id: datasetId, feature_id: featureId, generated_by: userId,
-      sql_statements: sqlText, records_created: result.inserted,
+      id: datasetId,
+      feature_id: featureId,
+      generated_by: userId,
+      sql_statements: sqlText,
+      records_created: result.inserted,
       status: result.errors.length === 0 ? 'active' : 'partial',
-      trigger_source: triggerSource, pipeline_run_id: pipelineRunId,
+      trigger_source: triggerSource,
+      pipeline_run_id: pipelineRunId,
       created_at: new Date().toISOString(),
     });
 
     return json({
       data: {
-        dataset_id: datasetId, feature_code: feature.feature_code,
-        records_created: result.inserted, total_statements: result.total,
+        dataset_id: datasetId,
+        feature_code: feature.feature_code,
+        records_created: result.inserted,
+        total_statements: result.total,
         errors: result.errors,
         status: result.errors.length === 0 ? 'success' : 'partial',
-        trigger_source: triggerSource, pipeline_run_id: pipelineRunId,
+        trigger_source: triggerSource,
+        pipeline_run_id: pipelineRunId,
       },
     });
   } catch (err: unknown) {

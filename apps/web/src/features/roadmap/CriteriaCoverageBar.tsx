@@ -31,15 +31,9 @@ function CoverageSegments({ coverage }: { coverage: CoverageSummary }) {
 
   return (
     <div className="w-full bg-gray-200 rounded-full h-2 flex overflow-hidden">
-      {passedPct > 0 && (
-        <div className="bg-green-500 h-2" style={{ width: `${passedPct}%` }} />
-      )}
-      {failedPct > 0 && (
-        <div className="bg-red-500 h-2" style={{ width: `${failedPct}%` }} />
-      )}
-      {untestedPct > 0 && (
-        <div className="bg-gray-300 h-2" style={{ width: `${untestedPct}%` }} />
-      )}
+      {passedPct > 0 && <div className="bg-green-500 h-2" style={{ width: `${passedPct}%` }} />}
+      {failedPct > 0 && <div className="bg-red-500 h-2" style={{ width: `${failedPct}%` }} />}
+      {untestedPct > 0 && <div className="bg-gray-300 h-2" style={{ width: `${untestedPct}%` }} />}
     </div>
   );
 }
@@ -88,7 +82,9 @@ export function CriteriaCoverageBar({
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-gray-700">{criterion.text}</p>
                 {criterion.test_case_code && (
-                  <code className="text-[10px] font-mono text-gray-400">{criterion.test_case_code}</code>
+                  <code className="text-[10px] font-mono text-gray-400">
+                    {criterion.test_case_code}
+                  </code>
                 )}
                 {criterion.evidence_date && (
                   <span className="text-[10px] text-gray-400 ml-1">

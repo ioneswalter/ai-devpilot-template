@@ -21,7 +21,7 @@ interface AcquireResult {
 export async function acquireDeployLock(
   supabase: SupabaseClient,
   pipelineId: string,
-  featureId: string,
+  featureId: string
 ): Promise<AcquireResult> {
   // First, clean up any expired locks
   await cleanExpiredLocks(supabase);
@@ -39,8 +39,12 @@ export async function acquireDeployLock(
     // If stale (>10 min), force-release and take over
     if (age > LOCK_TIMEOUT_MS) {
       await supabase.from('deploy_locks').delete().eq('id', lock.id);
-      await appendLog(supabase, pipelineId, 'warn',
-        `Stale deploy lock released (held by pipeline ${lock.pipeline_id}, age ${Math.round(age / 60000)}min)`);
+      await appendLog(
+        supabase,
+        pipelineId,
+        'warn',
+        `Stale deploy lock released (held by pipeline ${lock.pipeline_id}, age ${Math.round(age / 60000)}min)`
+      );
     } else {
       return { acquired: false, held_by: lock.pipeline_id };
     }
@@ -63,7 +67,7 @@ export async function acquireDeployLock(
 /** Release the deploy lock held by a pipeline */
 export async function releaseDeployLock(
   supabase: SupabaseClient,
-  pipelineId: string,
+  pipelineId: string
 ): Promise<void> {
   await supabase.from('deploy_locks').delete().eq('pipeline_id', pipelineId);
 }
@@ -71,7 +75,7 @@ export async function releaseDeployLock(
 /** Update the heartbeat on the deploy lock */
 export async function updateDeployLockHeartbeat(
   supabase: SupabaseClient,
-  pipelineId: string,
+  pipelineId: string
 ): Promise<void> {
   await supabase
     .from('deploy_locks')
@@ -81,42 +85,57 @@ export async function updateDeployLockHeartbeat(
 
 /** Check if any deploy lock is currently held */
 export async function getDeployLockStatus(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient
 ): Promise<{ held: boolean; pipeline_id?: string; feature_id?: string; acquired_at?: string }> {
   await cleanExpiredLocks(supabase);
   const { data } = await supabase.from('deploy_locks').select('*').limit(1);
   if (!data || data.length === 0) return { held: false };
-  return { held: true, pipeline_id: data[0].pipeline_id, feature_id: data[0].feature_id, acquired_at: data[0].acquired_at };
+  return {
+    held: true,
+    pipeline_id: data[0].pipeline_id,
+    feature_id: data[0].feature_id,
+    acquired_at: data[0].acquired_at,
+  };
 }
 
 /** Wait for deploy lock with retries, updating pipeline status */
 export async function waitForDeployLock(
   supabase: SupabaseClient,
   pipelineId: string,
-  featureId: string,
+  featureId: string
 ): Promise<boolean> {
   for (let i = 0; i < MAX_DEPLOY_WAIT_RETRIES; i++) {
     const result = await acquireDeployLock(supabase, pipelineId, featureId);
     if (result.acquired) return true;
 
     // Update pipeline to show waiting state
-    await supabase.from('pipeline_runs').update({
-      waiting_for_deploy: true,
-      current_stage: 'waiting_for_deploy',
-      last_heartbeat: new Date().toISOString(),
-    }).eq('id', pipelineId);
+    await supabase
+      .from('pipeline_runs')
+      .update({
+        waiting_for_deploy: true,
+        current_stage: 'waiting_for_deploy',
+        last_heartbeat: new Date().toISOString(),
+      })
+      .eq('id', pipelineId);
 
     if (i === 0) {
-      await appendLog(supabase, pipelineId, 'info',
-        `Waiting for deployment slot (held by pipeline ${result.held_by ?? 'unknown'})`);
+      await appendLog(
+        supabase,
+        pipelineId,
+        'info',
+        `Waiting for deployment slot (held by pipeline ${result.held_by ?? 'unknown'})`
+      );
     }
 
     // Check if pipeline was cancelled while waiting
     const { data: pCheck } = await supabase
-      .from('pipeline_runs').select('status').eq('id', pipelineId).single();
+      .from('pipeline_runs')
+      .select('status')
+      .eq('id', pipelineId)
+      .single();
     if (pCheck?.status !== 'running') return false;
 
-    await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
   }
 
   await appendLog(supabase, pipelineId, 'error', 'Timed out waiting for deployment slot');
@@ -127,8 +146,13 @@ export async function waitForDeployLock(
 export async function detectFileConflicts(
   supabase: SupabaseClient,
   pipelineId: string,
-  requestId: string,
-): Promise<Array<{ file_path: string; other_pipelines: Array<{ pipeline_id: string; feature_title: string; task_title: string }> }>> {
+  requestId: string
+): Promise<
+  Array<{
+    file_path: string;
+    other_pipelines: Array<{ pipeline_id: string; feature_title: string; task_title: string }>;
+  }>
+> {
   // Get this pipeline's file paths
   const { data: myTasks } = await supabase
     .from('implementation_task_items')
@@ -138,7 +162,7 @@ export async function detectFileConflicts(
     .not('generated_code', 'is', null);
 
   if (!myTasks || myTasks.length === 0) return [];
-  const myPaths = myTasks.map(t => t.file_path);
+  const myPaths = myTasks.map((t) => t.file_path);
 
   // Find other running/completed pipelines (not this one)
   const { data: otherPipelines } = await supabase
@@ -150,7 +174,10 @@ export async function detectFileConflicts(
 
   if (!otherPipelines || otherPipelines.length === 0) return [];
 
-  const conflicts: Array<{ file_path: string; other_pipelines: Array<{ pipeline_id: string; feature_title: string; task_title: string }> }> = [];
+  const conflicts: Array<{
+    file_path: string;
+    other_pipelines: Array<{ pipeline_id: string; feature_title: string; task_title: string }>;
+  }> = [];
 
   for (const other of otherPipelines) {
     const { data: otherTasks } = await supabase
@@ -164,11 +191,18 @@ export async function detectFileConflicts(
     if (!otherTasks || otherTasks.length === 0) continue;
 
     const { data: feat } = await supabase
-      .from('product_features').select('title').eq('id', other.feature_id).single();
+      .from('product_features')
+      .select('title')
+      .eq('id', other.feature_id)
+      .single();
 
     for (const ot of otherTasks) {
-      const existing = conflicts.find(c => c.file_path === ot.file_path);
-      const entry = { pipeline_id: other.id, feature_title: feat?.title ?? 'Unknown', task_title: ot.title };
+      const existing = conflicts.find((c) => c.file_path === ot.file_path);
+      const entry = {
+        pipeline_id: other.id,
+        feature_title: feat?.title ?? 'Unknown',
+        task_title: ot.title,
+      };
       if (existing) {
         existing.other_pipelines.push(entry);
       } else {

@@ -11,11 +11,13 @@ const BrowserResultSchema = z.object({
   duration_ms: z.number(),
   steps_completed: z.number(),
   steps_total: z.number(),
-  failures: z.array(z.object({
-    step_number: z.number(),
-    expected: z.string(),
-    actual: z.string(),
-  })),
+  failures: z.array(
+    z.object({
+      step_number: z.number(),
+      expected: z.string(),
+      actual: z.string(),
+    })
+  ),
 });
 
 const ExecuteScriptSchema = z.object({
@@ -64,7 +66,7 @@ interface ScriptStep {
 export async function handleExecuteScript(
   supabase: SupabaseClient,
   body: unknown,
-  userId: string,
+  userId: string
 ): Promise<Response> {
   const validation = ExecuteScriptSchema.safeParse(body);
   if (!validation.success) {
@@ -115,9 +117,7 @@ export async function handleExecuteScript(
   });
 
   // Update script last run
-  const newFailureCount = result === 'failed'
-    ? script.failure_count + 1
-    : 0;
+  const newFailureCount = result === 'failed' ? script.failure_count + 1 : 0;
 
   await supabase
     .from('automated_test_scripts')
@@ -158,7 +158,7 @@ export async function handleExecuteScript(
 async function revertToManual(
   supabase: SupabaseClient,
   testCaseId: string,
-  scriptId: string,
+  scriptId: string
 ): Promise<void> {
   await supabase
     .from('test_cases')
@@ -169,17 +169,14 @@ async function revertToManual(
     })
     .eq('id', testCaseId);
 
-  await supabase
-    .from('automated_test_scripts')
-    .update({ is_stale: true })
-    .eq('id', scriptId);
+  await supabase.from('automated_test_scripts').update({ is_stale: true }).eq('id', scriptId);
 }
 
 /** v2: Two-tier suite execution with fail-fast (API first, then E2E) */
 export async function handleExecuteSuite(
   supabase: SupabaseClient,
   body: unknown,
-  userId: string,
+  userId: string
 ): Promise<Response> {
   const validation = ExecuteSuiteSchema.safeParse(body);
   if (!validation.success) return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
@@ -189,52 +186,79 @@ export async function handleExecuteSuite(
 
   // Tier 1: API tests
   const { data: apiTests } = await supabase
-    .from('api_verification_tests').select('id, test_case_id, is_stale')
+    .from('api_verification_tests')
+    .select('id, test_case_id, is_stale')
     .eq('feature_id', feature_id);
 
-  const apiResults = { total: 0, passed: 0, failed: 0, errors: 0, duration_ms: 0, results: [] as unknown[] };
-  for (const test of (apiTests ?? []).filter(t => !t.is_stale)) {
+  const apiResults = {
+    total: 0,
+    passed: 0,
+    failed: 0,
+    errors: 0,
+    duration_ms: 0,
+    results: [] as unknown[],
+  };
+  for (const test of (apiTests ?? []).filter((t) => !t.is_stale)) {
     apiResults.total++;
     try {
       const { handleExecuteApiTest } = await import('./execute-api-tests.ts');
       const resp = await handleExecuteApiTest(supabase, { test_id: test.id, environment }, userId);
       const data = await resp.json();
       const r = data.data?.result || 'error';
-      if (r === 'passed') apiResults.passed++; else if (r === 'failed') apiResults.failed++; else apiResults.errors++;
+      if (r === 'passed') apiResults.passed++;
+      else if (r === 'failed') apiResults.failed++;
+      else apiResults.errors++;
       apiResults.results.push(data.data);
-    } catch { apiResults.errors++; }
+    } catch {
+      apiResults.errors++;
+    }
   }
   apiResults.duration_ms = Date.now() - startTime;
 
   // Fail-fast: skip E2E if API tests failed
   const apiPassed = apiResults.failed === 0 && apiResults.errors === 0;
   const e2eResults = {
-    total: 0, passed: 0, failed: 0, errors: 0, skipped_stale: 0,
-    skipped_api_failed: !apiPassed, duration_ms: 0, results: [] as unknown[],
+    total: 0,
+    passed: 0,
+    failed: 0,
+    errors: 0,
+    skipped_stale: 0,
+    skipped_api_failed: !apiPassed,
+    duration_ms: 0,
+    results: [] as unknown[],
   };
 
   if (apiPassed) {
     const e2eStart = Date.now();
     const { data: scripts } = await supabase
-      .from('automated_test_scripts').select('id, test_case_id, is_stale')
+      .from('automated_test_scripts')
+      .select('id, test_case_id, is_stale')
       .eq('feature_id', feature_id);
 
     for (const script of scripts ?? []) {
-      if (script.is_stale) { e2eResults.skipped_stale++; continue; }
+      if (script.is_stale) {
+        e2eResults.skipped_stale++;
+        continue;
+      }
       e2eResults.total++;
       const execBody = { script_id: script.id, environment };
       const execResult = await handleExecuteScript(supabase, execBody, userId);
       const execData = await execResult.json();
       const r = execData.data?.result || 'error';
-      if (r === 'passed') e2eResults.passed++; else if (r === 'failed') e2eResults.failed++; else e2eResults.errors++;
+      if (r === 'passed') e2eResults.passed++;
+      else if (r === 'failed') e2eResults.failed++;
+      else e2eResults.errors++;
       e2eResults.results.push(execData.data);
     }
     e2eResults.duration_ms = Date.now() - e2eStart;
   }
 
-  const allPassed = apiResults.failed === 0 && apiResults.errors === 0 &&
-    e2eResults.failed === 0 && e2eResults.errors === 0 &&
-    (apiResults.passed + e2eResults.passed) > 0;
+  const allPassed =
+    apiResults.failed === 0 &&
+    apiResults.errors === 0 &&
+    e2eResults.failed === 0 &&
+    e2eResults.errors === 0 &&
+    apiResults.passed + e2eResults.passed > 0;
 
   return jsonResponse({
     data: {

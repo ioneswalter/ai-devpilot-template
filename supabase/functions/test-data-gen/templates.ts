@@ -141,10 +141,10 @@ function buildFR122(): string[] {
 function buildFR123(adminUserId: string): string[] {
   // Reference FR-122 test data courses (verified to exist in DB)
   const landscapeCourse = 'dd000122-0000-0000-0000-000000000001'; // Landscaping Business Mastery (active, free)
-  const solarCourse = 'dd000122-0000-0000-0000-000000000002';     // Solar Panel Installation Basics (draft, $49)
-  const landscapeMod1 = 'dd000122-0001-0000-0000-000000000001';   // Getting Started with Landscaping
-  const landscapeMod2 = 'dd000122-0001-0000-0000-000000000002';   // Quoting and Pricing Jobs
-  const landscapeMod3 = 'dd000122-0001-0000-0000-000000000003';   // Customer Retention Strategies
+  const solarCourse = 'dd000122-0000-0000-0000-000000000002'; // Solar Panel Installation Basics (draft, $49)
+  const landscapeMod1 = 'dd000122-0001-0000-0000-000000000001'; // Getting Started with Landscaping
+  const landscapeMod2 = 'dd000122-0001-0000-0000-000000000002'; // Quoting and Pricing Jobs
+  const landscapeMod3 = 'dd000122-0001-0000-0000-000000000003'; // Customer Retention Strategies
 
   // Admin user — the person running the tests. ALL browser-interactive data uses this ID.
   const adminId = adminUserId;
@@ -223,9 +223,12 @@ function buildFR140(adminUserId: string): string[] {
   const msgFeedback = 'dd000140-0002-0000-0000-000000000003';
   const msgAsst2 = 'dd000140-0002-0000-0000-000000000004';
 
-  const sampleUiHtml = '<html><head><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-gray-50 p-6"><div class="max-w-4xl mx-auto"><h1 class="text-2xl font-bold mb-4">Weekly Earnings Dashboard</h1><div class="grid grid-cols-3 gap-4"><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">This Week</p><p class="text-3xl font-bold text-green-600">$1,200</p></div><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">Jobs</p><p class="text-3xl font-bold">5</p></div><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">Rating</p><p class="text-3xl font-bold">4.8</p></div></div></div></body></html>';
+  const sampleUiHtml =
+    '<html><head><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-gray-50 p-6"><div class="max-w-4xl mx-auto"><h1 class="text-2xl font-bold mb-4">Weekly Earnings Dashboard</h1><div class="grid grid-cols-3 gap-4"><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">This Week</p><p class="text-3xl font-bold text-green-600">$1,200</p></div><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">Jobs</p><p class="text-3xl font-bold">5</p></div><div class="bg-white rounded-lg shadow p-4"><p class="text-sm text-gray-500">Rating</p><p class="text-3xl font-bold">4.8</p></div></div></div></body></html>';
 
-  const sampleUiHtmlV2 = sampleUiHtml.replace('This Week', 'Week of 14 Apr').replace('$1,200', '$1,450');
+  const sampleUiHtmlV2 = sampleUiHtml
+    .replace('This Week', 'Week of 14 Apr')
+    .replace('$1,200', '$1,450');
 
   return [
     // Ideation conversation owned by admin

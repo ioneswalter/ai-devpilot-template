@@ -60,7 +60,10 @@ export function ReviewApprovalBar({
             {isSendingBack ? 'Sending...' : 'Send Back'}
           </button>
           <button
-            onClick={() => { setShowSendBack(false); setFeedback(''); }}
+            onClick={() => {
+              setShowSendBack(false);
+              setFeedback('');
+            }}
             className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
           >
             Cancel
@@ -77,9 +80,13 @@ export function ReviewApprovalBar({
         {pendingCount > 0 && (
           <span className="bg-gray-100 px-2 py-0.5 rounded">{pendingCount} pending</span>
         )}
-        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">{acceptedCount} accepted</span>
+        <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded">
+          {acceptedCount} accepted
+        </span>
         {rejectedCount > 0 && (
-          <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded">{rejectedCount} rejected</span>
+          <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded">
+            {rejectedCount} rejected
+          </span>
         )}
         {!isReviewActive && totalDecided > 0 && (
           <span className="text-gray-400 italic ml-1">Review complete</span>

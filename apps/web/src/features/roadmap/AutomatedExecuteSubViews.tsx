@@ -57,13 +57,17 @@ export function RunningProgress({
         <div className="border rounded-lg divide-y flex-1 overflow-y-auto min-h-0">
           {liveResults.map((r) => (
             <div key={r.script_id} className="px-3 py-1.5 flex items-center gap-2 text-xs">
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                r.result === 'passed' ? 'bg-green-500' : 'bg-red-500'
-              }`} />
+              <span
+                className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  r.result === 'passed' ? 'bg-green-500' : 'bg-red-500'
+                }`}
+              />
               <span className="flex-1 truncate text-gray-700">{r.test_case_title}</span>
-              <span className={`text-[10px] font-medium ${
-                r.result === 'passed' ? 'text-green-600' : 'text-red-600'
-              }`}>
+              <span
+                className={`text-[10px] font-medium ${
+                  r.result === 'passed' ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
                 {r.result === 'passed' ? 'Pass' : 'Fail'}
               </span>
               <span className="text-[10px] text-gray-400 w-10 text-right">
@@ -81,17 +85,34 @@ export function RunningProgress({
 export function BrowserSuiteResultSummary({ result }: { result: BrowserSuiteResult }) {
   const isPass = result.is_release_ready;
   return (
-    <div className={`p-4 rounded-lg border ${
-      isPass ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-    }`}>
+    <div
+      className={`p-4 rounded-lg border ${
+        isPass ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+      }`}
+    >
       <div className="flex items-center gap-2 mb-2">
         {isPass ? (
-          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className="w-5 h-5 text-green-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         ) : (
-          <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          <svg
+            className="w-5 h-5 text-red-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
           </svg>
         )}
         <h4 className={`text-sm font-semibold ${isPass ? 'text-green-800' : 'text-red-800'}`}>
@@ -102,7 +123,9 @@ export function BrowserSuiteResultSummary({ result }: { result: BrowserSuiteResu
         <span className="text-green-700">{result.passed} passed</span>
         {result.failed > 0 && <span className="text-red-700">{result.failed} failed</span>}
         {result.errors > 0 && <span className="text-red-700">{result.errors} errors</span>}
-        {result.skipped_stale > 0 && <span className="text-amber-700">{result.skipped_stale} skipped (stale)</span>}
+        {result.skipped_stale > 0 && (
+          <span className="text-amber-700">{result.skipped_stale} skipped (stale)</span>
+        )}
         <span className="text-gray-500">{(result.duration_ms / 1000).toFixed(1)}s</span>
       </div>
     </div>
@@ -127,14 +150,18 @@ export function FailureDetail({ scriptResult }: { scriptResult: BrowserScriptRes
               step.passed ? 'text-gray-600' : 'text-red-700 bg-red-50/50'
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${
-              step.passed ? 'bg-green-500' : 'bg-red-500'
-            }`} />
+            <span
+              className={`w-1.5 h-1.5 rounded-full mt-1 flex-shrink-0 ${
+                step.passed ? 'bg-green-500' : 'bg-red-500'
+              }`}
+            />
             <span className="font-mono text-[10px] text-gray-400 w-4 flex-shrink-0">
               {step.step_number}
             </span>
             <span className="flex-1">{step.actual_outcome}</span>
-            <span className="text-[10px] text-gray-400">{(step.duration_ms / 1000).toFixed(1)}s</span>
+            <span className="text-[10px] text-gray-400">
+              {(step.duration_ms / 1000).toFixed(1)}s
+            </span>
           </div>
         ))}
       </div>

@@ -31,7 +31,9 @@ export function useAutomationCoverage(featureId: string): UseAutomationCoverageR
     }
   }, [featureId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return { coverage, loading, error, refresh };
 }

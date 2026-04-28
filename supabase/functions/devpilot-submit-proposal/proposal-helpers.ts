@@ -21,7 +21,7 @@ interface ProposalTestCases {
 export function buildTestCases(
   proposal: ProposalTestCases,
   featureCode: string,
-  featureId: string,
+  featureId: string
 ): Record<string, unknown>[] {
   const testCasePrefix = featureCode.replace('FR-', 'TC-');
 
@@ -49,7 +49,10 @@ export function buildTestCases(
     const thenMatch = title.match(/Then\s+(.+)/i);
     if (thenMatch) title = thenMatch[1];
     if (title.length > 100) title = title.substring(0, 97) + '...';
-    const isEdgeCase = /unavailable|fail|error|invalid|no modules|no content|expires|malformed|blocked/i.test(criterion);
+    const isEdgeCase =
+      /unavailable|fail|error|invalid|no modules|no content|expires|malformed|blocked/i.test(
+        criterion
+      );
     const isHighPriority = /moderat|block|restrict|revok|auth|payment|secur/i.test(criterion);
     return {
       test_code: `${testCasePrefix}-${num}`,
@@ -57,7 +60,7 @@ export function buildTestCases(
       title,
       description: criterion,
       test_type: isEdgeCase ? 'edge_case' : 'e2e',
-      priority: isHighPriority ? 'high' : (isEdgeCase ? 'medium' : 'high'),
+      priority: isHighPriority ? 'high' : isEdgeCase ? 'medium' : 'high',
       status: 'draft',
       automated: false,
       automation_status: 'manual',
@@ -69,7 +72,7 @@ export function buildTestCases(
 export async function attachPrototype(
   supabase: SB,
   conversationId: string,
-  featureId: string,
+  featureId: string
 ): Promise<Record<string, unknown> | null> {
   const { data: currentProto } = await supabase
     .from('prototype_versions')
@@ -88,13 +91,17 @@ export async function attachPrototype(
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const renderUrl = `${supabaseUrl}/functions/v1/render-prototype?id=${currentProto.id}`;
 
-  const { data: attachment } = await supabase.from('prototype_attachments').insert({
-    feature_id: featureId,
-    prototype_version_id: currentProto.id,
-    prototype_type: currentProto.prototype_type,
-    render_url: renderUrl,
-    total_versions: totalVersions ?? 1,
-  }).select('id, prototype_type, render_url, total_versions').single();
+  const { data: attachment } = await supabase
+    .from('prototype_attachments')
+    .insert({
+      feature_id: featureId,
+      prototype_version_id: currentProto.id,
+      prototype_type: currentProto.prototype_type,
+      render_url: renderUrl,
+      total_versions: totalVersions ?? 1,
+    })
+    .select('id, prototype_type, render_url, total_versions')
+    .single();
 
   return attachment ?? null;
 }

@@ -51,16 +51,19 @@ const proposalSchema = z.object({
     category: z.enum(['toolkit', 'business_module']).nullable().optional(),
     spec_section: z.string().optional(),
     journeys: z.array(journeySchema).optional(),
-    test_cases: z.array(z.object({
-      title: z.string().min(1),
-      type: z.enum(['api', 'e2e']),
-      scenario: z.string().min(1),
-    })).optional(),
+    test_cases: z
+      .array(
+        z.object({
+          title: z.string().min(1),
+          type: z.enum(['api', 'e2e']),
+          scenario: z.string().min(1),
+        })
+      )
+      .optional(),
     problem_statement: z.string().optional(),
     solution: z.string().optional(),
   }),
 });
-
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -82,7 +85,10 @@ Deno.serve(async (req) => {
     if (!authHeader?.startsWith('Bearer ')) {
       return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
     }
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(authHeader.substring(7));
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser(authHeader.substring(7));
     if (authErr || !user) return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
 
     const { data: adminRow } = await supabase
@@ -144,14 +150,16 @@ Deno.serve(async (req) => {
       .from('product_features')
       .select('id, feature_code, title, description, status');
 
-    const featuresList = (allFeatures ?? []) as Array<{ id: string; feature_code: string; title: string; description: string; status: string }>;
+    const featuresList = (allFeatures ?? []) as Array<{
+      id: string;
+      feature_code: string;
+      title: string;
+      description: string;
+      status: string;
+    }>;
 
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY') ?? '';
-    const dedupResult = await performDedupCheck(
-      proposal,
-      featuresList,
-      anthropicApiKey
-    );
+    const dedupResult = await performDedupCheck(proposal, featuresList, anthropicApiKey);
 
     // FR-149 v1.1 patch / FR-025: deterministic FR-code pre-pass. Any feature
     // explicitly referenced by code (e.g. "FR-130 v2.0" in the title) MUST be
@@ -185,18 +193,29 @@ Deno.serve(async (req) => {
     // Replaces AI-claimed status (which has been observed to hallucinate) so the client
     // can render correct badges and offer "Add to in-flight v1.N" instead of a doomed bump.
     if (dedupResult.matches.length > 0) {
-      const dbFeatureMap = new Map(featuresList.map((f) => [f.feature_code, { status: f.status, id: f.id }]));
+      const dbFeatureMap = new Map(
+        featuresList.map((f) => [f.feature_code, { status: f.status, id: f.id }])
+      );
       const inFlightEntries = await Promise.all(
         dedupResult.matches.map(async (m) => {
           const db = dbFeatureMap.get(m.feature_code);
           if (!db) return null;
           const inFlight = await getInFlightVersion(supabase, db.id);
-          return inFlight ? [m.feature_code, { version_label: inFlight.version_label }] as const : null;
+          return inFlight
+            ? ([m.feature_code, { version_label: inFlight.version_label }] as const)
+            : null;
         })
       );
-      const inFlightMap = new Map(inFlightEntries.filter((e): e is readonly [string, { version_label: string }] => e !== null));
-      dedupResult.matches = dedupResult.matches.map((m) =>
-        enrichMatchWithVersionInfo(m as unknown as { feature_code: string; status: string }, dbFeatureMap, inFlightMap) as typeof m
+      const inFlightMap = new Map(
+        inFlightEntries.filter((e): e is readonly [string, { version_label: string }] => e !== null)
+      );
+      dedupResult.matches = dedupResult.matches.map(
+        (m) =>
+          enrichMatchWithVersionInfo(
+            m as unknown as { feature_code: string; status: string },
+            dbFeatureMap,
+            inFlightMap
+          ) as typeof m
       );
     }
 
@@ -212,7 +231,7 @@ Deno.serve(async (req) => {
 
     const researchMarkdown = extractResearchNotes(
       (convMessages ?? []) as Array<{ role: string; content: string }>,
-      proposal.title,
+      proposal.title
     );
 
     // Create feature
@@ -223,7 +242,8 @@ Deno.serve(async (req) => {
         title: proposal.title,
         description: proposal.description,
         acceptance_criteria: proposal.acceptance_criteria,
-        priority, category,
+        priority,
+        category,
         status: 'proposed',
         feature_type: 'functional_requirement',
         spec_section: specSection,
@@ -241,12 +261,22 @@ Deno.serve(async (req) => {
 
     // Store SpecKit artifacts
     const now = new Date().toISOString();
-    const { error: artifactErr } = await supabase
-      .from('feature_spec_artifacts')
-      .insert([
-        { feature_id: feature.id, artifact_type: 'spec', file_name: 'spec.md', content: specMarkdown, synced_at: now },
-        { feature_id: feature.id, artifact_type: 'research', file_name: 'research.md', content: researchMarkdown, synced_at: now },
-      ]);
+    const { error: artifactErr } = await supabase.from('feature_spec_artifacts').insert([
+      {
+        feature_id: feature.id,
+        artifact_type: 'spec',
+        file_name: 'spec.md',
+        content: specMarkdown,
+        synced_at: now,
+      },
+      {
+        feature_id: feature.id,
+        artifact_type: 'research',
+        file_name: 'research.md',
+        content: researchMarkdown,
+        synced_at: now,
+      },
+    ]);
     if (artifactErr) console.error('Failed to save SpecKit artifacts:', artifactErr);
 
     // Generate and insert test cases
@@ -267,15 +297,18 @@ Deno.serve(async (req) => {
     // FR-140: Attach prototype
     const prototypeAttachment = await attachPrototype(supabase, conversation_id, feature.id);
 
-    return jsonResponse({
-      data: {
-        feature,
-        dedup_check: dedupResult,
-        speckit_spec: specMarkdown,
-        speckit_research: researchMarkdown,
-        prototype_attachment: prototypeAttachment,
+    return jsonResponse(
+      {
+        data: {
+          feature,
+          dedup_check: dedupResult,
+          speckit_spec: specMarkdown,
+          speckit_research: researchMarkdown,
+          prototype_attachment: prototypeAttachment,
+        },
       },
-    }, 201);
+      201
+    );
   } catch (error) {
     console.error('devpilot-submit-proposal error:', error);
     return errorResponse('INTERNAL_ERROR', 'An unexpected error occurred', 500);

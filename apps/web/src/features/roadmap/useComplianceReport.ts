@@ -32,9 +32,7 @@ export function useComplianceReport({
 }: UseComplianceReportOptions): UseComplianceReportResult {
   const queryClient = useQueryClient();
 
-  const filesWithCode = taskItems.filter(
-    (t) => t.generated_code && t.file_path,
-  );
+  const filesWithCode = taskItems.filter((t) => t.generated_code && t.file_path);
   const hasFiles = filesWithCode.length > 0;
 
   const complianceQuery = useQuery({

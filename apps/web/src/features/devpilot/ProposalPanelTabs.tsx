@@ -17,7 +17,12 @@ interface ProposalPanelTabsProps {
   onMove: (from: number, to: number) => void;
 }
 
-export function ProposalPanelTabs({ forms, activeIndex, onSelect, onMove }: ProposalPanelTabsProps) {
+export function ProposalPanelTabs({
+  forms,
+  activeIndex,
+  onSelect,
+  onMove,
+}: ProposalPanelTabsProps) {
   return (
     <div className="flex border-b px-2 pt-2 gap-1 overflow-x-auto items-end">
       {forms.map((f, i) => (

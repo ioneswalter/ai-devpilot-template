@@ -28,7 +28,7 @@ export async function seedTestData(
   supabase: SupabaseClient,
   pipelineId: string,
   _featureId: string,
-  specContext: string,
+  specContext: string
 ): Promise<SeedDataResult> {
   const start = Date.now();
   if (!specContext || specContext.length < 20) {
@@ -39,16 +39,22 @@ export async function seedTestData(
   try {
     const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
     if (!apiKey) {
-      return { status: 'skipped', duration_ms: Date.now() - start, errors: ['ANTHROPIC_API_KEY not set'], records: 0 };
+      return {
+        status: 'skipped',
+        duration_ms: Date.now() - start,
+        errors: ['ANTHROPIC_API_KEY not set'],
+        records: 0,
+      };
     }
 
     const anthropic = new Anthropic({ apiKey });
     const msg = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 2048,
-      messages: [{
-        role: 'user',
-        content: `Given this feature context, generate realistic test data as a series of SQL INSERT statements that would help test the feature. Only generate INSERTs for tables that likely exist in a Supabase PostgreSQL database for a gig platform (service providers, customers, jobs, etc). Each INSERT must be idempotent (use ON CONFLICT DO NOTHING where possible). Return ONLY valid SQL, no markdown fences or explanation.
+      messages: [
+        {
+          role: 'user',
+          content: `Given this feature context, generate realistic test data as a series of SQL INSERT statements that would help test the feature. Only generate INSERTs for tables that likely exist in a Supabase PostgreSQL database for a gig platform (service providers, customers, jobs, etc). Each INSERT must be idempotent (use ON CONFLICT DO NOTHING where possible). Return ONLY valid SQL, no markdown fences or explanation.
 
 Feature context:
 ${specContext}
@@ -58,18 +64,27 @@ Requirements:
 - Use UUIDs for IDs (use gen_random_uuid())
 - Include realistic data (names, descriptions, amounts)
 - Target tables: product_features, test_cases, or domain tables mentioned in context
-- Each statement on its own line, ending with semicolon`
-      }],
+- Each statement on its own line, ending with semicolon`,
+        },
+      ],
     });
 
     logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
-      operationType: 'test_readiness', inputTokens: msg.usage?.input_tokens ?? 0,
+      featureId: 'pipeline',
+      adminId: 'system',
+      modelId: 'claude-sonnet-4-6',
+      operationType: 'test_readiness',
+      inputTokens: msg.usage?.input_tokens ?? 0,
       outputTokens: msg.usage?.output_tokens ?? 0,
     });
     const sqlText = (msg.content[0] as { text: string }).text.trim();
     if (!sqlText || sqlText.length < 10) {
-      return { status: 'skipped', duration_ms: Date.now() - start, errors: ['AI returned empty SQL'], records: 0 };
+      return {
+        status: 'skipped',
+        duration_ms: Date.now() - start,
+        errors: ['AI returned empty SQL'],
+        records: 0,
+      };
     }
 
     // Execute via npm:pg
@@ -77,7 +92,10 @@ Requirements:
     const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
     await client.connect();
 
-    const statements = sqlText.split(';').map((s: string) => s.trim()).filter((s: string) => s.length > 5);
+    const statements = sqlText
+      .split(';')
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 5);
     let inserted = 0;
     const errors: string[] = [];
 
@@ -92,10 +110,15 @@ Requirements:
     }
 
     await client.end();
-    await appendLog(supabase, pipelineId, 'info', `Seed data: ${inserted}/${statements.length} records inserted`);
+    await appendLog(
+      supabase,
+      pipelineId,
+      'info',
+      `Seed data: ${inserted}/${statements.length} records inserted`
+    );
 
     return {
-      status: errors.length === 0 ? 'success' : (inserted > 0 ? 'success' : 'failed'),
+      status: errors.length === 0 ? 'success' : inserted > 0 ? 'success' : 'failed',
       duration_ms: Date.now() - start,
       errors,
       records: inserted,

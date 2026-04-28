@@ -29,7 +29,7 @@ export async function handleStatus(req: Request, ctx: AuthContext): Promise<Resp
   }
 
   // Get the latest/active pipeline
-  const active = pipelines?.find(p => p.status === 'running') ?? pipelines?.[0] ?? null;
+  const active = pipelines?.find((p) => p.status === 'running') ?? pipelines?.[0] ?? null;
 
   // If active pipeline, also fetch the current task info
   let currentTask = null;

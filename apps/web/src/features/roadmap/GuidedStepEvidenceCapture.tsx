@@ -60,7 +60,9 @@ export function RemotePageCapture({
                 <span className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin" />
                 Loading...
               </span>
-            ) : 'Load from Extension'}
+            ) : (
+              'Load from Extension'
+            )}
           </button>
         )}
         <button
@@ -77,9 +79,7 @@ export function RemotePageCapture({
           className="hidden"
         />
       </div>
-      {captureError && (
-        <p className="mt-1 text-[10px] text-red-600">{captureError}</p>
-      )}
+      {captureError && <p className="mt-1 text-[10px] text-red-600">{captureError}</p>}
       {lastCaptureSuccess && !capturing && (
         <div className="mt-1 flex items-center gap-2">
           <button
@@ -89,7 +89,10 @@ export function RemotePageCapture({
             {showPreview ? 'Hide preview' : 'Evidence loaded — click to preview'}
           </button>
           <button
-            onClick={() => { setUploadedPreview(null); onClearEvidence?.(); }}
+            onClick={() => {
+              setUploadedPreview(null);
+              onClearEvidence?.();
+            }}
             className="text-[10px] text-red-500 hover:text-red-700"
           >
             Remove
@@ -99,17 +102,28 @@ export function RemotePageCapture({
       {showPreview && lastCapture && (
         <div className="mt-2 space-y-1.5 border border-green-200 rounded p-2 bg-green-50/50">
           {lastCapture.screenshot && (
-            <img src={lastCapture.screenshot} alt="Captured screenshot" className="w-full rounded border border-gray-200" />
+            <img
+              src={lastCapture.screenshot}
+              alt="Captured screenshot"
+              className="w-full rounded border border-gray-200"
+            />
           )}
         </div>
       )}
       {uploadedPreview && !lastCaptureSuccess && (
         <div className="mt-2 border border-blue-200 rounded p-2 bg-blue-50/50">
-          <img src={uploadedPreview} alt="Uploaded screenshot" className="w-full rounded border border-gray-200" />
+          <img
+            src={uploadedPreview}
+            alt="Uploaded screenshot"
+            className="w-full rounded border border-gray-200"
+          />
           <div className="mt-1 flex items-center justify-between">
             <p className="text-[10px] text-blue-600">Screenshot uploaded</p>
             <button
-              onClick={() => { setUploadedPreview(null); onClearEvidence?.(); }}
+              onClick={() => {
+                setUploadedPreview(null);
+                onClearEvidence?.();
+              }}
               className="text-[10px] text-red-500 hover:text-red-700"
             >
               Remove
@@ -154,11 +168,11 @@ export function SamePageCapture({
             <span className="w-3 h-3 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
             Capturing...
           </span>
-        ) : 'Capture Evidence'}
+        ) : (
+          'Capture Evidence'
+        )}
       </button>
-      {captureError && (
-        <p className="mt-1 text-[10px] text-red-600">{captureError}</p>
-      )}
+      {captureError && <p className="mt-1 text-[10px] text-red-600">{captureError}</p>}
       {lastCaptureSuccess && !capturing && (
         <button
           onClick={() => setShowPreview((v) => !v)}

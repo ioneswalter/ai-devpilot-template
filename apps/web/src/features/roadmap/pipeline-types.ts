@@ -4,7 +4,12 @@
  */
 
 /** Visual status of a single pipeline stage */
-export type StageStatusValue = 'not_started' | 'in_progress' | 'completed' | 'warning' | 'escalated';
+export type StageStatusValue =
+  | 'not_started'
+  | 'in_progress'
+  | 'completed'
+  | 'warning'
+  | 'escalated';
 
 /** Status object for one pipeline stage */
 export interface StageStatus {
@@ -52,4 +57,12 @@ export const STAGE_CONFIG: Record<PipelineStageName, { label: string; icon: stri
 };
 
 /** Feature statuses that show the pipeline bar (in_acceptance added FR-130 v2.0 / J10) */
-export const PIPELINE_VISIBLE_STATUSES = ['proposed', 'reviewed', 'specified', 'in_development', 'in_testing', 'in_acceptance', 'released'] as const;
+export const PIPELINE_VISIBLE_STATUSES = [
+  'proposed',
+  'reviewed',
+  'specified',
+  'in_development',
+  'in_testing',
+  'in_acceptance',
+  'released',
+] as const;

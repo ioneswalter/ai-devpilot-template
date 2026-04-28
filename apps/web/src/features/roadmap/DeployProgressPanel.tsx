@@ -47,10 +47,12 @@ function isStaleHeartbeat(lastHeartbeat: string | null): boolean {
 }
 
 function SuccessSummary({ results }: { results: DeployResults }) {
-  const migCount = results.migrations.filter(s => s.status === 'success').length;
-  const fnCount = results.functions.filter(s => s.status === 'success').length;
-  const duration = results.started_at && results.completed_at
-    ? formatTotalDuration(results.started_at, results.completed_at) : 'N/A';
+  const migCount = results.migrations.filter((s) => s.status === 'success').length;
+  const fnCount = results.functions.filter((s) => s.status === 'success').length;
+  const duration =
+    results.started_at && results.completed_at
+      ? formatTotalDuration(results.started_at, results.completed_at)
+      : 'N/A';
 
   return (
     <div className="bg-emerald-50 border border-emerald-200 rounded p-2 space-y-1">
@@ -68,7 +70,17 @@ function SuccessSummary({ results }: { results: DeployResults }) {
 }
 
 function ReleaseSection({ gating }: { gating: ReleaseGating }) {
-  const { featureStatus, totalTests, passedTests, failedTests, hasDeployResults, onRelease, isReleasing, releaseError, featureUpdatedAt } = gating;
+  const {
+    featureStatus,
+    totalTests,
+    passedTests,
+    failedTests,
+    hasDeployResults,
+    onRelease,
+    isReleasing,
+    releaseError,
+    featureUpdatedAt,
+  } = gating;
 
   // Already released — show timestamp
   if (featureStatus === 'released') {
@@ -78,7 +90,15 @@ function ReleaseSection({ gating }: { gating: ReleaseGating }) {
         <div>
           <p className="text-xs font-semibold text-green-800">Released</p>
           {featureUpdatedAt && (
-            <p className="text-xs text-green-600">{new Date(featureUpdatedAt).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+            <p className="text-xs text-green-600">
+              {new Date(featureUpdatedAt).toLocaleDateString('en-AU', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </p>
           )}
         </div>
       </div>
@@ -102,13 +122,19 @@ function ReleaseSection({ gating }: { gating: ReleaseGating }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {noTests && (
-            <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">No tests run</span>
+            <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">
+              No tests run
+            </span>
           )}
           {failedTests > 0 && (
-            <span className="text-xs text-red-600">{failedTests} test(s) failing — fix before releasing</span>
+            <span className="text-xs text-red-600">
+              {failedTests} test(s) failing — fix before releasing
+            </span>
           )}
           {allTestsPass && (
-            <span className="text-xs text-green-600">{passedTests}/{totalTests} tests passing</span>
+            <span className="text-xs text-green-600">
+              {passedTests}/{totalTests} tests passing
+            </span>
           )}
         </div>
         <button
@@ -142,20 +168,41 @@ export function DeployProgressPanel({
   releaseGating,
 }: DeployProgressPanelProps) {
   const migrations: DeployStepResult[] = deployResults?.migrations
-    ? (Array.isArray(deployResults.migrations) ? deployResults.migrations : []) : [];
+    ? Array.isArray(deployResults.migrations)
+      ? deployResults.migrations
+      : []
+    : [];
   const functions: DeployStepResult[] = deployResults?.functions
-    ? (Array.isArray(deployResults.functions) ? deployResults.functions : []) : [];
+    ? Array.isArray(deployResults.functions)
+      ? deployResults.functions
+      : []
+    : [];
   const allSteps = [...migrations, ...functions];
   const isComplete = deployResults?.overall_status === 'success';
-  const isFailed = deployResults?.overall_status === 'failed' || deployResults?.overall_status === 'partial';
+  const isFailed =
+    deployResults?.overall_status === 'failed' || deployResults?.overall_status === 'partial';
   const isEscalated = currentStage === 'escalated';
   const stale = isDeploying && isStaleHeartbeat(lastHeartbeat);
 
   // Active escalations (open or acknowledged)
-  const activeEscalations = escalations.filter(e => e.status === 'open' || e.status === 'acknowledged');
+  const activeEscalations = escalations.filter(
+    (e) => e.status === 'open' || e.status === 'acknowledged'
+  );
 
-  const borderColor = isEscalated ? 'border-amber-300' : isComplete ? 'border-emerald-200' : isFailed ? 'border-red-200' : 'border-indigo-200';
-  const bgColor = isEscalated ? 'bg-amber-50' : isComplete ? 'bg-emerald-50' : isFailed ? 'bg-orange-50' : 'bg-indigo-50';
+  const borderColor = isEscalated
+    ? 'border-amber-300'
+    : isComplete
+      ? 'border-emerald-200'
+      : isFailed
+        ? 'border-red-200'
+        : 'border-indigo-200';
+  const bgColor = isEscalated
+    ? 'bg-amber-50'
+    : isComplete
+      ? 'bg-emerald-50'
+      : isFailed
+        ? 'bg-orange-50'
+        : 'bg-indigo-50';
 
   return (
     <div className={`border rounded-lg p-3 space-y-2 ${bgColor} ${borderColor}`}>
@@ -165,10 +212,26 @@ export function DeployProgressPanel({
           {isDeploying && !stale && (
             <div className="w-4 h-4 border-2 border-emerald-300 border-t-emerald-600 rounded-full animate-spin" />
           )}
-          <h4 className={`text-xs font-semibold uppercase tracking-wider ${
-            isEscalated ? 'text-amber-800' : isComplete ? 'text-emerald-800' : isFailed ? 'text-orange-800' : 'text-indigo-800'
-          }`}>
-            {isEscalated ? 'Deploy \u2014 Escalated' : isDeploying ? 'Deploying' : isComplete ? 'Deployed' : isFailed ? 'Deploy Failed' : 'Deploy'}
+          <h4
+            className={`text-xs font-semibold uppercase tracking-wider ${
+              isEscalated
+                ? 'text-amber-800'
+                : isComplete
+                  ? 'text-emerald-800'
+                  : isFailed
+                    ? 'text-orange-800'
+                    : 'text-indigo-800'
+            }`}
+          >
+            {isEscalated
+              ? 'Deploy \u2014 Escalated'
+              : isDeploying
+                ? 'Deploying'
+                : isComplete
+                  ? 'Deployed'
+                  : isFailed
+                    ? 'Deploy Failed'
+                    : 'Deploy'}
           </h4>
         </div>
         {isFailed && !isEscalated && (
@@ -190,7 +253,7 @@ export function DeployProgressPanel({
       )}
 
       {/* Escalation banners */}
-      {activeEscalations.map(esc => (
+      {activeEscalations.map((esc) => (
         <EscalationBanner
           key={esc.id}
           escalation={esc}
@@ -204,14 +267,20 @@ export function DeployProgressPanel({
       {/* Step counts */}
       {allSteps.length > 0 && (
         <div className="flex items-center gap-3 text-xs text-gray-600">
-          {allSteps.filter(s => s.status === 'success').length > 0 && (
-            <span className="text-green-600">{allSteps.filter(s => s.status === 'success').length} passed</span>
+          {allSteps.filter((s) => s.status === 'success').length > 0 && (
+            <span className="text-green-600">
+              {allSteps.filter((s) => s.status === 'success').length} passed
+            </span>
           )}
-          {allSteps.filter(s => s.status === 'failed').length > 0 && (
-            <span className="text-red-600">{allSteps.filter(s => s.status === 'failed').length} failed</span>
+          {allSteps.filter((s) => s.status === 'failed').length > 0 && (
+            <span className="text-red-600">
+              {allSteps.filter((s) => s.status === 'failed').length} failed
+            </span>
           )}
-          {allSteps.filter(s => s.status === 'running').length > 0 && (
-            <span className="text-blue-600">{allSteps.filter(s => s.status === 'running').length} running</span>
+          {allSteps.filter((s) => s.status === 'running').length > 0 && (
+            <span className="text-blue-600">
+              {allSteps.filter((s) => s.status === 'running').length} running
+            </span>
           )}
         </div>
       )}
@@ -221,7 +290,9 @@ export function DeployProgressPanel({
         <div>
           <h5 className="text-xs font-medium text-gray-500 mb-1">Migrations</h5>
           <div className="divide-y divide-gray-100">
-            {migrations.map((step, i) => <DeployStepRow key={`m-${i}`} step={step} />)}
+            {migrations.map((step, i) => (
+              <DeployStepRow key={`m-${i}`} step={step} />
+            ))}
           </div>
         </div>
       )}
@@ -231,14 +302,18 @@ export function DeployProgressPanel({
         <div>
           <h5 className="text-xs font-medium text-gray-500 mb-1">Edge Functions</h5>
           <div className="divide-y divide-gray-100">
-            {functions.map((step, i) => <DeployStepRow key={`f-${i}`} step={step} />)}
+            {functions.map((step, i) => (
+              <DeployStepRow key={`f-${i}`} step={step} />
+            ))}
           </div>
         </div>
       )}
 
       {/* Deploying with no results yet */}
       {isDeploying && allSteps.length === 0 && !stale && (
-        <p className="text-xs text-emerald-600">Applying migrations and deploying Edge Functions...</p>
+        <p className="text-xs text-emerald-600">
+          Applying migrations and deploying Edge Functions...
+        </p>
       )}
 
       {/* No artifacts */}

@@ -29,19 +29,15 @@ function LoadingSkeleton() {
 function ErrorMessage({ message }: { message: string }) {
   return (
     <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-      <span className="text-red-500" aria-hidden="true">{'\u26A0'}</span>
-      <p className="text-xs text-red-700">
-        Compliance check failed: {message}
-      </p>
+      <span className="text-red-500" aria-hidden="true">
+        {'\u26A0'}
+      </span>
+      <p className="text-xs text-red-700">Compliance check failed: {message}</p>
     </div>
   );
 }
 
-export function CompliancePanel({
-  featureId,
-  taskItems,
-  onBlockedChange,
-}: CompliancePanelProps) {
+export function CompliancePanel({ featureId, taskItems, onBlockedChange }: CompliancePanelProps) {
   const { report, isLoading, isError, error, refetch } = useComplianceReport({
     featureId,
     taskItems,
@@ -96,9 +92,7 @@ export function CompliancePanel({
 
         {isLoading && <LoadingSkeleton />}
 
-        {isError && error && (
-          <ErrorMessage message={error.message} />
-        )}
+        {isError && error && <ErrorMessage message={error.message} />}
 
         {!isLoading && (
           <>
@@ -141,9 +135,7 @@ function SummaryStats({ report }: { report: ReturnType<typeof useComplianceRepor
       <span className="text-gray-500">
         {totalFiles} file{totalFiles !== 1 ? 's' : ''} scanned
       </span>
-      <span className="text-green-600">
-        {compliantFiles} compliant
-      </span>
+      <span className="text-green-600">{compliantFiles} compliant</span>
       {totalViolations > 0 && (
         <span className="text-red-600 font-medium">
           {totalViolations} violation{totalViolations !== 1 ? 's' : ''}

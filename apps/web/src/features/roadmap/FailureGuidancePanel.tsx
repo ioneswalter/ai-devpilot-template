@@ -50,15 +50,13 @@ export function FailureGuidancePanel({ featureId, featureCode }: FailureGuidance
   if (error) {
     return (
       <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-        <p className="text-xs text-red-700">
-          Failed to load failure guidance: {error.message}
-        </p>
+        <p className="text-xs text-red-700">Failed to load failure guidance: {error.message}</p>
       </div>
     );
   }
 
   const activeGuidance = guidance.filter(
-    (g) => g.status !== 'resolved' && g.status !== 'dismissed',
+    (g) => g.status !== 'resolved' && g.status !== 'dismissed'
   );
   if (activeGuidance.length === 0) return null;
 

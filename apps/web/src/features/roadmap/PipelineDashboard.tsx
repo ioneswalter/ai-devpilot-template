@@ -17,8 +17,10 @@ export function PipelineDashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pipeline-queue-status'] }),
   });
 
-  if (isLoading) return <div className="p-4 text-sm text-gray-500">Loading pipeline dashboard...</div>;
-  if (error || !data) return <div className="p-4 text-sm text-red-500">Failed to load pipeline status</div>;
+  if (isLoading)
+    return <div className="p-4 text-sm text-gray-500">Loading pipeline dashboard...</div>;
+  if (error || !data)
+    return <div className="p-4 text-sm text-red-500">Failed to load pipeline status</div>;
 
   const { running, queued, recent_completed, max_concurrent, deploy_lock } = data;
 
@@ -37,7 +39,11 @@ export function PipelineDashboard() {
       {running.length > 0 && (
         <Section title="Running" count={running.length} color="green">
           {running.map((p) => (
-            <PipelineQueueCard key={p.queue_entry_id} entry={p} onCancel={(id) => cancelMutation.mutate(id)} />
+            <PipelineQueueCard
+              key={p.queue_entry_id}
+              entry={p}
+              onCancel={(id) => cancelMutation.mutate(id)}
+            />
           ))}
         </Section>
       )}
@@ -45,7 +51,11 @@ export function PipelineDashboard() {
       {queued.length > 0 && (
         <Section title="Queued" count={queued.length} color="amber">
           {queued.map((p) => (
-            <PipelineQueueCard key={p.queue_entry_id} entry={p} onCancel={(id) => cancelMutation.mutate(id)} />
+            <PipelineQueueCard
+              key={p.queue_entry_id}
+              entry={p}
+              onCancel={(id) => cancelMutation.mutate(id)}
+            />
           ))}
         </Section>
       )}
@@ -68,8 +78,22 @@ export function PipelineDashboard() {
   );
 }
 
-function Section({ title, count, color, children }: { title: string; count: number; color: string; children: React.ReactNode }) {
-  const colors: Record<string, string> = { green: 'bg-green-50 border-green-200', amber: 'bg-amber-50 border-amber-200', gray: 'bg-gray-50 border-gray-200' };
+function Section({
+  title,
+  count,
+  color,
+  children,
+}: {
+  title: string;
+  count: number;
+  color: string;
+  children: React.ReactNode;
+}) {
+  const colors: Record<string, string> = {
+    green: 'bg-green-50 border-green-200',
+    amber: 'bg-amber-50 border-amber-200',
+    gray: 'bg-gray-50 border-gray-200',
+  };
   return (
     <div className={`rounded-lg border p-3 ${colors[color] ?? colors.gray}`}>
       <div className="mb-2 flex items-center gap-2 text-xs font-medium text-gray-600">

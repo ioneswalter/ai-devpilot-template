@@ -8,22 +8,34 @@ import type { DeployResults, DeployStepResult } from '@/lib/api/admin-api';
 
 function StepRow({ step }: { step: DeployStepResult }) {
   const [expanded, setExpanded] = useState(false);
-  const icon = step.status === 'success' ? '\u2713' : step.status === 'skipped' ? '\u2014' : '\u2717';
-  const color = step.status === 'success' ? 'text-green-700 bg-green-100' : step.status === 'skipped' ? 'text-gray-500 bg-gray-100' : 'text-red-700 bg-red-100';
+  const icon =
+    step.status === 'success' ? '\u2713' : step.status === 'skipped' ? '\u2014' : '\u2717';
+  const color =
+    step.status === 'success'
+      ? 'text-green-700 bg-green-100'
+      : step.status === 'skipped'
+        ? 'text-gray-500 bg-gray-100'
+        : 'text-red-700 bg-red-100';
   const label = step.action === 'execute_sql' ? 'Migration' : 'Function';
 
   return (
     <div className="py-1.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${color}`}>{icon}</span>
+          <span
+            className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${color}`}
+          >
+            {icon}
+          </span>
           <span className="text-xs text-gray-500">{label}</span>
-          <span className="text-xs font-medium text-gray-800 truncate max-w-[200px]">{step.artifact}</span>
+          <span className="text-xs font-medium text-gray-800 truncate max-w-[200px]">
+            {step.artifact}
+          </span>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-400">
           {step.duration_ms > 0 && <span>{(step.duration_ms / 1000).toFixed(1)}s</span>}
           {step.error && (
-            <button onClick={() => setExpanded(v => !v)} className="text-red-500 hover:underline">
+            <button onClick={() => setExpanded((v) => !v)} className="text-red-500 hover:underline">
               {expanded ? 'hide' : 'error'}
             </button>
           )}
@@ -44,19 +56,32 @@ interface DeployStatusPanelProps {
   isRedeploying: boolean;
 }
 
-export function DeployStatusPanel({ deployResults, onRedeploy, isRedeploying }: DeployStatusPanelProps) {
+export function DeployStatusPanel({
+  deployResults,
+  onRedeploy,
+  isRedeploying,
+}: DeployStatusPanelProps) {
   const migrations = Array.isArray(deployResults.migrations) ? deployResults.migrations : [];
   const functions = Array.isArray(deployResults.functions) ? deployResults.functions : [];
   const allSteps = [...migrations, ...functions];
-  const successCount = allSteps.filter(s => s.status === 'success').length;
-  const failedCount = allSteps.filter(s => s.status === 'failed').length;
+  const successCount = allSteps.filter((s) => s.status === 'success').length;
+  const failedCount = allSteps.filter((s) => s.status === 'failed').length;
   const allSuccess = deployResults.overall_status === 'success';
 
   return (
-    <div className={`border rounded-lg p-3 space-y-2 ${allSuccess ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}>
+    <div
+      className={`border rounded-lg p-3 space-y-2 ${allSuccess ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'}`}
+    >
       <div className="flex items-center justify-between">
-        <h4 className={`text-xs font-semibold uppercase tracking-wider ${allSuccess ? 'text-emerald-800' : 'text-orange-800'}`}>
-          Deployment {allSuccess ? 'Complete' : deployResults.overall_status === 'partial' ? 'Partial' : 'Failed'}
+        <h4
+          className={`text-xs font-semibold uppercase tracking-wider ${allSuccess ? 'text-emerald-800' : 'text-orange-800'}`}
+        >
+          Deployment{' '}
+          {allSuccess
+            ? 'Complete'
+            : deployResults.overall_status === 'partial'
+              ? 'Partial'
+              : 'Failed'}
         </h4>
         {!allSuccess && (
           <button
@@ -76,7 +101,9 @@ export function DeployStatusPanel({ deployResults, onRedeploy, isRedeploying }: 
 
       {allSteps.length > 0 && (
         <div className="divide-y divide-gray-100">
-          {allSteps.map((step, i) => <StepRow key={i} step={step} />)}
+          {allSteps.map((step, i) => (
+            <StepRow key={i} step={step} />
+          ))}
         </div>
       )}
 

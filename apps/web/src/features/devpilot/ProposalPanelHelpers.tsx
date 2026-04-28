@@ -18,7 +18,9 @@ export function useAvailableSections() {
       .not('spec_section', 'is', null)
       .then(({ data }) => {
         if (data) {
-          const unique = [...new Set(data.map((r: { spec_section: string }) => r.spec_section))].sort();
+          const unique = [
+            ...new Set(data.map((r: { spec_section: string }) => r.spec_section)),
+          ].sort();
           setSections(unique);
         }
       });

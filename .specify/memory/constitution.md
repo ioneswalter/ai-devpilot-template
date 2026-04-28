@@ -395,6 +395,7 @@ AI-generated code has consistently produced integration defects when tasks are e
 alternatives:
 
 ### Frontend
+
 - **Language**: TypeScript 5.0+ (strict mode)
 - **Framework**: React 18+
 - **Router**: TanStack Router (type-safe routing)
@@ -406,6 +407,7 @@ alternatives:
 - **Testing**: Vitest + React Testing Library + jest-axe
 
 ### Backend
+
 - **Platform**: Supabase (managed backend)
 - **Runtime**: Supabase Edge Functions (Deno runtime, TypeScript)
 - **Database**: PostgreSQL 14+ (Supabase-managed)
@@ -415,6 +417,7 @@ alternatives:
 - **Payments**: Stripe API + Stripe Connect (payouts)
 
 ### Shared/Tooling
+
 - **Monorepo**: Turborepo or pnpm workspaces
 - **Package Manager**: pnpm (fast, efficient)
 - **Linting**: ESLint (TypeScript rules, React hooks rules)
@@ -423,6 +426,7 @@ alternatives:
 - **Environment**: dotenv for local, Supabase secrets for production
 
 ### Deployment & Hosting
+
 - **Platform**: DigitalOcean App Platform (NOT Vercel, Netlify, or any other host)
 - **Frontend**: Deployed as a Static Site (Vite build output)
 - **Region**: SYD1 (Sydney, Australia)
@@ -590,10 +594,10 @@ OwnYourGig operates as a **member-governed platform** - owned and governed by it
 
 ### Membership Tiers
 
-| Tier | Investment | Transaction Fee | Benefits |
-|------|------------|-----------------|----------|
-| **Member** | $1,500 (first 300 at $1,000) | 10% | AI Coach, Voting Rights, Certification Path, Equity |
-| **Associate** | $0 | 20% | Marketplace access, Job matching, Bid & provide services |
+| Tier          | Investment                   | Transaction Fee | Benefits                                                 |
+| ------------- | ---------------------------- | --------------- | -------------------------------------------------------- |
+| **Member**    | $1,500 (first 300 at $1,000) | 10%             | AI Coach, Voting Rights, Certification Path, Equity      |
+| **Associate** | $0                           | 20%             | Marketplace access, Job matching, Bid & provide services |
 
 ### Fee Structure
 

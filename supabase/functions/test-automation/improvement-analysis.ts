@@ -15,15 +15,19 @@ const AnalyzeSchema = z.object({
   test_run_id: z.string(),
   feature_id: z.string(),
   execution_data: z.object({
-    api_timings: z.array(z.object({
-      test_case_id: z.string(),
-      endpoint: z.string(),
-      duration_ms: z.number(),
-    })),
-    e2e_timings: z.array(z.object({
-      test_case_id: z.string(),
-      step_timings: z.array(z.object({ step: z.number(), duration_ms: z.number() })),
-    })),
+    api_timings: z.array(
+      z.object({
+        test_case_id: z.string(),
+        endpoint: z.string(),
+        duration_ms: z.number(),
+      })
+    ),
+    e2e_timings: z.array(
+      z.object({
+        test_case_id: z.string(),
+        step_timings: z.array(z.object({ step: z.number(), duration_ms: z.number() })),
+      })
+    ),
     criteria_coverage: z.object({
       total_criteria: z.number(),
       tested_criteria: z.number(),
@@ -39,7 +43,8 @@ const corsHeaders = {
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
-    status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
@@ -50,7 +55,7 @@ function errorResponse(code: string, message: string, status: number): Response 
 export async function handleAnalyzeImprovements(
   supabase: SupabaseClient,
   body: unknown,
-  _userId: string,
+  _userId: string
 ): Promise<Response> {
   const validation = AnalyzeSchema.safeParse(body);
   if (!validation.success) return errorResponse('VALIDATION_ERROR', validation.error.message, 400);
@@ -59,13 +64,15 @@ export async function handleAnalyzeImprovements(
   const anthropic = new Anthropic();
 
   // Build analysis context
-  const slowApis = execution_data.api_timings.filter(t => t.duration_ms > 500);
-  const coverageGap = execution_data.criteria_coverage.total_criteria - execution_data.criteria_coverage.tested_criteria;
+  const slowApis = execution_data.api_timings.filter((t) => t.duration_ms > 500);
+  const coverageGap =
+    execution_data.criteria_coverage.total_criteria -
+    execution_data.criteria_coverage.tested_criteria;
   const untestedList = execution_data.criteria_coverage.untested_criteria.slice(0, 5).join(', ');
 
   const prompt = `Analyze these passing test results and suggest improvements.
 
-SLOW API ENDPOINTS (>500ms): ${slowApis.length > 0 ? slowApis.map(t => `${t.endpoint}: ${t.duration_ms}ms`).join(', ') : 'None'}
+SLOW API ENDPOINTS (>500ms): ${slowApis.length > 0 ? slowApis.map((t) => `${t.endpoint}: ${t.duration_ms}ms`).join(', ') : 'None'}
 COVERAGE GAPS: ${coverageGap} of ${execution_data.criteria_coverage.total_criteria} criteria untested${untestedList ? `: ${untestedList}` : ''}
 E2E TEST COUNT: ${execution_data.e2e_timings.length}
 
@@ -84,12 +91,15 @@ Only include genuine improvements. If everything looks good, return an empty arr
 
   try {
     const response = await anthropic.messages.create({
-      model: AI_MODEL, max_tokens: 1000,
+      model: AI_MODEL,
+      max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }],
     });
 
     logAIUsageFromEnv({
-      featureId: 'test-automation', adminId: 'system', modelId: AI_MODEL,
+      featureId: 'test-automation',
+      adminId: 'system',
+      modelId: AI_MODEL,
       operationType: 'improvement_analysis',
       inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
@@ -97,23 +107,29 @@ Only include genuine improvements. If everything looks good, return an empty arr
 
     const text = response.content
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text).join('');
+      .map((b) => b.text)
+      .join('');
     const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) return jsonResponse({ data: { recommendations: [] } }, 201);
 
     const recs = JSON.parse(jsonMatch[1] || jsonMatch[0]);
     const stored: Array<Record<string, unknown>> = [];
 
-    for (const rec of (Array.isArray(recs) ? recs : [])) {
-      const { data } = await supabase.from('improvement_recommendations').insert({
-        feature_id, test_run_id,
-        category: rec.category || 'coverage',
-        observation: rec.observation || '',
-        why_it_matters: rec.why_it_matters || '',
-        suggested_action: rec.suggested_action || '',
-        priority: rec.priority || 'medium',
-        status: 'new',
-      }).select('*').single();
+    for (const rec of Array.isArray(recs) ? recs : []) {
+      const { data } = await supabase
+        .from('improvement_recommendations')
+        .insert({
+          feature_id,
+          test_run_id,
+          category: rec.category || 'coverage',
+          observation: rec.observation || '',
+          why_it_matters: rec.why_it_matters || '',
+          suggested_action: rec.suggested_action || '',
+          priority: rec.priority || 'medium',
+          status: 'new',
+        })
+        .select('*')
+        .single();
       if (data) stored.push(data);
     }
 
@@ -127,10 +143,12 @@ Only include genuine improvements. If everything looks good, return an empty arr
 export async function handleGetRecommendations(
   supabase: SupabaseClient,
   featureId: string,
-  status?: string,
+  status?: string
 ): Promise<Response> {
-  let query = supabase.from('improvement_recommendations')
-    .select('*').eq('feature_id', featureId)
+  let query = supabase
+    .from('improvement_recommendations')
+    .select('*')
+    .eq('feature_id', featureId)
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data } = await query;
@@ -140,15 +158,19 @@ export async function handleGetRecommendations(
 /** PATCH handler: update recommendation status */
 export async function handleUpdateRecommendation(
   supabase: SupabaseClient,
-  body: unknown,
+  body: unknown
 ): Promise<Response> {
   const { recommendation_id, status } = body as { recommendation_id: string; status: string };
-  if (!recommendation_id || !status) return errorResponse('VALIDATION_ERROR', 'recommendation_id and status required', 400);
+  if (!recommendation_id || !status)
+    return errorResponse('VALIDATION_ERROR', 'recommendation_id and status required', 400);
 
   const resolved_at = status === 'accepted' ? new Date().toISOString() : null;
-  const { data } = await supabase.from('improvement_recommendations')
-    .update({ status, resolved_at }).eq('id', recommendation_id)
-    .select('id, status, resolved_at').single();
+  const { data } = await supabase
+    .from('improvement_recommendations')
+    .update({ status, resolved_at })
+    .eq('id', recommendation_id)
+    .select('id, status, resolved_at')
+    .single();
 
   if (!data) return errorResponse('NOT_FOUND', 'Recommendation not found', 404);
   return jsonResponse({ data });

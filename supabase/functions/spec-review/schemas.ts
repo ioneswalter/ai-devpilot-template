@@ -11,16 +11,24 @@ export const startReviewSchema = z.object({
 export const updateReviewSchema = z.object({
   review_id: z.string().uuid('Invalid review_id format'),
   version: z.number().int().positive('Version must be a positive integer'),
-  updates: z.array(z.object({
-    item_id: z.string().uuid('Invalid item_id format'),
-    decision: z.enum(['accepted', 'rejected', 'modified']).optional(),
-    content: z.string().min(1, 'Content cannot be empty').optional(),
-    comment: z.string().min(1, 'Comment cannot be empty').optional(),
-  })).optional(),
-  new_items: z.array(z.object({
-    item_type: z.enum(['criterion', 'test_case', 'edge_case']),
-    content: z.string().min(1, 'Content cannot be empty'),
-  })).optional(),
+  updates: z
+    .array(
+      z.object({
+        item_id: z.string().uuid('Invalid item_id format'),
+        decision: z.enum(['accepted', 'rejected', 'modified']).optional(),
+        content: z.string().min(1, 'Content cannot be empty').optional(),
+        comment: z.string().min(1, 'Comment cannot be empty').optional(),
+      })
+    )
+    .optional(),
+  new_items: z
+    .array(
+      z.object({
+        item_type: z.enum(['criterion', 'test_case', 'edge_case']),
+        content: z.string().min(1, 'Content cannot be empty'),
+      })
+    )
+    .optional(),
 });
 
 export const approveSchema = z.object({

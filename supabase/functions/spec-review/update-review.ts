@@ -16,9 +16,16 @@ interface UpdateReviewParams {
   supabase: SupabaseClient;
 }
 
-export async function handleUpdateReview(
-  { input, userId, userName, supabase }: UpdateReviewParams
-): Promise<{ data?: unknown; error?: { code: string; message: string }; status: number }> {
+export async function handleUpdateReview({
+  input,
+  userId,
+  userName,
+  supabase,
+}: UpdateReviewParams): Promise<{
+  data?: unknown;
+  error?: { code: string; message: string };
+  status: number;
+}> {
   const { review_id, version, updates, new_items } = input;
 
   // 1. Fetch review and verify
@@ -154,7 +161,10 @@ export async function handleUpdateReview(
 
   if (versionErr) {
     console.error('Failed to increment review version:', versionErr);
-    return { error: { code: 'DATABASE_ERROR', message: 'Failed to update review version' }, status: 500 };
+    return {
+      error: { code: 'DATABASE_ERROR', message: 'Failed to update review version' },
+      status: 500,
+    };
   }
 
   return {

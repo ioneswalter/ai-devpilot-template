@@ -59,7 +59,7 @@ export async function enrichFeature(
   title: string,
   description: string,
   criteria: string[],
-  context?: EnrichmentContext,
+  context?: EnrichmentContext
 ): Promise<EnrichmentResult | null> {
   const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
   if (!anthropicApiKey) {
@@ -98,7 +98,11 @@ Generate enrichment suggestions. Validate criteria against constitution principl
       if (attempt > 1) {
         messages.push(
           { role: 'assistant', content: '(previous attempt returned invalid JSON)' },
-          { role: 'user', content: 'Your previous response was not valid JSON. Return ONLY valid JSON with a "suggestions" array. No markdown, no code fences.' },
+          {
+            role: 'user',
+            content:
+              'Your previous response was not valid JSON. Return ONLY valid JSON with a "suggestions" array. No markdown, no code fences.',
+          }
         );
       }
 
@@ -114,11 +118,14 @@ Generate enrichment suggestions. Validate criteria against constitution principl
         ),
       ]);
 
-    logAIUsageFromEnv({
-      featureId: 'spec-review', adminId: 'system', modelId: AI_MODEL,
-      operationType: 'spec_review', inputTokens: response.usage?.input_tokens ?? 0,
-      outputTokens: response.usage?.output_tokens ?? 0,
-    });
+      logAIUsageFromEnv({
+        featureId: 'spec-review',
+        adminId: 'system',
+        modelId: AI_MODEL,
+        operationType: 'spec_review',
+        inputTokens: response.usage?.input_tokens ?? 0,
+        outputTokens: response.usage?.output_tokens ?? 0,
+      });
 
       const textBlock = response.content.find((b: { type: string }) => b.type === 'text');
       if (!textBlock || textBlock.type !== 'text') {
@@ -148,7 +155,11 @@ Generate enrichment suggestions. Validate criteria against constitution principl
 /**
  * Parse the AI JSON response into structured items
  */
-function parseEnrichmentResponse(rawText: string, inputTokens = 0, outputTokens = 0): EnrichmentResult | null {
+function parseEnrichmentResponse(
+  rawText: string,
+  inputTokens = 0,
+  outputTokens = 0
+): EnrichmentResult | null {
   try {
     // Try direct JSON parse first
     let parsed: { suggestions?: EnrichmentItem[] };
@@ -171,10 +182,16 @@ function parseEnrichmentResponse(rawText: string, inputTokens = 0, outputTokens 
 
     const validTypes = ['criterion', 'test_case', 'edge_case', 'description'];
     const items = parsed.suggestions
-      .filter(s => validTypes.includes(s.item_type) && s.content?.trim())
-      .map(s => ({ item_type: s.item_type, content: s.content.trim() }));
+      .filter((s) => validTypes.includes(s.item_type) && s.content?.trim())
+      .map((s) => ({ item_type: s.item_type, content: s.content.trim() }));
 
-    return { items, raw_response: rawText, model: AI_MODEL, input_tokens: inputTokens, output_tokens: outputTokens };
+    return {
+      items,
+      raw_response: rawText,
+      model: AI_MODEL,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+    };
   } catch (error) {
     console.error('Failed to parse AI enrichment response:', error);
     return null;

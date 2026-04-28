@@ -23,7 +23,7 @@ interface LearningParams {
 /** Record an AI learning. Non-blocking — errors are swallowed. */
 export async function recordLearning(
   supabase: SupabaseClient,
-  params: LearningParams,
+  params: LearningParams
 ): Promise<void> {
   try {
     // Look up category ID from slug
@@ -54,7 +54,7 @@ export async function recordLearning(
 export async function fetchLearnings(
   supabase: SupabaseClient,
   categorySlug: string,
-  limit = 10,
+  limit = 10
 ): Promise<string> {
   try {
     const { data: category } = await supabase
@@ -76,7 +76,7 @@ export async function fetchLearnings(
     if (!learnings || learnings.length === 0) return '';
 
     const lines = learnings.map(
-      (l) => `- [${l.severity.toUpperCase()}] ${l.title}: ${l.correction}`,
+      (l) => `- [${l.severity.toUpperCase()}] ${l.title}: ${l.correction}`
     );
 
     return `\n## Known Learnings (avoid these mistakes)\n${lines.join('\n')}`;

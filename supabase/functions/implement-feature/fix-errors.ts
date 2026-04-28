@@ -117,8 +117,11 @@ export async function handleFixErrors(req: Request, _ctx: AuthContext): Promise<
     ]);
 
     logAIUsageFromEnv({
-      featureId: 'pipeline', adminId: 'system', modelId: 'claude-sonnet-4-6',
-      operationType: 'error_fixing', inputTokens: response.usage?.input_tokens ?? 0,
+      featureId: 'pipeline',
+      adminId: 'system',
+      modelId: 'claude-sonnet-4-6',
+      operationType: 'error_fixing',
+      inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
     });
 
@@ -166,7 +169,9 @@ function buildFixMessage(errors: BuildError[], files: FileContent[], stage: stri
     sections.push(`### ${file.path}\n\`\`\`typescript\n${file.content}\n\`\`\`\n`);
   }
 
-  sections.push(`Fix all the ${stageLabel} errors listed above. Return ONLY a JSON array of fixed files.`);
+  sections.push(
+    `Fix all the ${stageLabel} errors listed above. Return ONLY a JSON array of fixed files.`
+  );
   return sections.join('\n');
 }
 

@@ -35,101 +35,121 @@ export interface BrowserSuiteResult {
   results: BrowserScriptResult[];
 }
 
-type ExtensionExecuteFn = (steps: ScriptStep[], baseUrl?: string) => Promise<TestScriptExecutionResult | null>;
+type ExtensionExecuteFn = (
+  steps: ScriptStep[],
+  baseUrl?: string
+) => Promise<TestScriptExecutionResult | null>;
 
 /**
  * Execute a single script via the browser extension.
  * Opens a real browser tab and performs actual clicks/assertions.
  */
 export function useExecuteScript() {
-  return useCallback(async (
-    script: ScriptListItem,
-    _environment: string,
-    extensionExecute: ExtensionExecuteFn,
-  ): Promise<BrowserScriptResult> => {
-    if (script.is_stale) {
+  return useCallback(
+    async (
+      script: ScriptListItem,
+      _environment: string,
+      extensionExecute: ExtensionExecuteFn
+    ): Promise<BrowserScriptResult> => {
+      if (script.is_stale) {
+        return {
+          script_id: script.id,
+          test_case_id: script.test_case_id,
+          test_case_title: script.test_case_title,
+          result: 'skipped',
+          duration_ms: 0,
+          steps_completed: 0,
+          steps_total: script.step_count,
+          step_results: [],
+          failures: [],
+        };
+      }
+
+      const steps = script.script_steps;
+      console.log(
+        '[SpecKit Auto] executeScript:',
+        script.test_case_title,
+        'steps:',
+        steps?.length ?? 'NULL',
+        'stale:',
+        script.is_stale
+      );
+      if (!steps?.length) {
+        console.warn('[SpecKit Auto] No steps for script', script.id, '- script_steps is', steps);
+        return {
+          script_id: script.id,
+          test_case_id: script.test_case_id,
+          test_case_title: script.test_case_title,
+          result: 'error',
+          duration_ms: 0,
+          steps_completed: 0,
+          steps_total: script.step_count,
+          step_results: [],
+          failures: [{ step_number: 0, expected: 'Script steps', actual: 'No steps available' }],
+        };
+      }
+
+      // Execute via browser extension
+      const execResult = await extensionExecute(steps);
+      if (!execResult) {
+        return {
+          script_id: script.id,
+          test_case_id: script.test_case_id,
+          test_case_title: script.test_case_title,
+          result: 'error',
+          duration_ms: 0,
+          steps_completed: 0,
+          steps_total: steps.length,
+          step_results: [],
+          failures: [
+            {
+              step_number: 0,
+              expected: 'Extension response',
+              actual: 'Extension unavailable or timed out',
+            },
+          ],
+        };
+      }
+
+      const failures = execResult.results
+        .filter((r) => !r.passed)
+        .map((r) => ({
+          step_number: r.step_number,
+          expected:
+            steps.find((s) => s.step_number === r.step_number)?.expected_outcome || 'Step passes',
+          actual: r.actual_outcome,
+        }));
+
+      const result: 'passed' | 'failed' = failures.length > 0 ? 'failed' : 'passed';
+      const stepsCompleted = execResult.results.filter((r) => r.passed).length;
+
+      // Record result in the backend with the real browser result
+      try {
+        await testAutomationApi.executeScript(script.id, _environment, {
+          result,
+          duration_ms: execResult.duration_ms,
+          steps_completed: stepsCompleted,
+          steps_total: steps.length,
+          failures,
+        });
+      } catch {
+        // Backend recording is best-effort; the real result is from the browser
+      }
+
       return {
         script_id: script.id,
         test_case_id: script.test_case_id,
         test_case_title: script.test_case_title,
-        result: 'skipped',
-        duration_ms: 0,
-        steps_completed: 0,
-        steps_total: script.step_count,
-        step_results: [],
-        failures: [],
-      };
-    }
-
-    const steps = script.script_steps;
-    console.log('[SpecKit Auto] executeScript:', script.test_case_title, 'steps:', steps?.length ?? 'NULL', 'stale:', script.is_stale);
-    if (!steps?.length) {
-      console.warn('[SpecKit Auto] No steps for script', script.id, '- script_steps is', steps);
-      return {
-        script_id: script.id,
-        test_case_id: script.test_case_id,
-        test_case_title: script.test_case_title,
-        result: 'error',
-        duration_ms: 0,
-        steps_completed: 0,
-        steps_total: script.step_count,
-        step_results: [],
-        failures: [{ step_number: 0, expected: 'Script steps', actual: 'No steps available' }],
-      };
-    }
-
-    // Execute via browser extension
-    const execResult = await extensionExecute(steps);
-    if (!execResult) {
-      return {
-        script_id: script.id,
-        test_case_id: script.test_case_id,
-        test_case_title: script.test_case_title,
-        result: 'error',
-        duration_ms: 0,
-        steps_completed: 0,
-        steps_total: steps.length,
-        step_results: [],
-        failures: [{ step_number: 0, expected: 'Extension response', actual: 'Extension unavailable or timed out' }],
-      };
-    }
-
-    const failures = execResult.results
-      .filter((r) => !r.passed)
-      .map((r) => ({
-        step_number: r.step_number,
-        expected: steps.find((s) => s.step_number === r.step_number)?.expected_outcome || 'Step passes',
-        actual: r.actual_outcome,
-      }));
-
-    const result: 'passed' | 'failed' = failures.length > 0 ? 'failed' : 'passed';
-    const stepsCompleted = execResult.results.filter((r) => r.passed).length;
-
-    // Record result in the backend with the real browser result
-    try {
-      await testAutomationApi.executeScript(script.id, _environment, {
         result,
         duration_ms: execResult.duration_ms,
         steps_completed: stepsCompleted,
         steps_total: steps.length,
+        step_results: execResult.results,
         failures,
-      });
-    } catch {
-      // Backend recording is best-effort; the real result is from the browser
-    }
-
-    return {
-      script_id: script.id,
-      test_case_id: script.test_case_id,
-      test_case_title: script.test_case_title,
-      result,
-      duration_ms: execResult.duration_ms,
-      steps_completed: stepsCompleted,
-      steps_total: steps.length,
-      step_results: execResult.results,
-      failures,
-    };
-  }, []);
+      };
+    },
+    []
+  );
 }
 
 /**
@@ -137,7 +157,7 @@ export function useExecuteScript() {
  */
 export async function executeApiTest(
   script: ScriptListItem,
-  environment: string,
+  environment: string
 ): Promise<BrowserScriptResult> {
   try {
     const apiRes = await testAutomationApi.executeApiTest(script.id, environment);
@@ -150,9 +170,21 @@ export async function executeApiTest(
       steps_completed: apiRes.result === 'passed' ? 1 : 0,
       steps_total: 1,
       step_results: [],
-      failures: apiRes.result !== 'passed'
-        ? [{ step_number: 0, expected: 'API assertions pass', actual: (apiRes.assertions?.find((a: { passed: boolean }) => !a.passed) as { description?: string })?.description || 'Failed' }]
-        : [],
+      failures:
+        apiRes.result !== 'passed'
+          ? [
+              {
+                step_number: 0,
+                expected: 'API assertions pass',
+                actual:
+                  (
+                    apiRes.assertions?.find((a: { passed: boolean }) => !a.passed) as {
+                      description?: string;
+                    }
+                  )?.description || 'Failed',
+              },
+            ]
+          : [],
     };
   } catch (err) {
     return {
@@ -164,7 +196,13 @@ export async function executeApiTest(
       steps_completed: 0,
       steps_total: 1,
       step_results: [],
-      failures: [{ step_number: 0, expected: 'API test executes', actual: err instanceof Error ? err.message : 'Unknown error' }],
+      failures: [
+        {
+          step_number: 0,
+          expected: 'API test executes',
+          actual: err instanceof Error ? err.message : 'Unknown error',
+        },
+      ],
     };
   }
 }

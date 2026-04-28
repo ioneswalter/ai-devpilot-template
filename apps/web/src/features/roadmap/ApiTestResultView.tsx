@@ -10,17 +10,16 @@ interface ApiTestResultViewProps {
 }
 
 export function ApiTestResultView({ result }: ApiTestResultViewProps) {
-  const statusColor = result.result === 'passed'
-    ? 'text-green-700 bg-green-50 border-green-200'
-    : 'text-red-700 bg-red-50 border-red-200';
+  const statusColor =
+    result.result === 'passed'
+      ? 'text-green-700 bg-green-50 border-green-200'
+      : 'text-red-700 bg-red-50 border-red-200';
 
   return (
     <div className="space-y-3 text-sm">
       {/* Header */}
       <div className={`flex items-center justify-between p-2 rounded border ${statusColor}`}>
-        <span className="font-medium">
-          {result.result === 'passed' ? 'PASSED' : 'FAILED'}
-        </span>
+        <span className="font-medium">{result.result === 'passed' ? 'PASSED' : 'FAILED'}</span>
         <span className="text-xs text-gray-500">{result.duration_ms}ms</span>
       </div>
 

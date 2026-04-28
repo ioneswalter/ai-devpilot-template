@@ -55,7 +55,9 @@ export function useRoadmapData(featureParam?: string) {
   // AI Copilot state (admin only)
   const isAdmin = useIsAdmin();
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const [selectedFeatureForCopilot, setSelectedFeatureForCopilot] = useState<ProductFeature | null>(null);
+  const [selectedFeatureForCopilot, setSelectedFeatureForCopilot] = useState<ProductFeature | null>(
+    null
+  );
   // Admin edit/delete state
   const [editingFeature, setEditingFeature] = useState<ProductFeature | null>(null);
   const [deletingFeature, setDeletingFeature] = useState<ProductFeature | null>(null);
@@ -97,60 +99,84 @@ export function useRoadmapData(featureParam?: string) {
       hasAutoExpanded.current = true;
       setExpandedFeature(target.id);
       requestAnimationFrame(() => {
-        const el = featureRowRefs.current[target.id]; if (el) scrollToFeatureRow(el);
+        const el = featureRowRefs.current[target.id];
+        if (el) scrollToFeatureRow(el);
       });
     }
   }, [featureParam, features]);
 
   // Delete feature handler
-  const handleDeleteFeature = useCallback(async (feature: ProductFeature) => {
-    if (!feature) return;
-    setIsDeleting(true);
-    try {
-      await apiClient(`roadmap-admin-features?feature_id=${feature.id}`, {
-        method: 'DELETE',
-      });
-      await fetchFeatures();
-      setDeletingFeature(null);
-    } catch (error) {
-      console.error('Failed to delete feature:', error);
-      alert('Failed to delete feature. Please try again.');
-    } finally {
-      setIsDeleting(false);
-    }
-  }, [fetchFeatures]);
+  const handleDeleteFeature = useCallback(
+    async (feature: ProductFeature) => {
+      if (!feature) return;
+      setIsDeleting(true);
+      try {
+        await apiClient(`roadmap-admin-features?feature_id=${feature.id}`, {
+          method: 'DELETE',
+        });
+        await fetchFeatures();
+        setDeletingFeature(null);
+      } catch (error) {
+        console.error('Failed to delete feature:', error);
+        alert('Failed to delete feature. Please try again.');
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [fetchFeatures]
+  );
 
   // Derive unique sections for section filter
-  const availableSections = Array.from(new Set(features.map((f) => f.spec_section || 'Other'))).sort();
+  const availableSections = Array.from(
+    new Set(features.map((f) => f.spec_section || 'Other'))
+  ).sort();
 
   // Hide internal features from non-admin users
   const visibleFeatures = isAdmin ? features : features.filter((f) => f.category !== 'internal');
 
   const filteredFeatures = visibleFeatures.filter((feature) => {
-    const matchesStatus = filterStatus === 'all'
-      || feature.status === filterStatus
-      || (filterStatus === 'in_development' && feature.status === 'in_testing');
+    const matchesStatus =
+      filterStatus === 'all' ||
+      feature.status === filterStatus ||
+      (filterStatus === 'in_development' && feature.status === 'in_testing');
     const matchesPriority = filterPriority === 'all' || feature.priority === filterPriority;
     const matchesType = filterType === 'all' || feature.feature_type === filterType;
-    const matchesCategory = filterCategory === 'all' ||
+    const matchesCategory =
+      filterCategory === 'all' ||
       (filterCategory === 'none' ? !feature.category : feature.category === filterCategory);
-    const matchesSection = filterSection === 'all' || (feature.spec_section || 'Other') === filterSection;
+    const matchesSection =
+      filterSection === 'all' || (feature.spec_section || 'Other') === filterSection;
     const matchesSearch =
       searchTerm === '' ||
       feature.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       feature.feature_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       feature.description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchesStatus && matchesPriority && matchesType && matchesCategory && matchesSection && matchesSearch;
+    return (
+      matchesStatus &&
+      matchesPriority &&
+      matchesType &&
+      matchesCategory &&
+      matchesSection &&
+      matchesSearch
+    );
   });
 
   // Calculate stats
-  const isFiltered = filterStatus !== 'all' || filterPriority !== 'all' || filterType !== 'all' || filterCategory !== 'all' || filterSection !== 'all' || searchTerm.trim() !== '';
+  const isFiltered =
+    filterStatus !== 'all' ||
+    filterPriority !== 'all' ||
+    filterType !== 'all' ||
+    filterCategory !== 'all' ||
+    filterSection !== 'all' ||
+    searchTerm.trim() !== '';
   const stats: RoadmapStats = {
     total: filteredFeatures.length,
     released: filteredFeatures.filter((f) => f.status === 'released').length,
     inAcceptance: filteredFeatures.filter((f) => f.status === 'in_acceptance').length,
-    inDevelopment: filteredFeatures.filter((f) => f.status === 'in_development' || f.status === 'in_testing').length,
+    inDevelopment: filteredFeatures.filter(
+      (f) => f.status === 'in_development' || f.status === 'in_testing'
+    ).length,
     specified: filteredFeatures.filter((f) => f.status === 'specified').length,
     reviewed: filteredFeatures.filter((f) => f.status === 'reviewed').length,
     proposed: filteredFeatures.filter((f) => f.status === 'proposed').length,
@@ -174,28 +200,32 @@ export function useRoadmapData(featureParam?: string) {
     });
   }
 
-  const toggleExpanded = useCallback((featureId: string) => {
-    const isExpanding = expandedFeature !== featureId;
-    setExpandedFeature(isExpanding ? featureId : null);
+  const toggleExpanded = useCallback(
+    (featureId: string) => {
+      const isExpanding = expandedFeature !== featureId;
+      setExpandedFeature(isExpanding ? featureId : null);
 
-    const feature = features.find((f) => f.id === featureId);
-    navigate({
-      to: '/roadmap',
-      search: { feature: isExpanding && feature ? feature.feature_code : undefined },
-      replace: true,
-      resetScroll: false,
-    });
-
-    if (isExpanding) {
-      requestAnimationFrame(() => {
-        const el = featureRowRefs.current[featureId]; if (el) scrollToFeatureRow(el);
+      const feature = features.find((f) => f.id === featureId);
+      navigate({
+        to: '/roadmap',
+        search: { feature: isExpanding && feature ? feature.feature_code : undefined },
+        replace: true,
+        resetScroll: false,
       });
-    }
 
-    if (isAdmin && isExpanding && feature) {
-      setSelectedFeatureForCopilot(feature);
-    }
-  }, [expandedFeature, features, isAdmin, navigate]);
+      if (isExpanding) {
+        requestAnimationFrame(() => {
+          const el = featureRowRefs.current[featureId];
+          if (el) scrollToFeatureRow(el);
+        });
+      }
+
+      if (isAdmin && isExpanding && feature) {
+        setSelectedFeatureForCopilot(feature);
+      }
+    },
+    [expandedFeature, features, isAdmin, navigate]
+  );
 
   // Refresh features after copilot action
   const handleFeatureUpdated = useCallback(async () => {
@@ -254,7 +284,8 @@ export function useRoadmapData(featureParam?: string) {
     setViewMode('list');
     setExpandedFeature(featureId);
     requestAnimationFrame(() => {
-      const el = featureRowRefs.current[featureId]; if (el) scrollToFeatureRow(el);
+      const el = featureRowRefs.current[featureId];
+      if (el) scrollToFeatureRow(el);
     });
   }, []);
 

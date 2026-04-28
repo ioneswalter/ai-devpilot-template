@@ -26,9 +26,12 @@ const STAGE_ORDER: PipelineStageName[] = ['spec', 'build', 'test', 'uat', 'deplo
 
 const DEFAULT_STAGE = { status: 'not_started' as const, label: 'Not Started' };
 const DEFAULT_UAT: UatStageDetail = {
-  status: 'not_started', label: 'Not Started',
-  packageStatus: null, cycleNumber: 0,
-  decisionCounts: { pass: 0, fail: 0, defer: 0, pending: 0 }, dueAt: null,
+  status: 'not_started',
+  label: 'Not Started',
+  packageStatus: null,
+  cycleNumber: 0,
+  decisionCounts: { pass: 0, fail: 0, defer: 0, pending: 0 },
+  dueAt: null,
 };
 
 function StageSkeleton() {
@@ -56,7 +59,14 @@ function ChevronSep() {
   );
 }
 
-function StageOrTile({ stage, stages, isAdmin, onStageClick, featureId, featureCode }: {
+function StageOrTile({
+  stage,
+  stages,
+  isAdmin,
+  onStageClick,
+  featureId,
+  featureCode,
+}: {
   stage: PipelineStageName;
   stages: FeaturePipelineState;
   isAdmin: boolean;
@@ -85,23 +95,49 @@ function StageOrTile({ stage, stages, isAdmin, onStageClick, featureId, featureC
   );
 }
 
-export function PipelineBar({ featureStatus, pipeline, isAdmin, isLoading, onStageClick, canAccessPanel, featureId, featureCode }: PipelineBarProps) {
-  if (!PIPELINE_VISIBLE_STATUSES.includes(featureStatus as typeof PIPELINE_VISIBLE_STATUSES[number])) return null;
+export function PipelineBar({
+  featureStatus,
+  pipeline,
+  isAdmin,
+  isLoading,
+  onStageClick,
+  canAccessPanel,
+  featureId,
+  featureCode,
+}: PipelineBarProps) {
+  if (
+    !PIPELINE_VISIBLE_STATUSES.includes(featureStatus as (typeof PIPELINE_VISIBLE_STATUSES)[number])
+  )
+    return null;
   if (isLoading) return <StageSkeleton />;
 
-  const stages = pipeline ?? {
-    spec: DEFAULT_STAGE, build: DEFAULT_STAGE, test: DEFAULT_STAGE, uat: DEFAULT_UAT, deploy: DEFAULT_STAGE,
-  } as FeaturePipelineState;
+  const stages =
+    pipeline ??
+    ({
+      spec: DEFAULT_STAGE,
+      build: DEFAULT_STAGE,
+      test: DEFAULT_STAGE,
+      uat: DEFAULT_UAT,
+      deploy: DEFAULT_STAGE,
+    } as FeaturePipelineState);
   const visible = STAGE_ORDER.filter((s) => !canAccessPanel || canAccessPanel(s));
 
   return (
-    <div className="flex items-center gap-2 py-1.5 overflow-x-auto" role="toolbar" aria-label="Development pipeline">
+    <div
+      className="flex items-center gap-2 py-1.5 overflow-x-auto"
+      role="toolbar"
+      aria-label="Development pipeline"
+    >
       {visible.flatMap((stage, idx) => {
         const tile = (
           <StageOrTile
             key={`${stage}-tile`}
-            stage={stage} stages={stages} isAdmin={isAdmin}
-            onStageClick={onStageClick} featureId={featureId} featureCode={featureCode}
+            stage={stage}
+            stages={stages}
+            isAdmin={isAdmin}
+            onStageClick={onStageClick}
+            featureId={featureId}
+            featureCode={featureCode}
           />
         );
         if (idx === visible.length - 1) return [tile];

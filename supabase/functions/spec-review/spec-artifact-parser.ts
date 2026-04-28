@@ -10,7 +10,7 @@ export async function loadSpecArtifactItems(
   featureId: string,
   reviewId: string,
   startOrder: number,
-  now: string,
+  now: string
 ) {
   const { data: artifacts } = await supabase
     .from('feature_spec_artifacts')
@@ -20,13 +20,23 @@ export async function loadSpecArtifactItems(
 
   if (!artifacts || artifacts.length === 0) return [];
 
-  const specContent = artifacts.find((a: { artifact_type: string }) => a.artifact_type === 'spec')?.content;
+  const specContent = artifacts.find(
+    (a: { artifact_type: string }) => a.artifact_type === 'spec'
+  )?.content;
   if (!specContent) return [];
 
   const items: Array<{
-    id: string; review_id: string; item_type: string; source: string;
-    content: string; original_content: string; decision: string;
-    sort_order: number; comments: never[]; created_at: string; updated_at: string;
+    id: string;
+    review_id: string;
+    item_type: string;
+    source: string;
+    content: string;
+    original_content: string;
+    decision: string;
+    sort_order: number;
+    comments: never[];
+    created_at: string;
+    updated_at: string;
   }> = [];
   let order = startOrder;
 
@@ -35,10 +45,17 @@ export async function loadSpecArtifactItems(
   for (const scenario of scenarioMatches) {
     const cleaned = scenario.replace(/^\d+\.\s+/, '').replace(/\*\*/g, '');
     items.push({
-      id: crypto.randomUUID(), review_id: reviewId, item_type: 'criterion',
-      source: 'speckit', content: cleaned, original_content: cleaned,
-      decision: 'pending', sort_order: order++, comments: [],
-      created_at: now, updated_at: now,
+      id: crypto.randomUUID(),
+      review_id: reviewId,
+      item_type: 'criterion',
+      source: 'speckit',
+      content: cleaned,
+      original_content: cleaned,
+      decision: 'pending',
+      sort_order: order++,
+      comments: [],
+      created_at: now,
+      updated_at: now,
     });
   }
 
@@ -48,10 +65,17 @@ export async function loadSpecArtifactItems(
     const cleaned = edgeCase.replace(/^- /, '');
     const asCriteria = rephraseEdgeCaseAsCriteria(cleaned);
     items.push({
-      id: crypto.randomUUID(), review_id: reviewId, item_type: 'edge_case',
-      source: 'speckit', content: asCriteria, original_content: cleaned,
-      decision: 'pending', sort_order: order++, comments: [],
-      created_at: now, updated_at: now,
+      id: crypto.randomUUID(),
+      review_id: reviewId,
+      item_type: 'edge_case',
+      source: 'speckit',
+      content: asCriteria,
+      original_content: cleaned,
+      decision: 'pending',
+      sort_order: order++,
+      comments: [],
+      created_at: now,
+      updated_at: now,
     });
   }
 
@@ -60,10 +84,17 @@ export async function loadSpecArtifactItems(
   for (const req of reqMatches) {
     const cleaned = req.replace(/\*\*/g, '');
     items.push({
-      id: crypto.randomUUID(), review_id: reviewId, item_type: 'criterion',
-      source: 'speckit', content: cleaned, original_content: cleaned,
-      decision: 'pending', sort_order: order++, comments: [],
-      created_at: now, updated_at: now,
+      id: crypto.randomUUID(),
+      review_id: reviewId,
+      item_type: 'criterion',
+      source: 'speckit',
+      content: cleaned,
+      original_content: cleaned,
+      decision: 'pending',
+      sort_order: order++,
+      comments: [],
+      created_at: now,
+      updated_at: now,
     });
   }
 

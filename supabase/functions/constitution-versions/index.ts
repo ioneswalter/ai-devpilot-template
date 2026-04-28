@@ -9,12 +9,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import {
-  success,
-  badRequest,
-  internalError,
-  corsResponse,
-} from '../_shared/response.ts';
+import { success, badRequest, internalError, corsResponse } from '../_shared/response.ts';
 import { verifyAdmin } from '../_shared/admin-auth.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -82,9 +77,7 @@ Deno.serve(async (req: Request) => {
 
     // Optionally include rules for each version
     if (includeRules && versions && versions.length > 0) {
-      const versionIds = versions.map(
-        (v: Record<string, unknown>) => v.id as string
-      );
+      const versionIds = versions.map((v: Record<string, unknown>) => v.id as string);
       const { data: allRules } = await supabase
         .from('constitution_rules')
         .select('*')

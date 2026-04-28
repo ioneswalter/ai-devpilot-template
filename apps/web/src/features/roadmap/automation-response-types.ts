@@ -104,7 +104,11 @@ export interface StalenessResult {
 
 // --- Guidance & Recommendation Response Types ---
 
-import type { FailureGuidance, GuidanceGroup, ImprovementRecommendation } from './automation-test-types';
+import type {
+  FailureGuidance,
+  GuidanceGroup,
+  ImprovementRecommendation,
+} from './automation-test-types';
 
 export interface GuidanceListResult {
   guidance: Array<FailureGuidance & { test_case_title: string }>;

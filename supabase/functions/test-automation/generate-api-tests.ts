@@ -26,7 +26,9 @@ function hashText(text: string): string {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
   let hash = 0;
-  for (const byte of data) { hash = ((hash << 5) - hash + byte) | 0; }
+  for (const byte of data) {
+    hash = ((hash << 5) - hash + byte) | 0;
+  }
   return Math.abs(hash).toString(16).padStart(8, '0');
 }
 
@@ -37,8 +39,14 @@ export async function handleGenerateApiTest(
   testCase: { id: string; title: string; steps: string; expected_result: string },
   featureId: string,
   criteria: string[],
-  userId: string,
-): Promise<{ test_case_id: string; test_id: string; endpoint: string; assertion_count: number; negative_case_count: number } | null> {
+  userId: string
+): Promise<{
+  test_case_id: string;
+  test_id: string;
+  endpoint: string;
+  assertion_count: number;
+  negative_case_count: number;
+} | null> {
   const prompt = buildApiTestPrompt(testCase, criteria);
 
   try {
@@ -49,7 +57,9 @@ export async function handleGenerateApiTest(
     });
 
     logAIUsageFromEnv({
-      featureId: 'test-automation', adminId: userId, modelId: AI_MODEL,
+      featureId: 'test-automation',
+      adminId: userId,
+      modelId: AI_MODEL,
       operationType: 'generate_api_test',
       inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
@@ -57,7 +67,8 @@ export async function handleGenerateApiTest(
 
     const text = response.content
       .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text).join('');
+      .map((b) => b.text)
+      .join('');
 
     const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
@@ -68,24 +79,28 @@ export async function handleGenerateApiTest(
     const hash = hashText(criteria.join('\n'));
     const { data: test, error } = await supabase
       .from('api_verification_tests')
-      .upsert({
-        test_case_id: testCase.id,
-        feature_id: featureId,
-        endpoint: parsed.endpoint,
-        method: parsed.method,
-        setup_sql: parsed.setup_sql || [],
-        request_body: parsed.request_body || {},
-        auth_context: parsed.auth_context || { type: 'service_role' },
-        assertions: parsed.assertions,
-        cleanup_sql: parsed.cleanup_sql || [],
-        negative_cases: parsed.negative_cases || [],
-        generated_from_hash: hash,
-        ai_model: AI_MODEL,
-        is_stale: false,
-        generation_notes: parsed.notes || '',
-        created_by: userId,
-      }, { onConflict: 'test_case_id' })
-      .select('id').single();
+      .upsert(
+        {
+          test_case_id: testCase.id,
+          feature_id: featureId,
+          endpoint: parsed.endpoint,
+          method: parsed.method,
+          setup_sql: parsed.setup_sql || [],
+          request_body: parsed.request_body || {},
+          auth_context: parsed.auth_context || { type: 'service_role' },
+          assertions: parsed.assertions,
+          cleanup_sql: parsed.cleanup_sql || [],
+          negative_cases: parsed.negative_cases || [],
+          generated_from_hash: hash,
+          ai_model: AI_MODEL,
+          is_stale: false,
+          generation_notes: parsed.notes || '',
+          created_by: userId,
+        },
+        { onConflict: 'test_case_id' }
+      )
+      .select('id')
+      .single();
 
     if (error || !test) return null;
 
@@ -104,7 +119,7 @@ export async function handleGenerateApiTest(
 
 function buildApiTestPrompt(
   testCase: { title: string; steps: string; expected_result: string },
-  criteria: string[],
+  criteria: string[]
 ): string {
   const criteriaList = criteria.map((c, i) => `[${i}] ${c}`).join('\n');
   return `Generate an API verification test for this test case. The test calls a Supabase Edge Function directly and asserts on the response + database state.
@@ -155,7 +170,7 @@ RULES:
 export async function handleExecuteApiTest(
   supabase: SupabaseClient,
   body: unknown,
-  _userId: string,
+  _userId: string
 ): Promise<Response> {
   // Delegate to execute-api-tests.ts
   const { handleExecuteApiTest: exec } = await import('./execute-api-tests.ts');

@@ -6,14 +6,22 @@ import { ComplexityScorePanel } from './ComplexityScorePanel';
 interface VersionGroupedTasksProps {
   taskItems: ImplementationTaskItem[];
   versionInfo: { currentLabel: string; priorLabel: string } | null | undefined;
-  onDecision: (id: string, data: { decision?: string; title?: string; description?: string }) => void;
+  onDecision: (
+    id: string,
+    data: { decision?: string; title?: string; description?: string }
+  ) => void;
   onComment: (id: string, comment: string) => void;
   isUpdating: boolean;
   isImplementing: boolean;
 }
 
 export function VersionGroupedTasks({
-  taskItems, versionInfo, onDecision, onComment, isUpdating, isImplementing,
+  taskItems,
+  versionInfo,
+  onDecision,
+  onComment,
+  isUpdating,
+  isImplementing,
 }: VersionGroupedTasksProps) {
   // Group tasks by version_label
   const groups = new Map<string, ImplementationTaskItem[]>();
@@ -39,11 +47,13 @@ export function VersionGroupedTasks({
           <div key={version} className="mb-4">
             {hasMultipleVersions && (
               <div className="flex items-center gap-2 mb-2 mt-3">
-                <span className={`px-1.5 py-0.5 text-[10px] font-mono font-medium rounded ${
-                  version === versionInfo?.currentLabel
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-slate-100 text-slate-500'
-                }`}>
+                <span
+                  className={`px-1.5 py-0.5 text-[10px] font-mono font-medium rounded ${
+                    version === versionInfo?.currentLabel
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
                   {version}
                 </span>
                 <span className="text-xs text-gray-400">

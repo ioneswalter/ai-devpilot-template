@@ -26,7 +26,7 @@ export function ImplementationLoadingSkeleton() {
         <div className="h-3 w-40 bg-gray-200 rounded animate-pulse" />
 
         {/* Task card skeletons */}
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4].map((i) => (
           <div key={i} className="border rounded-lg p-3 animate-pulse">
             <div className="flex gap-2 mb-2">
               <div className="h-5 w-14 bg-gray-200 rounded" />

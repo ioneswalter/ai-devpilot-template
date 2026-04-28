@@ -3,11 +3,7 @@
  */
 
 import type { SupabaseClient } from './shared.ts';
-import {
-  UpdateFeatureSchema,
-  errorResponse,
-  jsonResponse,
-} from './shared.ts';
+import { UpdateFeatureSchema, errorResponse, jsonResponse } from './shared.ts';
 import {
   parseTestCasesText,
   generateTestCaseCode,
@@ -19,26 +15,29 @@ export async function handleUpdateFeature(
   req: Request,
   supabase: SupabaseClient,
   userId: string,
-  userEmail: string | undefined,
+  userEmail: string | undefined
 ): Promise<Response> {
   const rawBody = await req.json();
   const validation = UpdateFeatureSchema.safeParse(rawBody);
 
   if (!validation.success) {
-    return errorResponse(
-      'VALIDATION_ERROR',
-      validation.error.errors[0].message,
-      400,
-    );
+    return errorResponse('VALIDATION_ERROR', validation.error.errors[0].message, 400);
   }
 
   const { feature_id, test_cases_text, ...updates } = validation.data;
 
   // Only allow updating certain fields
   const allowedFields = [
-    'title', 'description', 'feature_type', 'priority', 'status',
-    'acceptance_criteria', 'category', 'spec_section',
-    'related_user_stories', 'implementing_features',
+    'title',
+    'description',
+    'feature_type',
+    'priority',
+    'status',
+    'acceptance_criteria',
+    'category',
+    'spec_section',
+    'related_user_stories',
+    'implementing_features',
   ];
 
   const filteredUpdates: Record<string, unknown> = {};
@@ -53,7 +52,7 @@ export async function handleUpdateFeature(
     const statusError = await validateStatusTransition(
       supabase,
       feature_id,
-      filteredUpdates.status as string,
+      filteredUpdates.status as string
     );
     if (statusError) return statusError;
   }
@@ -61,15 +60,18 @@ export async function handleUpdateFeature(
   // FR-149: Block editing acceptance_criteria or description on released features
   if (!('status' in filteredUpdates)) {
     const editBlockedFields = ['acceptance_criteria', 'description'];
-    const hasBlockedEdits = editBlockedFields.some(f => f in filteredUpdates);
+    const hasBlockedEdits = editBlockedFields.some((f) => f in filteredUpdates);
     if (hasBlockedEdits) {
       const { data: current } = await supabase
-        .from('product_features').select('status').eq('id', feature_id).single();
+        .from('product_features')
+        .select('status')
+        .eq('id', feature_id)
+        .single();
       if (current?.status === 'released') {
         return errorResponse(
           'VERSION_BUMP_REQUIRED',
           'Released features cannot be edited directly. Create a new version first.',
-          409,
+          409
         );
       }
     }
@@ -78,11 +80,7 @@ export async function handleUpdateFeature(
   // Allow update even if only test_cases_text is provided
   const hasTestCases = test_cases_text && test_cases_text.trim();
   if (Object.keys(filteredUpdates).length === 0 && !hasTestCases) {
-    return errorResponse(
-      'VALIDATION_ERROR',
-      'No valid fields to update',
-      400,
-    );
+    return errorResponse('VALIDATION_ERROR', 'No valid fields to update', 400);
   }
 
   const now = new Date().toISOString();
@@ -138,11 +136,9 @@ export async function handleUpdateFeature(
 async function validateStatusTransition(
   supabase: SupabaseClient,
   featureId: string,
-  newStatus: string,
+  newStatus: string
 ): Promise<Response | null> {
-  const statusOrder = [
-    'proposed', 'specified', 'in_development', 'in_testing', 'released',
-  ];
+  const statusOrder = ['proposed', 'specified', 'in_development', 'in_testing', 'released'];
 
   const { data: currentFeature, error: fetchError } = await supabase
     .from('product_features')
@@ -162,17 +158,13 @@ async function validateStatusTransition(
     const targetStages = statusOrder.slice(fromIndex + 1, toIndex + 1);
 
     // Acceptance criteria required for approved, in_development, or released
-    if (
-      targetStages.some(
-        s => s === 'specified' || s === 'in_development' || s === 'released',
-      )
-    ) {
+    if (targetStages.some((s) => s === 'specified' || s === 'in_development' || s === 'released')) {
       const criteria = currentFeature.acceptance_criteria as string[] | null;
       if (!criteria || criteria.length === 0) {
         return errorResponse(
           'MISSING_CRITERIA',
           `Cannot move to ${newStatus}: no acceptance criteria defined.`,
-          400,
+          400
         );
       }
     }
@@ -191,14 +183,18 @@ async function validateStatusTransition(
 
 async function validateTestGate(
   supabase: SupabaseClient,
-  featureId: string,
+  featureId: string
 ): Promise<Response | null> {
   const { data: testCases } = await supabase
     .from('test_cases')
     .select('id, test_code')
     .eq('feature_id', featureId);
   if (!testCases || testCases.length === 0) {
-    return errorResponse('MISSING_TESTS', 'Cannot release: no test cases defined. Add test cases first.', 400);
+    return errorResponse(
+      'MISSING_TESTS',
+      'Cannot release: no test cases defined. Add test cases first.',
+      400
+    );
   }
 
   // FR-145 v1.1 hardening: require real test_runs evidence (result='pass')
@@ -213,11 +209,14 @@ async function validateTestGate(
   const passed = new Set((runs ?? []).map((r: { test_case_id: string }) => r.test_case_id));
   const missing = testCases.filter((t: { id: string }) => !passed.has(t.id));
   if (missing.length > 0) {
-    const codes = missing.map((t: { test_code: string | null }) => t.test_code ?? '?').slice(0, 5).join(', ');
+    const codes = missing
+      .map((t: { test_code: string | null }) => t.test_code ?? '?')
+      .slice(0, 5)
+      .join(', ');
     return errorResponse(
       'TESTS_NOT_PASSED',
       `Cannot release: ${missing.length} test(s) lack a passing test_runs row (${codes}${missing.length > 5 ? ', …' : ''}). Run the tests via the test runner before releasing.`,
-      400,
+      400
     );
   }
   return null;
@@ -229,17 +228,12 @@ async function appendTestCases(
   feature: { id: string; feature_code: string },
   testCasesText: string,
   userId: string,
-  now: string,
+  now: string
 ): Promise<void> {
   const parsedTestCases = parseTestCasesText(testCasesText);
   if (parsedTestCases.length === 0) return;
 
-  console.log(
-    'Processing',
-    parsedTestCases.length,
-    'test cases for',
-    feature.feature_code,
-  );
+  console.log('Processing', parsedTestCases.length, 'test cases for', feature.feature_code);
 
   const { data: existingFeatureTestCases } = await supabase
     .from('test_cases')
@@ -247,15 +241,15 @@ async function appendTestCases(
     .eq('feature_id', feature.id);
 
   const existingTCCodes = (existingFeatureTestCases || []).map(
-    (tc: { test_code: string }) => tc.test_code,
+    (tc: { test_code: string }) => tc.test_code
   );
-  const existingTitles = (existingFeatureTestCases || []).map(
-    (tc: { title: string }) => ({ title: tc.title }),
-  );
+  const existingTitles = (existingFeatureTestCases || []).map((tc: { title: string }) => ({
+    title: tc.title,
+  }));
 
   const { unique: uniqueTestCases, duplicates } = filterDuplicateTestCases(
     parsedTestCases,
-    existingTitles,
+    existingTitles
   );
 
   if (duplicates.length > 0) {
@@ -280,10 +274,5 @@ async function appendTestCases(
       updated_at: now,
     });
   }
-  console.log(
-    'Created',
-    uniqueTestCases.length,
-    'new test cases for',
-    feature.feature_code,
-  );
+  console.log('Created', uniqueTestCases.length, 'new test cases for', feature.feature_code);
 }

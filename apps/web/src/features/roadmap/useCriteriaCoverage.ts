@@ -4,11 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import type {
-  CriterionCoverage,
-  CoverageSummary,
-  CriterionStatus,
-} from './guided-testing-types';
+import type { CriterionCoverage, CoverageSummary, CriterionStatus } from './guided-testing-types';
 
 interface TestCaseInput {
   id: string;
@@ -34,7 +30,11 @@ function isGuidedEvidence(ev: Record<string, unknown> | null): boolean {
   return ev !== null && ev.type === 'guided' && Array.isArray(ev.steps);
 }
 
-export function useCriteriaCoverage({ criteria, testCases, testRuns }: CriteriaCoverageInput): CoverageSummary {
+export function useCriteriaCoverage({
+  criteria,
+  testCases,
+  testRuns,
+}: CriteriaCoverageInput): CoverageSummary {
   return useMemo(() => {
     const coverageMap = new Map<number, CriterionCoverage>();
 
@@ -71,7 +71,11 @@ export function useCriteriaCoverage({ criteria, testCases, testRuns }: CriteriaC
         if (!current) continue;
 
         const newStatus: CriterionStatus =
-          step.verdict === 'passed' ? 'passed' : step.verdict === 'failed' ? 'failed' : current.status;
+          step.verdict === 'passed'
+            ? 'passed'
+            : step.verdict === 'failed'
+              ? 'failed'
+              : current.status;
 
         // Failed overrides passed (conservative)
         if (current.status === 'failed') continue;

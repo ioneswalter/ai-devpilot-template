@@ -29,11 +29,7 @@ export function PrototypeVersionHistory({
   isReverting,
 }: PrototypeVersionHistoryProps) {
   if (versions.length === 0) {
-    return (
-      <div className="p-3 text-xs text-gray-400 text-center">
-        No versions yet
-      </div>
-    );
+    return <div className="p-3 text-xs text-gray-400 text-center">No versions yet</div>;
   }
 
   return (
@@ -70,7 +66,10 @@ export function PrototypeVersionHistory({
               </p>
             )}
             <p className="text-[10px] text-gray-400 mt-0.5">
-              {new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(v.created_at).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </div>
         );

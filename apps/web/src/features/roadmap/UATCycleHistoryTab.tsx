@@ -64,7 +64,9 @@ function CycleRow({ decision }: { decision: AggregatedDecision }) {
   return (
     <div className="border border-gray-200 rounded-lg p-3 bg-white">
       <div className="flex items-center gap-2 mb-1">
-        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${DECISION_STYLES[decision.decision]}`}>
+        <span
+          className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${DECISION_STYLES[decision.decision]}`}
+        >
           Cycle {decision.cycle_number} · {decision.decision}
         </span>
         <span className="text-[10px] text-gray-400 ml-auto">

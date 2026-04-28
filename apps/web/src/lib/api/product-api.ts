@@ -71,7 +71,11 @@ export const productApi = {
   bumpVersion: (featureId: string, bumpType: 'minor' | 'major', changeSummary: string) =>
     apiClient<{ data: VersionBumpResponse }>('feature-versions', {
       method: 'POST',
-      body: JSON.stringify({ feature_id: featureId, bump_type: bumpType, change_summary: changeSummary }),
+      body: JSON.stringify({
+        feature_id: featureId,
+        bump_type: bumpType,
+        change_summary: changeSummary,
+      }),
     }),
 
   getVersions: (featureId: string) =>
@@ -80,9 +84,12 @@ export const productApi = {
     }),
 
   compareVersions: (v1: string, v2: string) =>
-    apiClient<{ data: VersionCompareResponse }>(`feature-versions?action=compare&v1=${v1}&v2=${v2}`, {
-      method: 'GET',
-    }),
+    apiClient<{ data: VersionCompareResponse }>(
+      `feature-versions?action=compare&v1=${v1}&v2=${v2}`,
+      {
+        method: 'GET',
+      }
+    ),
 };
 
 // FR-149 types
@@ -122,8 +129,22 @@ export interface VersionListResponse {
 }
 
 export interface VersionCompareResponse {
-  v1: { id: string; version_label: string; title: string; description: string | null; acceptance_criteria: string[]; created_at: string };
-  v2: { id: string; version_label: string; title: string; description: string | null; acceptance_criteria: string[]; created_at: string };
+  v1: {
+    id: string;
+    version_label: string;
+    title: string;
+    description: string | null;
+    acceptance_criteria: string[];
+    created_at: string;
+  };
+  v2: {
+    id: string;
+    version_label: string;
+    title: string;
+    description: string | null;
+    acceptance_criteria: string[];
+    created_at: string;
+  };
   diff: {
     title: { changed: boolean };
     description: { changed: boolean };

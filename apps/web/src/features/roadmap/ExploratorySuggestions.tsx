@@ -32,14 +32,10 @@ function SuggestionCard({
       <p className="text-[10px] text-indigo-700 mt-0.5">{suggestion.description}</p>
 
       {suggestion.related_criterion && (
-        <p className="text-[10px] text-purple-600 mt-1">
-          Related: {suggestion.related_criterion}
-        </p>
+        <p className="text-[10px] text-purple-600 mt-1">Related: {suggestion.related_criterion}</p>
       )}
       {suggestion.overlaps_with && (
-        <p className="text-[10px] text-amber-600 mt-0.5">
-          May overlap: {suggestion.overlaps_with}
-        </p>
+        <p className="text-[10px] text-amber-600 mt-0.5">May overlap: {suggestion.overlaps_with}</p>
       )}
 
       {/* Steps preview */}

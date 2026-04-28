@@ -27,7 +27,9 @@ export function ConflictReportPanel({ pipelineId }: Props) {
   const isPending = report.status === 'pending';
 
   return (
-    <div className={`rounded-lg border p-3 ${isPending ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-gray-50'}`}>
+    <div
+      className={`rounded-lg border p-3 ${isPending ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-gray-50'}`}
+    >
       <div className="mb-2 flex items-center justify-between">
         <h4 className="text-sm font-semibold text-orange-800">
           File Conflicts Detected ({report.conflicts.length})
@@ -41,9 +43,7 @@ export function ConflictReportPanel({ pipelineId }: Props) {
             {ackMutation.isPending ? 'Acknowledging...' : 'Acknowledge & Proceed'}
           </button>
         )}
-        {!isPending && (
-          <span className="text-xs text-green-700">Acknowledged</span>
-        )}
+        {!isPending && <span className="text-xs text-green-700">Acknowledged</span>}
       </div>
 
       <div className="space-y-2">
@@ -53,7 +53,8 @@ export function ConflictReportPanel({ pipelineId }: Props) {
             <div className="mt-1 space-y-0.5">
               {conflict.other_pipelines.map((op) => (
                 <p key={op.pipeline_id} className="text-gray-500">
-                  Also modified by: <span className="font-medium text-gray-700">{op.feature_title}</span>
+                  Also modified by:{' '}
+                  <span className="font-medium text-gray-700">{op.feature_title}</span>
                   {op.task_title && <span className="ml-1">({op.task_title})</span>}
                 </p>
               ))}

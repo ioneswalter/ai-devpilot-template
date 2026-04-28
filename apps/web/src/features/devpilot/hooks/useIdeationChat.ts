@@ -12,9 +12,9 @@ import type { ConversationMessage, MessageMetadata } from '../types';
 
 /** Approximate cost per message (1K input + 2K output tokens) by model tier */
 const MODEL_INFO: Record<string, { label: string; costPerMsg: string }> = {
-  opus:   { label: 'Opus',   costPerMsg: '~$0.17' },
+  opus: { label: 'Opus', costPerMsg: '~$0.17' },
   sonnet: { label: 'Sonnet', costPerMsg: '~$0.03' },
-  haiku:  { label: 'Haiku',  costPerMsg: '~$0.005' },
+  haiku: { label: 'Haiku', costPerMsg: '~$0.005' },
 };
 
 function getModelInfo(modelId: string): { label: string; costPerMsg: string } {
@@ -28,7 +28,15 @@ interface UseIdeationChatOptions {
   conversationId: string | null;
 }
 
-function mapApiMessages(raw: ReadonlyArray<{ id: string; role: string; content: string; metadata: unknown; created_at: string }>): ConversationMessage[] {
+function mapApiMessages(
+  raw: ReadonlyArray<{
+    id: string;
+    role: string;
+    content: string;
+    metadata: unknown;
+    created_at: string;
+  }>
+): ConversationMessage[] {
   return raw.map((m) => ({
     id: m.id,
     role: m.role as 'user' | 'assistant',
@@ -67,34 +75,45 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [modelLabel, setModelLabel] = useState<string | null>(null);
   const [modelCostPerMsg, setModelCostPerMsg] = useState<string | null>(null);
-  const [availableModels, setAvailableModels] = useState<Array<{ id: string; label: string; costPerMsg: string }>>([]);
+  const [availableModels, setAvailableModels] = useState<
+    Array<{ id: string; label: string; costPerMsg: string }>
+  >([]);
 
   // Fetch available models on mount
   useEffect(() => {
-    devpilotApi.getChatModel()
+    devpilotApi
+      .getChatModel()
       .then((res) => {
         const defaultInfo = getModelInfo(res.data.model);
         setSelectedModelId(res.data.model);
         setModelLabel(defaultInfo.label);
         setModelCostPerMsg(defaultInfo.costPerMsg);
         if (res.data.available_models) {
-          setAvailableModels(res.data.available_models.map(m => ({
-            ...m, costPerMsg: getModelInfo(m.id).costPerMsg,
-          })));
+          setAvailableModels(
+            res.data.available_models.map((m) => ({
+              ...m,
+              costPerMsg: getModelInfo(m.id).costPerMsg,
+            }))
+          );
         }
       })
-      .catch(() => { /* silent */ });
+      .catch(() => {
+        /* silent */
+      });
   }, []);
 
   // Compatibility shim — consumers can still call loadMessages(convId).
   // It now just invalidates the cache so the query refetches.
-  const loadMessages = useCallback(async (convId: string) => {
-    if (convId !== effectiveConvId) {
-      setOverrideConvId(convId);
-      return;
-    }
-    await queryClient.invalidateQueries({ queryKey: queryKeys.ideation.chat(convId) });
-  }, [effectiveConvId, queryClient]);
+  const loadMessages = useCallback(
+    async (convId: string) => {
+      if (convId !== effectiveConvId) {
+        setOverrideConvId(convId);
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.ideation.chat(convId) });
+    },
+    [effectiveConvId, queryClient]
+  );
 
   const sendMutation = useMutation({
     mutationFn: async ({ convId, message }: { convId: string; message: string }) => {
@@ -143,7 +162,8 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
             role: assistant_message.role as 'assistant',
             content: assistant_message.content,
             metadata: {
-              ...((assistant_message.metadata as unknown as MessageMetadata) ?? {} as MessageMetadata),
+              ...((assistant_message.metadata as unknown as MessageMetadata) ??
+                ({} as MessageMetadata)),
               ...(cost != null ? { cost } : {}),
               ...(model ? { model } : {}),
             } as MessageMetadata,
@@ -166,7 +186,7 @@ export function useIdeationChat({ conversationId }: UseIdeationChatOptions) {
       setError(null);
       sendMutation.mutate({ convId, message });
     },
-    [effectiveConvId, conversationId, sendMutation],
+    [effectiveConvId, conversationId, sendMutation]
   );
 
   // Extract latest proposals from messages

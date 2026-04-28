@@ -5,11 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '@/lib/api/admin-api';
-import type {
-  ReviewItemDecision,
-  ReviewItemType,
-  UpdateReviewRequest,
-} from './spec-review-types';
+import type { ReviewItemDecision, ReviewItemType, UpdateReviewRequest } from './spec-review-types';
 
 const REVIEW_KEY = ['spec-review'];
 
@@ -104,12 +100,12 @@ export function useSpecReview(featureId: string, options?: { enabled?: boolean }
   // Helper: accept all pending items in one request
   function acceptAll() {
     if (!review) return;
-    const pendingItems = items.filter(i => i.decision === 'pending');
+    const pendingItems = items.filter((i) => i.decision === 'pending');
     if (pendingItems.length === 0) return;
     const data: UpdateReviewRequest = {
       review_id: review.id,
       version: review.version,
-      updates: pendingItems.map(i => ({ item_id: i.id, decision: 'accepted' as const })),
+      updates: pendingItems.map((i) => ({ item_id: i.id, decision: 'accepted' as const })),
     };
     return updateMutation.mutateAsync(data);
   }
@@ -126,9 +122,11 @@ export function useSpecReview(featureId: string, options?: { enabled?: boolean }
   }
 
   const isReviewActive = review?.status === 'in_review';
-  const pendingCount = items.filter(i => i.decision === 'pending').length;
-  const acceptedCount = items.filter(i => i.decision === 'accepted' || i.decision === 'modified').length;
-  const rejectedCount = items.filter(i => i.decision === 'rejected').length;
+  const pendingCount = items.filter((i) => i.decision === 'pending').length;
+  const acceptedCount = items.filter(
+    (i) => i.decision === 'accepted' || i.decision === 'modified'
+  ).length;
+  const rejectedCount = items.filter((i) => i.decision === 'rejected').length;
 
   return {
     // Data

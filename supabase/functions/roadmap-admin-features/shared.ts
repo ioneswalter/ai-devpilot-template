@@ -50,7 +50,7 @@ export const UpdateFeatureSchema = z.object({
 export async function isAdmin(
   supabase: SupabaseClient,
   userId: string,
-  userEmail: string | undefined,
+  userEmail: string | undefined
 ): Promise<boolean> {
   // Check by user_id first (more reliable for phone auth users)
   const { data: adminById } = await supabase
@@ -79,12 +79,9 @@ export async function isAdmin(
  * Generate next available feature code, recycling deleted codes
  * Finds the lowest available gap in the sequence
  */
-export function generateFeatureCode(
-  existingCodes: string[],
-  type: 'feature' | 'journey',
-): string {
+export function generateFeatureCode(existingCodes: string[], type: 'feature' | 'journey'): string {
   const prefix = type === 'journey' ? 'J-' : 'FR-';
-  const relevantCodes = existingCodes.filter(c => c.startsWith(prefix));
+  const relevantCodes = existingCodes.filter((c) => c.startsWith(prefix));
 
   const existingNumbers: number[] = [];
   for (const code of relevantCodes) {
@@ -111,9 +108,9 @@ export function generateFeatureCode(
 function simpleParseCriteria(text: string): string[] {
   return text
     .split(/[\n\r]+|(?:^|\s)[-•*]\s|(?:^|\s)\d+[.)]\s/m)
-    .map(s => s.trim())
-    .filter(s => s.length > 10)
-    .map(s => s.replace(/^[-•*\d.)]+\s*/, '').trim());
+    .map((s) => s.trim())
+    .filter((s) => s.length > 10)
+    .map((s) => s.replace(/^[-•*\d.)]+\s*/, '').trim());
 }
 
 /**
@@ -126,24 +123,17 @@ export function parseAcceptanceCriteria(text: string): string[] {
 }
 
 /** Build a JSON error response with CORS headers */
-export function errorResponse(
-  code: string,
-  message: string,
-  status: number,
-): Response {
-  return new Response(
-    JSON.stringify({ error: { code, message } }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-  );
+export function errorResponse(code: string, message: string, status: number): Response {
+  return new Response(JSON.stringify({ error: { code, message } }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }
 
 /** Build a JSON success response with CORS headers */
-export function jsonResponse(
-  data: unknown,
-  status = 200,
-): Response {
-  return new Response(
-    JSON.stringify({ data }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-  );
+export function jsonResponse(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify({ data }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 }

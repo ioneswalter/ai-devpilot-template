@@ -27,7 +27,7 @@ export async function enqueuePipeline(
   supabase: SupabaseClient,
   featureId: string,
   requestId: string,
-  createdBy?: string,
+  createdBy?: string
 ): Promise<EnqueueResult> {
   const maxConcurrent = getMaxConcurrent();
 
@@ -86,17 +86,20 @@ export async function enqueuePipeline(
 export async function linkPipelineToQueue(
   supabase: SupabaseClient,
   queueEntryId: string,
-  pipelineId: string,
+  pipelineId: string
 ): Promise<void> {
   await supabase.from('pipeline_queue').update({ pipeline_id: pipelineId }).eq('id', queueEntryId);
-  await supabase.from('pipeline_runs').update({ queue_entry_id: queueEntryId }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({ queue_entry_id: queueEntryId })
+    .eq('id', pipelineId);
 }
 
 /** Mark a queue entry as completed and promote the next one */
 export async function completeQueueEntry(
   supabase: SupabaseClient,
   pipelineId: string,
-  finalStatus: 'completed' | 'failed' = 'completed',
+  finalStatus: 'completed' | 'failed' = 'completed'
 ): Promise<void> {
   await supabase
     .from('pipeline_queue')
@@ -130,11 +133,14 @@ export async function promoteNextInQueue(supabase: SupabaseClient): Promise<void
   const entry = next[0];
 
   // Promote to running
-  await supabase.from('pipeline_queue').update({
-    status: 'running',
-    position: 0,
-    started_at: new Date().toISOString(),
-  }).eq('id', entry.id);
+  await supabase
+    .from('pipeline_queue')
+    .update({
+      status: 'running',
+      position: 0,
+      started_at: new Date().toISOString(),
+    })
+    .eq('id', entry.id);
 
   // Reorder remaining queued entries
   await reorderQueue(supabase);
@@ -143,14 +149,19 @@ export async function promoteNextInQueue(supabase: SupabaseClient): Promise<void
   triggerPipelineStart(entry.feature_id, entry.request_id, entry.id);
 
   // Send notification
-  await sendQueueNotification(supabase, entry.feature_id, 'queue_promoted',
-    'Your pipeline has started', 'Your queued pipeline is now running.');
+  await sendQueueNotification(
+    supabase,
+    entry.feature_id,
+    'queue_promoted',
+    'Your pipeline has started',
+    'Your queued pipeline is now running.'
+  );
 }
 
 /** Cancel a queue entry */
 export async function cancelQueueEntry(
   supabase: SupabaseClient,
-  queueEntryId: string,
+  queueEntryId: string
 ): Promise<{ cancelled: boolean; positions_updated: number }> {
   const { data: entry } = await supabase
     .from('pipeline_queue')
@@ -162,14 +173,22 @@ export async function cancelQueueEntry(
 
   if (entry.status === 'running' && entry.pipeline_id) {
     // Cancel the running pipeline too
-    await supabase.from('pipeline_runs').update({
-      status: 'cancelled', cancelled_at: new Date().toISOString(),
-    }).eq('id', entry.pipeline_id);
+    await supabase
+      .from('pipeline_runs')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+      })
+      .eq('id', entry.pipeline_id);
   }
 
-  await supabase.from('pipeline_queue').update({
-    status: 'cancelled', completed_at: new Date().toISOString(),
-  }).eq('id', queueEntryId);
+  await supabase
+    .from('pipeline_queue')
+    .update({
+      status: 'cancelled',
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', queueEntryId);
 
   const updated = await reorderQueue(supabase);
 
@@ -187,22 +206,45 @@ export async function getQueueStatus(supabase: SupabaseClient): Promise<{
   max_concurrent: number;
 }> {
   const [runRes, queueRes, completedRes] = await Promise.all([
-    supabase.from('pipeline_queue').select('*').eq('status', 'running').order('started_at', { ascending: true }),
-    supabase.from('pipeline_queue').select('*').eq('status', 'queued').order('position', { ascending: true }),
-    supabase.from('pipeline_queue').select('*').in('status', ['completed', 'failed']).order('completed_at', { ascending: false }).limit(10),
+    supabase
+      .from('pipeline_queue')
+      .select('*')
+      .eq('status', 'running')
+      .order('started_at', { ascending: true }),
+    supabase
+      .from('pipeline_queue')
+      .select('*')
+      .eq('status', 'queued')
+      .order('position', { ascending: true }),
+    supabase
+      .from('pipeline_queue')
+      .select('*')
+      .in('status', ['completed', 'failed'])
+      .order('completed_at', { ascending: false })
+      .limit(10),
   ]);
 
   // Enrich with feature titles and pipeline progress
   const enriched = async (entries: unknown[]) => {
     const results = [];
     for (const e of entries as Array<Record<string, unknown>>) {
-      const { data: feat } = await supabase.from('product_features').select('title').eq('id', e.feature_id).single();
+      const { data: feat } = await supabase
+        .from('product_features')
+        .select('title')
+        .eq('id', e.feature_id)
+        .single();
       let progress = null;
       let stage = null;
       if (e.pipeline_id) {
-        const { data: pr } = await supabase.from('pipeline_runs')
-          .select('current_stage, completed_tasks, total_tasks').eq('id', e.pipeline_id).single();
-        if (pr) { stage = pr.current_stage; progress = { completed: pr.completed_tasks, total: pr.total_tasks }; }
+        const { data: pr } = await supabase
+          .from('pipeline_runs')
+          .select('current_stage, completed_tasks, total_tasks')
+          .eq('id', e.pipeline_id)
+          .single();
+        if (pr) {
+          stage = pr.current_stage;
+          progress = { completed: pr.completed_tasks, total: pr.total_tasks };
+        }
       }
       results.push({ ...e, feature_title: feat?.title ?? 'Unknown', stage, progress });
     }
@@ -226,7 +268,10 @@ async function reorderQueue(supabase: SupabaseClient): Promise<number> {
 
   if (!queued) return 0;
   for (let i = 0; i < queued.length; i++) {
-    await supabase.from('pipeline_queue').update({ position: i + 1 }).eq('id', queued[i].id);
+    await supabase
+      .from('pipeline_queue')
+      .update({ position: i + 1 })
+      .eq('id', queued[i].id);
   }
   return queued.length;
 }
@@ -236,13 +281,25 @@ function triggerPipelineStart(featureId: string, requestId: string, queueEntryId
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
   fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
-    body: JSON.stringify({ action: 'start-from-queue', feature_id: featureId, request_id: requestId, queue_entry_id: queueEntryId }),
-  }).catch(err => console.error('Failed to trigger queued pipeline:', err));
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${serviceKey}` },
+    body: JSON.stringify({
+      action: 'start-from-queue',
+      feature_id: featureId,
+      request_id: requestId,
+      queue_entry_id: queueEntryId,
+    }),
+  }).catch((err) => console.error('Failed to trigger queued pipeline:', err));
 }
 
 async function sendQueueNotification(
-  supabase: SupabaseClient, featureId: string, type: string, title: string, message: string,
+  supabase: SupabaseClient,
+  featureId: string,
+  type: string,
+  title: string,
+  message: string
 ): Promise<void> {
-  await supabase.from('pipeline_notifications').insert({ feature_id: featureId, pipeline_id: featureId, type, title, message }).catch(() => {});
+  await supabase
+    .from('pipeline_notifications')
+    .insert({ feature_id: featureId, pipeline_id: featureId, type, title, message })
+    .catch(() => {});
 }

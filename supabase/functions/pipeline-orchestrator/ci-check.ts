@@ -26,7 +26,7 @@ import {
 export async function runCICheck(pipelineId: string, requestId: string): Promise<void> {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
@@ -42,7 +42,12 @@ export async function runCICheck(pipelineId: string, requestId: string): Promise
     .update({ current_stage: 'build_check', last_heartbeat: new Date().toISOString() })
     .eq('id', pipelineId);
 
-  await appendLog(supabase, pipelineId, 'info', 'Starting CI validation: TypeScript → ESLint → Tests');
+  await appendLog(
+    supabase,
+    pipelineId,
+    'info',
+    'Starting CI validation: TypeScript → ESLint → Tests'
+  );
 
   // Collect all generated code
   const { data: tasks } = await supabase
@@ -58,7 +63,7 @@ export async function runCICheck(pipelineId: string, requestId: string): Promise
     return;
   }
 
-  const files: GeneratedFile[] = tasks.map(t => ({
+  const files: GeneratedFile[] = tasks.map((t) => ({
     file_path: t.file_path,
     code: t.generated_code!,
     task_title: t.title,
@@ -100,8 +105,14 @@ export async function runCICheck(pipelineId: string, requestId: string): Promise
     }
 
     const passed = await runStageWithRetries(
-      supabase, anthropic, pipelineId, requestId,
-      stage, files, feature, ciResults[stage],
+      supabase,
+      anthropic,
+      pipelineId,
+      requestId,
+      stage,
+      files,
+      feature,
+      ciResults[stage]
     );
 
     ciResults[stage].passed = passed;
@@ -113,10 +124,7 @@ export async function runCICheck(pipelineId: string, requestId: string): Promise
   }
 
   // Save CI results and complete pipeline
-  await supabase
-    .from('pipeline_runs')
-    .update({ ci_results: ciResults })
-    .eq('id', pipelineId);
+  await supabase.from('pipeline_runs').update({ ci_results: ciResults }).eq('id', pipelineId);
 
   await completePipeline(supabase, pipelineId, requestId, allPassed);
 }

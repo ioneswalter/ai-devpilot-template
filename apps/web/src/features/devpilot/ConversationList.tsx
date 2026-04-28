@@ -14,7 +14,12 @@ interface ConversationListProps {
   onArchive: (id: string) => void;
 }
 
-export function ConversationList({ conversations, isLoading, onSelect, onArchive }: ConversationListProps) {
+export function ConversationList({
+  conversations,
+  isLoading,
+  onSelect,
+  onArchive,
+}: ConversationListProps) {
   const [archiveConfirm, setArchiveConfirm] = useState<string | null>(null);
 
   if (isLoading) {
@@ -26,15 +31,15 @@ export function ConversationList({ conversations, isLoading, onSelect, onArchive
   }
 
   // Show empty state if no conversations, or if all are empty drafts
-  const hasVisibleConversations = conversations.some((c) => c.message_count > 0 || c.status !== 'draft');
+  const hasVisibleConversations = conversations.some(
+    (c) => c.message_count > 0 || c.status !== 'draft'
+  );
   if (conversations.length === 0 || !hasVisibleConversations) {
     return (
       <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
         <SparklesIcon className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
         <h3 className="text-lg font-semibold text-gray-900 mb-1">No conversations yet</h3>
-        <p className="text-gray-500 text-sm">
-          Start an ideation to explore feature ideas with AI.
-        </p>
+        <p className="text-gray-500 text-sm">Start an ideation to explore feature ideas with AI.</p>
       </div>
     );
   }
@@ -82,7 +87,8 @@ export function ConversationList({ conversations, isLoading, onSelect, onArchive
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full">
             <h3 className="font-semibold text-gray-900 mb-2">Archive conversation?</h3>
             <p className="text-sm text-gray-600 mb-4">
-              This conversation will be moved to the archived section. You can still view it but cannot continue chatting.
+              This conversation will be moved to the archived section. You can still view it but
+              cannot continue chatting.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -92,7 +98,10 @@ export function ConversationList({ conversations, isLoading, onSelect, onArchive
                 Cancel
               </button>
               <button
-                onClick={() => { onArchive(archiveConfirm); setArchiveConfirm(null); }}
+                onClick={() => {
+                  onArchive(archiveConfirm);
+                  setArchiveConfirm(null);
+                }}
                 className="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
                 Archive
@@ -105,7 +114,15 @@ export function ConversationList({ conversations, isLoading, onSelect, onArchive
   );
 }
 
-function Section({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
@@ -163,10 +180,7 @@ function ConversationItem({ conv, onSelect, showArchive, onArchiveClick }: Conve
 
   return (
     <div className="bg-white rounded-lg border hover:border-emerald-300 hover:shadow-sm transition-all flex group">
-      <button
-        onClick={() => onSelect(conv.id)}
-        className="flex-1 px-4 py-3 text-left min-w-0"
-      >
+      <button onClick={() => onSelect(conv.id)} className="flex-1 px-4 py-3 text-left min-w-0">
         <div className="flex items-start justify-between gap-3">
           <h4 className="font-medium text-gray-900 text-sm leading-snug">
             {smartTitle(conv.title)}
@@ -186,16 +200,23 @@ function ConversationItem({ conv, onSelect, showArchive, onArchiveClick }: Conve
           </div>
         </div>
         <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-medium ${config.badge}`}>
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 rounded border text-[10px] font-medium ${config.badge}`}
+          >
             {conv.status}
           </span>
-          <span>{conv.message_count} msg{conv.message_count !== 1 ? 's' : ''}</span>
+          <span>
+            {conv.message_count} msg{conv.message_count !== 1 ? 's' : ''}
+          </span>
           <span>{formatDate(conv.updated_at)}</span>
         </div>
       </button>
       {showArchive && (
         <button
-          onClick={(e) => { e.stopPropagation(); onArchiveClick?.(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onArchiveClick?.();
+          }}
           className="px-3 text-gray-300 hover:text-red-500 border-l opacity-0 group-hover:opacity-100 transition-opacity"
           title="Archive"
         >

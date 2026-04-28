@@ -1,7 +1,12 @@
 /** AI Usage Dashboard (FR-112) — shows cost analytics, budget status, drill-down, and CSV export */
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { aiUsageApi, type UsageAnalytics, type BudgetStatus, type UsageCosts } from '@/lib/api/ai-usage-api';
+import {
+  aiUsageApi,
+  type UsageAnalytics,
+  type BudgetStatus,
+  type UsageCosts,
+} from '@/lib/api/ai-usage-api';
 
 export function AIUsageDashboard() {
   const [drillFeatureId, setDrillFeatureId] = useState<string | null>(null);
@@ -41,8 +46,12 @@ export function AIUsageDashboard() {
       {budgetData && (
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-gray-500">Budget: ${budgetData.current_spend.toFixed(2)} / ${budgetData.budget_limit.toFixed(2)}</span>
-            <span className={budgetData.is_over_budget ? 'text-red-600 font-medium' : 'text-gray-500'}>
+            <span className="text-gray-500">
+              Budget: ${budgetData.current_spend.toFixed(2)} / ${budgetData.budget_limit.toFixed(2)}
+            </span>
+            <span
+              className={budgetData.is_over_budget ? 'text-red-600 font-medium' : 'text-gray-500'}
+            >
               {budgetData.percent_used.toFixed(0)}%
             </span>
           </div>
@@ -53,7 +62,8 @@ export function AIUsageDashboard() {
             />
           </div>
           <p className="text-xs text-gray-400">
-            Projected: ${budgetData.projected_spend.toFixed(2)} | {budgetData.days_remaining}d remaining
+            Projected: ${budgetData.projected_spend.toFixed(2)} | {budgetData.days_remaining}d
+            remaining
           </p>
         </div>
       )}
@@ -76,7 +86,9 @@ export function AIUsageDashboard() {
             .map(([op, data]) => (
               <div key={op} className="flex items-center justify-between text-xs">
                 <span className="text-gray-600 capitalize">{op.replace(/_/g, ' ')}</span>
-                <span className="text-gray-500">{data.calls} calls / ${data.cost.toFixed(2)}</span>
+                <span className="text-gray-500">
+                  {data.calls} calls / ${data.cost.toFixed(2)}
+                </span>
               </div>
             ))}
         </div>
@@ -96,8 +108,12 @@ export function AIUsageDashboard() {
                   onClick={() => setDrillFeatureId(drillFeatureId === fid ? null : fid)}
                   className="w-full flex items-center justify-between text-xs hover:bg-gray-50 rounded px-1 py-0.5"
                 >
-                  <span className="text-gray-600 truncate max-w-[60%]" title={fid}>{fid}</span>
-                  <span className="text-gray-500">{data.calls} calls / ${data.cost.toFixed(2)}</span>
+                  <span className="text-gray-600 truncate max-w-[60%]" title={fid}>
+                    {fid}
+                  </span>
+                  <span className="text-gray-500">
+                    {data.calls} calls / ${data.cost.toFixed(2)}
+                  </span>
                 </button>
                 {drillFeatureId === fid && <FeatureDrillDown featureId={fid} />}
               </div>
@@ -135,7 +151,9 @@ function FeatureDrillDown({ featureId }: { featureId: string }) {
         .map(([op, info]) => (
           <div key={op} className="flex items-center justify-between text-[10px]">
             <span className="text-gray-500 capitalize">{op.replace(/_/g, ' ')}</span>
-            <span className="text-gray-400">{info.calls} / ${info.cost.toFixed(4)}</span>
+            <span className="text-gray-400">
+              {info.calls} / ${info.cost.toFixed(4)}
+            </span>
           </div>
         ))}
     </div>
@@ -153,10 +171,22 @@ function CsvExportButton() {
       const records = Array.isArray(res.data) ? res.data : [];
       if (records.length === 0) return;
 
-      const headers = ['id', 'feature_id', 'model_id', 'operation_type', 'input_tokens', 'output_tokens', 'total_cost', 'status', 'created_at'];
+      const headers = [
+        'id',
+        'feature_id',
+        'model_id',
+        'operation_type',
+        'input_tokens',
+        'output_tokens',
+        'total_cost',
+        'status',
+        'created_at',
+      ];
       const csvRows = [
         headers.join(','),
-        ...records.map(r => headers.map(h => JSON.stringify(String(r[h as keyof typeof r] ?? ''))).join(',')),
+        ...records.map((r) =>
+          headers.map((h) => JSON.stringify(String(r[h as keyof typeof r] ?? ''))).join(',')
+        ),
       ];
       const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);

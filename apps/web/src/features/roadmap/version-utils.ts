@@ -24,15 +24,16 @@ export interface VersionSuggestions {
 export function parseVersion(version: string): ParsedVersion | null {
   // Remove 'v' prefix if present
   const cleanVersion = version.replace(/^v/, '');
-  
+
   // Regex for semver: major.minor.patch[-prerelease][+build]
-  const semverRegex = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
-  
+  const semverRegex =
+    /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/;
+
   const match = cleanVersion.match(semverRegex);
   if (!match) {
     return null;
   }
-  
+
   return {
     major: parseInt(match[1], 10),
     minor: parseInt(match[2], 10),
@@ -49,15 +50,15 @@ export function parseVersion(version: string): ParsedVersion | null {
 export function formatVersion(version: ParsedVersion, includePrefix = false): string {
   const prefix = includePrefix ? 'v' : '';
   let versionString = `${prefix}${version.major}.${version.minor}.${version.patch}`;
-  
+
   if (version.prerelease) {
     versionString += `-${version.prerelease}`;
   }
-  
+
   if (version.build) {
     versionString += `+${version.build}`;
   }
-  
+
   return versionString;
 }
 
@@ -70,29 +71,29 @@ export function compareVersions(a: ParsedVersion, b: ParsedVersion): number {
   if (a.major !== b.major) {
     return a.major - b.major;
   }
-  
+
   if (a.minor !== b.minor) {
     return a.minor - b.minor;
   }
-  
+
   if (a.patch !== b.patch) {
     return a.patch - b.patch;
   }
-  
+
   // Handle prerelease versions
   if (a.prerelease && !b.prerelease) {
     return -1; // a is prerelease, b is not -> a < b
   }
-  
+
   if (!a.prerelease && b.prerelease) {
     return 1; // a is not prerelease, b is -> a > b
   }
-  
+
   if (a.prerelease && b.prerelease) {
     // Compare prerelease identifiers lexically
     return a.prerelease.localeCompare(b.prerelease);
   }
-  
+
   // Both are equal
   return 0;
 }
@@ -104,33 +105,36 @@ export function findLatestVersion(versions: string[]): string | null {
   if (versions.length === 0) {
     return null;
   }
-  
+
   const parsedVersions = versions
-    .map(v => parseVersion(v))
+    .map((v) => parseVersion(v))
     .filter((v): v is ParsedVersion => v !== null)
-    .filter(v => !v.prerelease); // Exclude prerelease versions
-  
+    .filter((v) => !v.prerelease); // Exclude prerelease versions
+
   if (parsedVersions.length === 0) {
     return null;
   }
-  
-  const latest = parsedVersions.reduce((latest, current) => 
+
+  const latest = parsedVersions.reduce((latest, current) =>
     compareVersions(current, latest) > 0 ? current : latest
   );
-  
+
   return latest.raw;
 }
 
 /**
  * Increment a version by the specified type
  */
-export function incrementVersion(version: ParsedVersion, type: 'major' | 'minor' | 'patch'): ParsedVersion {
+export function incrementVersion(
+  version: ParsedVersion,
+  type: 'major' | 'minor' | 'patch'
+): ParsedVersion {
   const newVersion = { ...version };
-  
+
   // Remove prerelease and build metadata when incrementing
   delete newVersion.prerelease;
   delete newVersion.build;
-  
+
   switch (type) {
     case 'major':
       newVersion.major += 1;
@@ -145,10 +149,10 @@ export function incrementVersion(version: ParsedVersion, type: 'major' | 'minor'
       newVersion.patch += 1;
       break;
   }
-  
+
   // Update raw string
   newVersion.raw = formatVersion(newVersion);
-  
+
   return newVersion;
 }
 
@@ -157,12 +161,12 @@ export function incrementVersion(version: ParsedVersion, type: 'major' | 'minor'
  */
 export function generateVersionSuggestions(existingVersions: string[]): VersionSuggestions {
   const latestVersionString = findLatestVersion(existingVersions);
-  
+
   // Default to 1.0.0 if no versions exist
-  const baseVersion = latestVersionString 
+  const baseVersion = latestVersionString
     ? parseVersion(latestVersionString)
     : { major: 1, minor: 0, patch: 0, raw: '1.0.0' };
-  
+
   if (!baseVersion) {
     // Fallback if parsing fails
     return {
@@ -171,11 +175,11 @@ export function generateVersionSuggestions(existingVersions: string[]): VersionS
       major: '2.0.0',
     };
   }
-  
+
   const patchVersion = incrementVersion(baseVersion, 'patch');
   const minorVersion = incrementVersion(baseVersion, 'minor');
   const majorVersion = incrementVersion(baseVersion, 'major');
-  
+
   return {
     patch: formatVersion(patchVersion),
     minor: formatVersion(minorVersion),
@@ -195,10 +199,10 @@ export function isValidSemver(version: string): boolean {
  */
 export function sortVersions(versions: string[]): string[] {
   return versions
-    .map(v => ({ version: v, parsed: parseVersion(v) }))
-    .filter(v => v.parsed !== null)
+    .map((v) => ({ version: v, parsed: parseVersion(v) }))
+    .filter((v) => v.parsed !== null)
     .sort((a, b) => compareVersions(a.parsed!, b.parsed!))
-    .map(v => v.version);
+    .map((v) => v.version);
 }
 
 /**

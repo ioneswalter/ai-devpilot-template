@@ -55,7 +55,7 @@ export function computeSpecStage(
   reviews: SpecReviewRow[],
   artifacts: SpecArtifactRow[],
   featureId: string,
-  featureStatus?: string,
+  featureStatus?: string
 ): StageStatus {
   if (featureStatus === 'in_testing' || featureStatus === 'released') {
     return { status: 'completed', label: 'Approved' };
@@ -90,20 +90,25 @@ export function computeBuildStage(
   impls: ImplRequestRow[],
   pipelineRuns: PipelineRunRow[],
   featureId: string,
-  featureStatus: string,
+  featureStatus: string
 ): StageStatus {
   const featureImpls = impls.filter((r) => r.feature_id === featureId);
   const featurePipelines = pipelineRuns.filter((r) => r.feature_id === featureId);
 
   const runningPipeline = featurePipelines.find((p) => p.status === 'running');
   if (runningPipeline) {
-    const pct = runningPipeline.total_tasks > 0
-      ? Math.round((runningPipeline.completed_tasks / runningPipeline.total_tasks) * 100)
-      : 0;
+    const pct =
+      runningPipeline.total_tasks > 0
+        ? Math.round((runningPipeline.completed_tasks / runningPipeline.total_tasks) * 100)
+        : 0;
     return { status: 'in_progress', label: `Pipeline ${pct}%` };
   }
 
-  if (featureImpls.some((r) => (r.status === 'completed' || r.status === 'implemented') && r.code_applied)) {
+  if (
+    featureImpls.some(
+      (r) => (r.status === 'completed' || r.status === 'implemented') && r.code_applied
+    )
+  ) {
     return { status: 'completed', label: 'Completed' };
   }
   if (featurePipelines.some((p) => p.status === 'completed')) {
@@ -112,7 +117,11 @@ export function computeBuildStage(
   if (featureImpls.some((r) => r.status === 'completed' || r.status === 'implemented')) {
     return { status: 'in_progress', label: 'Plan Ready' };
   }
-  if (featureImpls.some((r) => r.status === 'pending' || r.status === 'in_progress' || r.status === 'implementing')) {
+  if (
+    featureImpls.some(
+      (r) => r.status === 'pending' || r.status === 'in_progress' || r.status === 'implementing'
+    )
+  ) {
     return { status: 'in_progress', label: 'Building' };
   }
   if (featurePipelines.some((p) => p.status === 'failed' || p.status === 'timed_out')) {
@@ -129,10 +138,7 @@ export function computeBuildStage(
   return { status: 'not_started', label: 'Not Started' };
 }
 
-export function computeTestStage(
-  testCases: TestCaseRow[],
-  featureId: string,
-): StageStatus {
+export function computeTestStage(testCases: TestCaseRow[], featureId: string): StageStatus {
   const cases = testCases.filter((tc) => tc.feature_id === featureId);
   if (cases.length === 0) return { status: 'not_started', label: 'Not Started' };
 
@@ -182,7 +188,7 @@ export function computeUatStage(
   decisions: UatDecisionRow[],
   totalChecklistItems: number,
   featureId: string,
-  featureStatus: string,
+  featureStatus: string
 ): UatStageDetail {
   const featurePackages = packages.filter((p) => p.feature_id === featureId);
   const latest = featurePackages.length > 0 ? featurePackages[0] : null;
@@ -211,10 +217,24 @@ export function computeUatStage(
 
   const cycleLabel = maxCycle > 1 ? ` · Cycle ${maxCycle}` : '';
   if (latest.status === 'approved') {
-    return { status: 'completed', label: `Approved${cycleLabel}`, packageStatus: 'approved', cycleNumber: maxCycle || 1, decisionCounts: counts, dueAt: latest.due_at };
+    return {
+      status: 'completed',
+      label: `Approved${cycleLabel}`,
+      packageStatus: 'approved',
+      cycleNumber: maxCycle || 1,
+      decisionCounts: counts,
+      dueAt: latest.due_at,
+    };
   }
   if (latest.status === 'rejected') {
-    return { status: 'warning', label: `Rejected${cycleLabel}`, packageStatus: 'rejected', cycleNumber: maxCycle || 1, decisionCounts: counts, dueAt: latest.due_at };
+    return {
+      status: 'warning',
+      label: `Rejected${cycleLabel}`,
+      packageStatus: 'rejected',
+      cycleNumber: maxCycle || 1,
+      decisionCounts: counts,
+      dueAt: latest.due_at,
+    };
   }
   // in_review
   const overdue = latest.due_at !== null && new Date(latest.due_at).getTime() < Date.now();
@@ -232,7 +252,7 @@ export function computeUatStage(
 export function computeDeployStage(
   pipelineRuns: PipelineRunRow[],
   featureId: string,
-  featureStatus: string,
+  featureStatus: string
 ): StageStatus {
   if (featureStatus === 'released') return { status: 'completed', label: 'Released' };
   if (featureStatus === 'deprecated') return { status: 'warning', label: 'Deprecated' };

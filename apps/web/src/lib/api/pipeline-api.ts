@@ -16,9 +16,7 @@ export const pipelineApiMethods = {
     if (featureId) params.set('feature_id', featureId);
     if (versionId) params.set('version_id', versionId);
     const qs = params.toString();
-    return apiClient<PipelineStatusResponse>(
-      `pipeline-status${qs ? `?${qs}` : ''}`,
-    );
+    return apiClient<PipelineStatusResponse>(`pipeline-status${qs ? `?${qs}` : ''}`);
   },
 
   // Pipeline Orchestrator (FR-113)
@@ -28,22 +26,17 @@ export const pipelineApiMethods = {
       {
         method: 'POST',
         body: JSON.stringify({ action: 'start', feature_id: featureId, request_id: requestId }),
-      },
+      }
     ),
 
   cancelPipeline: (pipelineId: string) =>
-    apiClient<{ data: { pipeline_id: string; status: string } }>(
-      'pipeline-orchestrator',
-      {
-        method: 'POST',
-        body: JSON.stringify({ action: 'cancel', pipeline_id: pipelineId }),
-      },
-    ),
+    apiClient<{ data: { pipeline_id: string; status: string } }>('pipeline-orchestrator', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'cancel', pipeline_id: pipelineId }),
+    }),
 
   getPipelineRunStatus: (featureId: string) =>
-    apiClient<{ data: PipelineRunStatus }>(
-      `pipeline-orchestrator?feature_id=${featureId}`,
-    ),
+    apiClient<{ data: PipelineRunStatus }>(`pipeline-orchestrator?feature_id=${featureId}`),
 
   // Re-run CI validation (FR-114)
   rerunCI: (pipelineId: string) =>
@@ -52,7 +45,7 @@ export const pipelineApiMethods = {
       {
         method: 'POST',
         body: JSON.stringify({ action: 'rerun-ci', pipeline_id: pipelineId }),
-      },
+      }
     ),
 
   // Re-deploy (FR-115)
@@ -62,7 +55,7 @@ export const pipelineApiMethods = {
       {
         method: 'POST',
         body: JSON.stringify({ action: 'redeploy', pipeline_id: pipelineId }),
-      },
+      }
     ),
 
   // Re-run readiness (FR-116)
@@ -72,13 +65,13 @@ export const pipelineApiMethods = {
       {
         method: 'POST',
         body: JSON.stringify({ action: 'rerun-readiness', pipeline_id: pipelineId }),
-      },
+      }
     ),
 
   // Deploy Progress (FR-142)
   getDeployProgress: (pipelineId: string) =>
     apiClient<{ data: DeployProgressResponse }>(
-      `pipeline-orchestrator?action=deploy-progress&pipeline_id=${pipelineId}`,
+      `pipeline-orchestrator?action=deploy-progress&pipeline_id=${pipelineId}`
     ),
 
   acknowledgeEscalation: (escalationId: string) =>
@@ -87,7 +80,7 @@ export const pipelineApiMethods = {
       {
         method: 'POST',
         body: JSON.stringify({ action: 'acknowledge-escalation', escalation_id: escalationId }),
-      },
+      }
     ),
 
   resolveEscalation: (escalationId: string, resolutionNotes: string) =>
@@ -95,40 +88,47 @@ export const pipelineApiMethods = {
       'pipeline-orchestrator',
       {
         method: 'POST',
-        body: JSON.stringify({ action: 'resolve-escalation', escalation_id: escalationId, resolution_notes: resolutionNotes }),
-      },
+        body: JSON.stringify({
+          action: 'resolve-escalation',
+          escalation_id: escalationId,
+          resolution_notes: resolutionNotes,
+        }),
+      }
     ),
 
   // Notifications (FR-116)
   getNotifications: (unreadOnly = true) =>
     apiClient<{ data: PipelineNotification[] }>(
-      `pipeline-orchestrator?action=notifications${unreadOnly ? '&unread=true' : ''}`,
+      `pipeline-orchestrator?action=notifications${unreadOnly ? '&unread=true' : ''}`
     ),
 
   markNotificationRead: (notificationId: string) =>
-    apiClient<{ data: { id: string; read: boolean } }>(
-      'pipeline-orchestrator',
-      {
-        method: 'POST',
-        body: JSON.stringify({ action: 'mark-notification-read', notification_id: notificationId }),
-      },
-    ),
+    apiClient<{ data: { id: string; read: boolean } }>('pipeline-orchestrator', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'mark-notification-read', notification_id: notificationId }),
+    }),
 
   // Learning Insights (FR-118)
   getLearningInsights: () =>
     apiClient<{ data: LearningInsights }>('pipeline-orchestrator?action=learning-insights'),
 
   approveRecommendation: (recommendationId: string) =>
-    apiClient<{ data: { id: string; status: string } }>(
-      'pipeline-orchestrator',
-      { method: 'POST', body: JSON.stringify({ action: 'approve-recommendation', recommendation_id: recommendationId }) },
-    ),
+    apiClient<{ data: { id: string; status: string } }>('pipeline-orchestrator', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'approve-recommendation',
+        recommendation_id: recommendationId,
+      }),
+    }),
 
   dismissRecommendation: (recommendationId: string) =>
-    apiClient<{ data: { id: string; status: string } }>(
-      'pipeline-orchestrator',
-      { method: 'POST', body: JSON.stringify({ action: 'dismiss-recommendation', recommendation_id: recommendationId }) },
-    ),
+    apiClient<{ data: { id: string; status: string } }>('pipeline-orchestrator', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'dismiss-recommendation',
+        recommendation_id: recommendationId,
+      }),
+    }),
 };
 
 // ── Pipeline Run Types (FR-113) ──
@@ -267,6 +267,11 @@ export interface PipelineRun {
 
 export interface PipelineRunStatus {
   active: PipelineRun | null;
-  current_task: { id: string; title: string; file_path: string; implementation_status: string } | null;
+  current_task: {
+    id: string;
+    title: string;
+    file_path: string;
+    implementation_status: string;
+  } | null;
   history: PipelineRun[];
 }

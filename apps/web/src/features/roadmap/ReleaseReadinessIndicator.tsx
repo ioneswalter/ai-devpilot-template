@@ -10,7 +10,12 @@ interface ReleaseReadinessIndicatorProps {
   notRun: number;
 }
 
-export function ReleaseReadinessIndicator({ total, passed, failed, notRun }: ReleaseReadinessIndicatorProps) {
+export function ReleaseReadinessIndicator({
+  total,
+  passed,
+  failed,
+  notRun,
+}: ReleaseReadinessIndicatorProps) {
   if (total === 0) {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 whitespace-nowrap">

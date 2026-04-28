@@ -9,7 +9,7 @@ type SupabaseClient = ReturnType<typeof createClient>;
 /** Try to load data-model.md from feature_spec_artifacts for targeted schema context */
 export async function getDataModelContext(
   featureId: string,
-  supabase: SupabaseClient,
+  supabase: SupabaseClient
 ): Promise<string | null> {
   try {
     const { data: artifact } = await supabase
@@ -31,15 +31,12 @@ export async function getDataModelContext(
 export function buildSpecContext(
   title: string,
   description: string | null,
-  criteria: string[],
+  criteria: string[]
 ): string {
   const parts = [`Feature: ${title}`];
   if (description) parts.push(`Description: ${description}`);
   if (criteria.length > 0) {
-    parts.push(
-      'Acceptance Criteria:\n' +
-        criteria.map((c, i) => `${i + 1}. ${c}`).join('\n'),
-    );
+    parts.push('Acceptance Criteria:\n' + criteria.map((c, i) => `${i + 1}. ${c}`).join('\n'));
   }
   return parts.join('\n\n');
 }

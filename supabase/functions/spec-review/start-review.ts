@@ -16,13 +16,21 @@ interface StartReviewParams {
   supabase: SupabaseClient;
 }
 
-export async function handleStartReview(
-  { featureId, userId, supabase }: StartReviewParams
-): Promise<{ data?: unknown; error?: { code: string; message: string }; status: number }> {
+export async function handleStartReview({
+  featureId,
+  userId,
+  supabase,
+}: StartReviewParams): Promise<{
+  data?: unknown;
+  error?: { code: string; message: string };
+  status: number;
+}> {
   // 1. Verify feature exists and is "proposed"
   const { data: feature, error: featureErr } = await supabase
     .from('product_features')
-    .select('id, title, description, acceptance_criteria, status, feature_code, spec_section, category')
+    .select(
+      'id, title, description, acceptance_criteria, status, feature_code, spec_section, category'
+    )
     .eq('id', featureId)
     .single();
 
@@ -32,7 +40,10 @@ export async function handleStartReview(
 
   if (feature.status !== 'proposed' && feature.status !== 'specified') {
     return {
-      error: { code: 'INVALID_STATUS', message: `Feature is "${feature.status}" — review requires "proposed" or "specified" status` },
+      error: {
+        code: 'INVALID_STATUS',
+        message: `Feature is "${feature.status}" — review requires "proposed" or "specified" status`,
+      },
       status: 422,
     };
   }
@@ -65,18 +76,16 @@ export async function handleStartReview(
   const reviewId = crypto.randomUUID();
   const now = new Date().toISOString();
 
-  const { error: reviewInsertErr } = await supabase
-    .from('spec_reviews')
-    .insert({
-      id: reviewId,
-      feature_id: featureId,
-      reviewer_id: userId,
-      reviewer_name: reviewerName,
-      status: 'in_review',
-      version: 1,
-      created_at: now,
-      updated_at: now,
-    });
+  const { error: reviewInsertErr } = await supabase.from('spec_reviews').insert({
+    id: reviewId,
+    feature_id: featureId,
+    reviewer_id: userId,
+    reviewer_name: reviewerName,
+    status: 'in_review',
+    version: 1,
+    created_at: now,
+    updated_at: now,
+  });
 
   if (reviewInsertErr) {
     console.error('Failed to create review:', reviewInsertErr);
@@ -103,12 +112,21 @@ export async function handleStartReview(
     const { error: itemsErr } = await supabase.from('review_items').insert(originalItems);
     if (itemsErr) {
       console.error('Failed to insert original items:', itemsErr);
-      return { error: { code: 'DATABASE_ERROR', message: 'Failed to insert original review items' }, status: 500 };
+      return {
+        error: { code: 'DATABASE_ERROR', message: 'Failed to insert original review items' },
+        status: 500,
+      };
     }
   }
 
   // 5b. Load spec artifacts and parse into reviewable items
-  const specItems = await loadSpecArtifactItems(supabase, featureId, reviewId, originalItems.length, now);
+  const specItems = await loadSpecArtifactItems(
+    supabase,
+    featureId,
+    reviewId,
+    originalItems.length,
+    now
+  );
   if (specItems.length > 0) {
     const { error: specItemsErr } = await supabase.from('review_items').insert(specItems);
     if (specItemsErr) {
@@ -117,7 +135,12 @@ export async function handleStartReview(
   }
 
   // 6. FR-121: Fetch deep review context
-  const reviewCtx = await buildReviewContext(supabase, featureId, feature.spec_section ?? null, feature.category ?? null);
+  const reviewCtx = await buildReviewContext(
+    supabase,
+    featureId,
+    feature.spec_section ?? null,
+    feature.category ?? null
+  );
   const relatedText = formatRelatedFeatures(reviewCtx.related_features);
 
   const learnings = await fetchLearnings(supabase, 'spec_review', 5);
@@ -126,18 +149,22 @@ export async function handleStartReview(
   let aiItems: typeof originalItems = [];
   let aiEnrichment: unknown = null;
 
-  const enrichment = await enrichFeature(
-    feature.title,
-    feature.description ?? '',
-    criteria,
-    { constitution: reviewCtx.constitution, related_features: relatedText, existing_test_count: reviewCtx.existing_test_count, learnings },
-  );
+  const enrichment = await enrichFeature(feature.title, feature.description ?? '', criteria, {
+    constitution: reviewCtx.constitution,
+    related_features: relatedText,
+    existing_test_count: reviewCtx.existing_test_count,
+    learnings,
+  });
 
   if (enrichment) {
     aiEnrichment = { raw_response: enrichment.raw_response, model: enrichment.model };
     logAIUsage(supabase, {
-      featureId, adminId: userId, modelId: enrichment.model, operationType: 'spec_review',
-      inputTokens: enrichment.input_tokens, outputTokens: enrichment.output_tokens,
+      featureId,
+      adminId: userId,
+      modelId: enrichment.model,
+      operationType: 'spec_review',
+      inputTokens: enrichment.input_tokens,
+      outputTokens: enrichment.output_tokens,
     }).catch(() => {});
     const startOrder = originalItems.length + specItems.length;
     aiItems = enrichment.items.map((item, index) => ({
@@ -175,7 +202,7 @@ export async function handleStartReview(
   }
 
   // 7. Return the review and all items
-  const allItems = [...originalItems, ...specItems, ...aiItems].map(item => ({
+  const allItems = [...originalItems, ...specItems, ...aiItems].map((item) => ({
     id: item.id,
     item_type: item.item_type,
     source: item.source,

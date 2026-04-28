@@ -23,7 +23,7 @@ export function AutomationDashboard({ featureId }: AutomationDashboardProps) {
       setStaleResult(
         result.stale_count > 0
           ? `${result.stale_count} script(s) marked stale`
-          : 'All scripts up to date',
+          : 'All scripts up to date'
       );
       await refresh();
     } catch {
@@ -79,9 +79,7 @@ export function AutomationDashboard({ featureId }: AutomationDashboardProps) {
 
         {/* Stale result */}
         {staleResult && (
-          <div className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">
-            {staleResult}
-          </div>
+          <div className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1">{staleResult}</div>
         )}
       </div>
     </div>
@@ -108,10 +106,7 @@ function CoverageBar({ coverage }: { coverage: AutomationCoverage }) {
           />
         )}
         {stalePct > 0 && (
-          <div
-            className="bg-amber-400 h-full transition-all"
-            style={{ width: `${stalePct}%` }}
-          />
+          <div className="bg-amber-400 h-full transition-all" style={{ width: `${stalePct}%` }} />
         )}
       </div>
       <div className="flex gap-3 mt-1">

@@ -5,7 +5,13 @@
 
 import { generateCode, type SpecArtifacts } from './ai-codegen.ts';
 import { autoSplitTask } from './split-task.ts';
-import { jsonResponse, errorResponse, countRemainingTasks, finalizeRequest, type AuthContext } from './shared.ts';
+import {
+  jsonResponse,
+  errorResponse,
+  countRemainingTasks,
+  finalizeRequest,
+  type AuthContext,
+} from './shared.ts';
 
 export async function handleImplementTask(req: Request, ctx: AuthContext): Promise<Response> {
   const rawBody = await req.json();
@@ -53,8 +59,8 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     .eq('request_id', requestId)
     .in('decision', ['accepted', 'modified']);
   const siblingFilePaths = (allTasks || [])
-    .map(t => t.file_path)
-    .filter(p => p !== task.file_path);
+    .map((t) => t.file_path)
+    .filter((p) => p !== task.file_path);
 
   // Load SpecKit artifacts for rich AI context
   const artifacts = await loadSpecArtifacts(ctx, feature.id);
@@ -76,11 +82,21 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
   // Generate code for this ONE task — with SpecKit artifacts + existing file content
   const existingContent = fileContexts[task.file_path] ?? undefined;
   const result = await generateCode(
-    { title: task.title, description: task.description, file_path: task.file_path, task_type: task.task_type },
-    { feature_code: feature.feature_code, title: feature.title, description: feature.description, criteria: feature.acceptance_criteria || [] },
+    {
+      title: task.title,
+      description: task.description,
+      file_path: task.file_path,
+      task_type: task.task_type,
+    },
+    {
+      feature_code: feature.feature_code,
+      title: feature.title,
+      description: feature.description,
+      criteria: feature.acceptance_criteria || [],
+    },
     siblingFilePaths,
     artifacts,
-    existingContent,
+    existingContent
   );
 
   // If rejected for exceeding line limit, auto-split — but only for original tasks (not already-split subtasks)
@@ -90,9 +106,17 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     const splitCount = await autoSplitTask(ctx, { ...task, request_id: requestId });
     if (splitCount > 0) {
       const remaining = await countRemainingTasks(ctx.supabase, requestId);
-      console.log(`Implementation: ${feature.feature_code} task "${task.title}" — auto-split into ${splitCount} subtasks (${remaining} remaining)`);
+      console.log(
+        `Implementation: ${feature.feature_code} task "${task.title}" — auto-split into ${splitCount} subtasks (${remaining} remaining)`
+      );
       return jsonResponse({
-        data: { done: false, remaining, task_id: task.id, status: 'split', split_count: splitCount },
+        data: {
+          done: false,
+          remaining,
+          task_id: task.id,
+          status: 'split',
+          split_count: splitCount,
+        },
       });
     }
   }
@@ -104,7 +128,9 @@ export async function handleImplementTask(req: Request, ctx: AuthContext): Promi
     await finalizeRequest(ctx.supabase, requestId);
   }
 
-  console.log(`Implementation: ${feature.feature_code} task "${task.title}" — ${result?.code ? 'completed' : 'failed'} (${remaining} remaining)`);
+  console.log(
+    `Implementation: ${feature.feature_code} task "${task.title}" — ${result?.code ? 'completed' : 'failed'} (${remaining} remaining)`
+  );
 
   return jsonResponse({
     data: {
@@ -133,7 +159,7 @@ async function resetStaleTasks(ctx: AuthContext, requestId: string): Promise<voi
 async function saveTaskResult(
   ctx: AuthContext,
   taskId: string,
-  result: { code?: string; log?: string } | null,
+  result: { code?: string; log?: string } | null
 ): Promise<void> {
   if (result?.code) {
     await ctx.supabase
@@ -171,11 +197,21 @@ async function loadSpecArtifacts(ctx: AuthContext, featureId: string): Promise<S
 
   for (const row of rows) {
     switch (row.artifact_type) {
-      case 'plan': artifacts.plan = row.content; break;
-      case 'data_model': artifacts.data_model = row.content; break;
-      case 'spec': artifacts.spec = row.content; break;
-      case 'research': artifacts.research = row.content; break;
-      case 'contract': contracts.push(row.content); break;
+      case 'plan':
+        artifacts.plan = row.content;
+        break;
+      case 'data_model':
+        artifacts.data_model = row.content;
+        break;
+      case 'spec':
+        artifacts.spec = row.content;
+        break;
+      case 'research':
+        artifacts.research = row.content;
+        break;
+      case 'contract':
+        contracts.push(row.content);
+        break;
     }
   }
 

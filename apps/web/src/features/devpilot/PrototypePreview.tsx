@@ -15,7 +15,16 @@ interface PrototypePreviewProps {
   featureCode?: string;
   versionNumber: number;
   totalVersions: number;
-  versions?: Array<{ id: string; version_number: number; prototype_type: string; content: string; feedback_prompt: string | null; is_current: boolean; confidence: number | null; created_at: string }>;
+  versions?: Array<{
+    id: string;
+    version_number: number;
+    prototype_type: string;
+    content: string;
+    feedback_prompt: string | null;
+    is_current: boolean;
+    confidence: number | null;
+    created_at: string;
+  }>;
   onRevert?: (versionId: string) => void;
   isReverting?: boolean;
   onFinalise?: () => void;
@@ -91,7 +100,11 @@ export function PrototypePreview({
         style={{ border: 'none', minHeight: '400px' }}
       />
       <div className="px-3 py-2 bg-gray-50 border-t text-xs text-gray-500">
-        To iterate, run <code className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">\iterate-prototype {cmdCode} &apos;your feedback&apos;</code> in Claude Code.
+        To iterate, run{' '}
+        <code className="font-mono bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
+          \iterate-prototype {cmdCode} &apos;your feedback&apos;
+        </code>{' '}
+        in Claude Code.
       </div>
     </div>
   );

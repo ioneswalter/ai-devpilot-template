@@ -16,7 +16,8 @@ const noAttachment: PrototypeAttachmentState = {
 };
 
 const withAttachment: PrototypeAttachmentState = {
-  content: '<!DOCTYPE html><html><body><svg><text x="10" y="20">demo prototype</text></svg></body></html>',
+  content:
+    '<!DOCTYPE html><html><body><svg><text x="10" y="20">demo prototype</text></svg></body></html>',
   prototypeType: 'sequence',
   isLoading: false,
   hasAttachment: true,

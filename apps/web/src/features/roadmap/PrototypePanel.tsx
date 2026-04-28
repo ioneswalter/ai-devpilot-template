@@ -32,14 +32,25 @@ export function PrototypePanel({ featureCode, attachment }: PrototypePanelProps)
           >
             <svg
               className={`w-3 h-3 transition-transform ${collapsed ? '-rotate-90' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
             <span>Prototype ({attachment.prototypeType ?? 'attached'})</span>
           </button>
           <p className="text-[11px] text-indigo-500">
-            Iterate with <CopyableCommand command={`\\iterate-prototype ${featureCode}`} className="bg-indigo-100" />
+            Iterate with{' '}
+            <CopyableCommand
+              command={`\\iterate-prototype ${featureCode}`}
+              className="bg-indigo-100"
+            />
           </p>
         </div>
         {!collapsed && (
@@ -57,9 +68,17 @@ export function PrototypePanel({ featureCode, attachment }: PrototypePanelProps)
   }
 
   return (
-    <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100" data-testid="prototype-panel-hint">
+    <div
+      className="px-4 py-2 bg-indigo-50 border-b border-indigo-100"
+      data-testid="prototype-panel-hint"
+    >
       <p className="text-xs text-indigo-700">
-        Run <CopyableCommand command={`\\generate-prototype ${featureCode}`} className="bg-indigo-100" /> in Claude Code to create a visual prototype for this feature.
+        Run{' '}
+        <CopyableCommand
+          command={`\\generate-prototype ${featureCode}`}
+          className="bg-indigo-100"
+        />{' '}
+        in Claude Code to create a visual prototype for this feature.
       </p>
     </div>
   );

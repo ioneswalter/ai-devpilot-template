@@ -60,9 +60,14 @@ export function FeatureDetailPanel({
             <ul className="space-y-2">
               {parseCriteria(feature.acceptance_criteria).map((criterion: string, idx: number) => {
                 const implFeaturesData = feature.implementing_features;
-                const isNewFormat = implFeaturesData && typeof implFeaturesData === 'object' && !Array.isArray(implFeaturesData);
+                const isNewFormat =
+                  implFeaturesData &&
+                  typeof implFeaturesData === 'object' &&
+                  !Array.isArray(implFeaturesData);
                 const implFeatureCodes: string[] = isNewFormat
-                  ? (Array.isArray(implFeaturesData[idx]) ? implFeaturesData[idx] : [])
+                  ? Array.isArray(implFeaturesData[idx])
+                    ? implFeaturesData[idx]
+                    : []
                   : [];
                 const hasImplementingFeature = implFeatureCodes.length > 0;
 
@@ -102,7 +107,10 @@ export function FeatureDetailPanel({
                                     if (implFeature) {
                                       toggleExpanded(implFeature.id);
                                       requestAnimationFrame(() => {
-                                        featureRowRefs.current[implFeature.id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        featureRowRefs.current[implFeature.id]?.scrollIntoView({
+                                          behavior: 'smooth',
+                                          block: 'start',
+                                        });
                                       });
                                     }
                                   }}
@@ -153,9 +161,7 @@ export function FeatureDetailPanel({
                   <div className="flex items-center gap-2 mb-1">
                     <span
                       className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                        test.passed
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-200 text-gray-500'
+                        test.passed ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'
                       }`}
                     >
                       {test.passed ? '\u2713' : '\u25CB'}
@@ -206,9 +212,7 @@ export function FeatureDetailPanel({
                   className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2"
                 >
                   <span className="font-mono text-xs text-purple-600">{jCode}</span>
-                  {journey && (
-                    <span className="ml-2 text-sm text-gray-700">{journey.title}</span>
-                  )}
+                  {journey && <span className="ml-2 text-sm text-gray-700">{journey.title}</span>}
                 </div>
               );
             })}
@@ -236,7 +240,11 @@ export function FeatureDetailPanel({
       )}
 
       {/* Comments Section */}
-      <FeatureComments featureId={feature.id} featureCode={feature.feature_code} isMember={isMember} />
+      <FeatureComments
+        featureId={feature.id}
+        featureCode={feature.feature_code}
+        isMember={isMember}
+      />
     </div>
   );
 }
@@ -249,8 +257,18 @@ function VersionHistoryWithSelector({ featureId }: { featureId: string }) {
     <div className="mt-4 pt-4 border-t">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold text-gray-900 flex items-center">
-          <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-5 h-5 mr-2 text-purple-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           Version History
         </h4>
@@ -281,8 +299,18 @@ function AICostBreakdown({ featureId }: { featureId: string }) {
   return (
     <div className="mt-4 pt-4 border-t">
       <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-        <svg className="w-5 h-5 mr-2 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          className="w-5 h-5 mr-2 text-violet-600"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         AI Cost: ${totalCost.toFixed(2)}
       </h4>
@@ -292,7 +320,9 @@ function AICostBreakdown({ featureId }: { featureId: string }) {
           .map(([op, info]) => (
             <div key={op} className="flex items-center justify-between text-xs">
               <span className="text-gray-600 capitalize">{op.replace(/_/g, ' ')}</span>
-              <span className="text-gray-500">{info.calls} calls / ${info.cost.toFixed(4)}</span>
+              <span className="text-gray-500">
+                {info.calls} calls / ${info.cost.toFixed(4)}
+              </span>
             </div>
           ))}
       </div>

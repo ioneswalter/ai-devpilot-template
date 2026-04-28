@@ -136,7 +136,7 @@ function buildGuidancePrompt(
   feature: FeatureRow,
   testCase: TestCaseRow,
   criteria: string[],
-  pageState: unknown,
+  pageState: unknown
 ): string {
   const parts = [
     `Feature: ${feature.title}`,

@@ -36,10 +36,26 @@ interface TestRunStatusViewProps {
 }
 
 export function TestRunStatusView({
-  featureId, featureCode, featureTitle, featureStatus, testCases, acceptanceCriteria,
-  coverage, lastRunResults, history, isLoading,
-  passedCount, failedCount, skippedCount, notRunCount, allPassed, isDeployed,
-  onRunTests, onComplete, onRefresh, onClose,
+  featureId,
+  featureCode,
+  featureTitle,
+  featureStatus,
+  testCases,
+  acceptanceCriteria,
+  coverage,
+  lastRunResults,
+  history,
+  isLoading,
+  passedCount,
+  failedCount,
+  skippedCount,
+  notRunCount,
+  allPassed,
+  isDeployed,
+  onRunTests,
+  onComplete,
+  onRefresh,
+  onClose,
 }: TestRunStatusViewProps) {
   return (
     // FR-089 v1.1: use flex-1 + min-h-0 (not h-full) so when this view is a sibling
@@ -90,18 +106,26 @@ export function TestRunStatusView({
       </div>
       <div className="border-t p-3 flex items-center justify-between bg-white">
         <span className="text-xs text-gray-400">
-          {passedCount} passed, {failedCount} failed{skippedCount > 0 ? `, ${skippedCount} skipped` : ''}, {notRunCount} not run
+          {passedCount} passed, {failedCount} failed
+          {skippedCount > 0 ? `, ${skippedCount} skipped` : ''}, {notRunCount} not run
         </span>
         <div className="flex items-center gap-2">
-          <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">Close</button>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700"
+          >
+            Close
+          </button>
           {allPassed && featureStatus !== 'released' && !isDeployed && (
             <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
               Run <CopyableCommand command={'\\deploy'} className="bg-amber-100" /> before releasing
             </span>
           )}
           {allPassed && featureStatus !== 'released' && isDeployed && (
-            <button onClick={onComplete}
-              className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={onComplete}
+              className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Release Feature
             </button>
           )}

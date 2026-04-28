@@ -94,64 +94,65 @@ export interface UpdateReleaseFormData {
 
 // Validation schemas
 export const createReleaseSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Release name is required')
     .max(100, 'Release name must be 100 characters or less')
     .regex(/^[a-zA-Z0-9\s\-_.]+$/, 'Release name contains invalid characters'),
-  
+
   type: z.enum([ReleaseType.MAJOR, ReleaseType.MINOR, ReleaseType.PATCH, ReleaseType.HOTFIX], {
-    errorMap: () => ({ message: 'Please select a valid release type' })
+    errorMap: () => ({ message: 'Please select a valid release type' }),
   }),
-  
-  description: z.string()
-    .max(500, 'Description must be 500 characters or less')
-    .optional(),
-  
-  feature_ids: z.array(z.string().uuid('Invalid feature ID'))
+
+  description: z.string().max(500, 'Description must be 500 characters or less').optional(),
+
+  feature_ids: z
+    .array(z.string().uuid('Invalid feature ID'))
     .min(1, 'At least one feature must be selected')
     .max(50, 'Cannot include more than 50 features in a single release'),
-  
-  scheduled_at: z.string()
+
+  scheduled_at: z
+    .string()
     .datetime('Invalid date format')
     .optional()
     .refine((date) => {
       if (!date) return true;
       return new Date(date) > new Date();
     }, 'Scheduled date must be in the future'),
-  
-  auto_generate_notes: z.boolean().default(true)
+
+  auto_generate_notes: z.boolean().default(true),
 });
 
 export const updateReleaseSchema = z.object({
-  name: z.string()
+  name: z
+    .string()
     .min(1, 'Release name is required')
     .max(100, 'Release name must be 100 characters or less')
     .regex(/^[a-zA-Z0-9\s\-_.]+$/, 'Release name contains invalid characters')
     .optional(),
-  
-  description: z.string()
-    .max(500, 'Description must be 500 characters or less')
-    .optional(),
-  
-  release_notes: z.string()
-    .max(5000, 'Release notes must be 5000 characters or less')
-    .optional(),
-  
-  scheduled_at: z.string()
+
+  description: z.string().max(500, 'Description must be 500 characters or less').optional(),
+
+  release_notes: z.string().max(5000, 'Release notes must be 5000 characters or less').optional(),
+
+  scheduled_at: z
+    .string()
     .datetime('Invalid date format')
     .optional()
     .refine((date) => {
       if (!date) return true;
       return new Date(date) > new Date();
     }, 'Scheduled date must be in the future'),
-  
-  feature_ids: z.array(z.string().uuid('Invalid feature ID'))
+
+  feature_ids: z
+    .array(z.string().uuid('Invalid feature ID'))
     .min(1, 'At least one feature must be selected')
     .max(50, 'Cannot include more than 50 features in a single release')
-    .optional()
+    .optional(),
 });
 
-export const versionSchema = z.string()
+export const versionSchema = z
+  .string()
   .regex(/^\d+\.\d+\.\d+$/, 'Version must follow semantic versioning (e.g., 1.2.3)');
 
 // Component prop types

@@ -47,10 +47,11 @@ export async function runStageWithRetries(
   stage: CIStage,
   files: GeneratedFile[],
   feature: { title: string; description: string; acceptance_criteria: string[] } | null,
-  stageResult: CIStageResult,
+  stageResult: CIStageResult
 ): Promise<boolean> {
   await appendLog(supabase, pipelineId, 'info', `Running ${STAGE_LABELS[stage]} validation...`);
-  await supabase.from('pipeline_runs')
+  await supabase
+    .from('pipeline_runs')
     .update({ last_heartbeat: new Date().toISOString() })
     .eq('id', pipelineId);
 
@@ -68,9 +69,10 @@ export async function runStageWithRetries(
     }
 
     await appendLog(
-      supabase, pipelineId,
+      supabase,
+      pipelineId,
       attempt < MAX_FIX_ATTEMPTS - 1 ? 'warn' : 'error',
-      `${STAGE_LABELS[stage]}: ${errors.length} issue(s) found (attempt ${attempt + 1}/${MAX_FIX_ATTEMPTS})`,
+      `${STAGE_LABELS[stage]}: ${errors.length} issue(s) found (attempt ${attempt + 1}/${MAX_FIX_ATTEMPTS})`
     );
 
     if (attempt < MAX_FIX_ATTEMPTS - 1) {
@@ -79,7 +81,7 @@ export async function runStageWithRetries(
 
       if (fixes && fixes.length > 0) {
         for (const fix of fixes) {
-          const fileIdx = files.findIndex(f => f.file_path === fix.path);
+          const fileIdx = files.findIndex((f) => f.file_path === fix.path);
           if (fileIdx >= 0) {
             files[fileIdx].code = fix.code;
             fixedPaths.push(fix.path);
@@ -87,13 +89,19 @@ export async function runStageWithRetries(
         }
 
         for (const fix of fixes) {
-          await supabase.from('implementation_task_items')
+          await supabase
+            .from('implementation_task_items')
             .update({ generated_code: fix.code, updated_at: new Date().toISOString() })
             .eq('request_id', requestId)
             .eq('file_path', fix.path);
         }
 
-        await appendLog(supabase, pipelineId, 'info', `Applied fixes to ${fixedPaths.length} file(s)`);
+        await appendLog(
+          supabase,
+          pipelineId,
+          'info',
+          `Applied fixes to ${fixedPaths.length} file(s)`
+        );
       }
 
       stageResult.attempts.push({
@@ -110,7 +118,8 @@ export async function runStageWithRetries(
       });
     }
 
-    await supabase.from('pipeline_runs')
+    await supabase
+      .from('pipeline_runs')
       .update({ last_heartbeat: new Date().toISOString() })
       .eq('id', pipelineId);
   }
@@ -123,35 +132,45 @@ export async function completePipeline(
   supabase: SupabaseClient,
   pipelineId: string,
   requestId: string,
-  allPassed: boolean | null,
+  allPassed: boolean | null
 ): Promise<void> {
   if (allPassed !== true) {
     const finalStage = allPassed === null ? 'idle' : 'build_failed';
-    await supabase.from('pipeline_runs').update({
-      status: 'completed',
-      current_stage: finalStage,
-      current_task_id: null,
-      completed_at: new Date().toISOString(),
-    }).eq('id', pipelineId);
+    await supabase
+      .from('pipeline_runs')
+      .update({
+        status: 'completed',
+        current_stage: finalStage,
+        current_task_id: null,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', pipelineId);
 
-    await supabase.from('implementation_requests').update({
-      status: 'completed',
-      updated_at: new Date().toISOString(),
-    }).eq('id', requestId);
+    await supabase
+      .from('implementation_requests')
+      .update({
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
 
-    const msg = allPassed === null
-      ? 'Pipeline completed (CI skipped)'
-      : 'Pipeline completed — some CI checks failed';
+    const msg =
+      allPassed === null
+        ? 'Pipeline completed (CI skipped)'
+        : 'Pipeline completed — some CI checks failed';
     await appendLog(supabase, pipelineId, allPassed === null ? 'info' : 'warn', msg);
     await onPipelineComplete(supabase, pipelineId, 'completed');
     return;
   }
 
   // CI passed — transition to autonomous deployment (FR-115)
-  await supabase.from('pipeline_runs').update({
-    current_stage: 'build_passed',
-    last_heartbeat: new Date().toISOString(),
-  }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      current_stage: 'build_passed',
+      last_heartbeat: new Date().toISOString(),
+    })
+    .eq('id', pipelineId);
 
   await appendLog(supabase, pipelineId, 'info', 'CI passed — starting autonomous deployment');
 
@@ -160,16 +179,22 @@ export async function completePipeline(
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown deploy error';
     await appendLog(supabase, pipelineId, 'error', `Deployment crashed: ${msg}`);
-    await supabase.from('pipeline_runs').update({
-      status: 'completed',
-      current_stage: 'deploy_failed',
-      current_task_id: null,
-      completed_at: new Date().toISOString(),
-    }).eq('id', pipelineId);
-    await supabase.from('implementation_requests').update({
-      status: 'completed',
-      updated_at: new Date().toISOString(),
-    }).eq('id', requestId);
+    await supabase
+      .from('pipeline_runs')
+      .update({
+        status: 'completed',
+        current_stage: 'deploy_failed',
+        current_task_id: null,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', pipelineId);
+    await supabase
+      .from('implementation_requests')
+      .update({
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', requestId);
     await onPipelineComplete(supabase, pipelineId, 'failed');
   }
 }
@@ -179,7 +204,7 @@ export function captureStageFailures(
   ciResults: CIResults,
   stage: CIStage,
   pipelineId: string,
-  featureId: string,
+  featureId: string
 ): void {
   const lastErrors = ciResults[stage].attempts[ciResults[stage].attempts.length - 1]?.errors ?? [];
   for (const err of lastErrors.slice(0, 3)) {

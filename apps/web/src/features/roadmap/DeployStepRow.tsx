@@ -15,7 +15,11 @@ const STATUS_CONFIG: Record<string, { icon: string; color: string; label: string
   skipped: { icon: '\u2014', color: 'text-gray-500 bg-gray-100', label: 'Skipped' },
   pending: { icon: '\u2022', color: 'text-gray-400 bg-gray-50', label: 'Pending' },
   running: { icon: '\u25CB', color: 'text-blue-700 bg-blue-100', label: 'Running' },
-  manual_override: { icon: '\u2691', color: 'text-amber-700 bg-amber-100', label: 'Manual Override' },
+  manual_override: {
+    icon: '\u2691',
+    color: 'text-amber-700 bg-amber-100',
+    label: 'Manual Override',
+  },
 };
 
 function formatDuration(ms: number): string {
@@ -31,7 +35,9 @@ function FixAttemptRow({ attempt, index }: { attempt: FixAttempt; index: number 
     <div className="py-1 border-l-2 border-amber-200 pl-2 ml-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className={`text-xs font-medium ${isSuccess ? 'text-green-600' : 'text-amber-600'}`}>
+          <span
+            className={`text-xs font-medium ${isSuccess ? 'text-green-600' : 'text-amber-600'}`}
+          >
             Fix #{index + 1}
           </span>
           <span className="text-xs text-gray-600">{attempt.description}</span>
@@ -39,7 +45,7 @@ function FixAttemptRow({ attempt, index }: { attempt: FixAttempt; index: number 
         <div className="flex items-center gap-1.5 text-xs">
           <span className={isSuccess ? 'text-green-600' : 'text-red-500'}>{attempt.status}</span>
           {attempt.error && (
-            <button onClick={() => setExpanded(v => !v)} className="text-red-500 hover:underline">
+            <button onClick={() => setExpanded((v) => !v)} className="text-red-500 hover:underline">
               {expanded ? 'hide' : 'error'}
             </button>
           )}
@@ -70,12 +76,16 @@ export function DeployStepRow({ step }: DeployStepRowProps) {
               <div className="w-3.5 h-3.5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
             </div>
           ) : (
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${config.color}`}>
+            <span
+              className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${config.color}`}
+            >
               {config.icon}
             </span>
           )}
           <span className="text-xs text-gray-500">{label}</span>
-          <span className="text-xs font-medium text-gray-800 truncate max-w-[200px]">{step.artifact}</span>
+          <span className="text-xs font-medium text-gray-800 truncate max-w-[200px]">
+            {step.artifact}
+          </span>
           {wasAutoFixed && (
             <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded px-1.5 py-0.5">
               Fixed automatically
@@ -85,8 +95,12 @@ export function DeployStepRow({ step }: DeployStepRowProps) {
         <div className="flex items-center gap-2 text-xs text-gray-400">
           {step.duration_ms > 0 && <span>{formatDuration(step.duration_ms)}</span>}
           {(step.error || fixAttempts.length > 0) && (
-            <button onClick={() => setExpanded(v => !v)} className="text-red-500 hover:underline">
-              {expanded ? 'hide' : fixAttempts.length > 0 ? `${fixAttempts.length} attempt(s)` : 'error'}
+            <button onClick={() => setExpanded((v) => !v)} className="text-red-500 hover:underline">
+              {expanded
+                ? 'hide'
+                : fixAttempts.length > 0
+                  ? `${fixAttempts.length} attempt(s)`
+                  : 'error'}
             </button>
           )}
         </div>

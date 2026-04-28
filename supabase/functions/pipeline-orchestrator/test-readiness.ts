@@ -32,27 +32,35 @@ interface ReadinessResults {
   overall_status: 'success' | 'partial' | 'failed';
 }
 
-export async function runTestReadiness(
-  pipelineId: string,
-  requestId: string,
-): Promise<void> {
+export async function runTestReadiness(pipelineId: string, requestId: string): Promise<void> {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
   // Transition to readying stage
-  await supabase.from('pipeline_runs').update({
-    current_stage: 'readying',
-    last_heartbeat: new Date().toISOString(),
-  }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      current_stage: 'readying',
+      last_heartbeat: new Date().toISOString(),
+    })
+    .eq('id', pipelineId);
 
   await appendLog(supabase, pipelineId, 'info', 'Starting test readiness preparation');
 
   const results: ReadinessResults = {
     seed_data: { status: 'skipped', duration_ms: 0, errors: [], records: 0 },
     test_cases: { status: 'skipped', duration_ms: 0, errors: [], created: 0, skipped: 0 },
-    automated_tests: { status: 'skipped', duration_ms: 0, errors: [], total: 0, passed: 0, failed: 0, is_release_ready: false },
+    automated_tests: {
+      status: 'skipped',
+      duration_ms: 0,
+      errors: [],
+      total: 0,
+      passed: 0,
+      failed: 0,
+      is_release_ready: false,
+    },
     status_update: { status: 'failed', from: '', to: 'in_testing' },
     started_at: new Date().toISOString(),
     completed_at: '',
@@ -92,25 +100,43 @@ export async function runTestReadiness(
   results.seed_data = await seedTestData(supabase, pipelineId, featureId, specContext);
 
   // Step 2: Generate test cases
-  results.test_cases = await generateTestCases(supabase, pipelineId, featureId, feature, specContext);
+  results.test_cases = await generateTestCases(
+    supabase,
+    pipelineId,
+    featureId,
+    feature,
+    specContext
+  );
 
   // Step 2.5: Run automated tests (FR-109 J4)
   results.automated_tests = await runAutomatedTests(supabase, pipelineId, featureId);
 
   // Step 3: Update feature status
-  results.status_update = await updateFeatureStatus(supabase, pipelineId, featureId, feature?.status ?? '');
+  results.status_update = await updateFeatureStatus(
+    supabase,
+    pipelineId,
+    featureId,
+    feature?.status ?? ''
+  );
 
   // Step 4: Create notification
   await createNotification(
-    supabase, pipelineId, featureId, feature,
+    supabase,
+    pipelineId,
+    featureId,
+    feature,
     results.status_update.status,
     results.test_cases.created,
-    results.seed_data.records,
+    results.seed_data.records
   );
 
   // Finalize
   results.completed_at = new Date().toISOString();
-  const stepStatuses = [results.seed_data.status, results.test_cases.status, results.status_update.status];
+  const stepStatuses = [
+    results.seed_data.status,
+    results.test_cases.status,
+    results.status_update.status,
+  ];
   if (results.automated_tests.status !== 'skipped') {
     stepStatuses.push(results.automated_tests.status);
   }
@@ -119,25 +145,33 @@ export async function runTestReadiness(
 
   results.overall_status = allSuccess ? 'success' : allFailed ? 'failed' : 'partial';
 
-  const finalStage = results.overall_status === 'failed' ? 'readiness_partial' : 'ready_for_testing';
+  const finalStage =
+    results.overall_status === 'failed' ? 'readiness_partial' : 'ready_for_testing';
 
-  await supabase.from('pipeline_runs').update({
-    status: 'completed',
-    current_stage: finalStage,
-    readiness_results: results,
-    completed_at: new Date().toISOString(),
-    last_heartbeat: new Date().toISOString(),
-  }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      status: 'completed',
+      current_stage: finalStage,
+      readiness_results: results,
+      completed_at: new Date().toISOString(),
+      last_heartbeat: new Date().toISOString(),
+    })
+    .eq('id', pipelineId);
 
-  await appendLog(supabase, pipelineId, 'info',
+  await appendLog(
+    supabase,
+    pipelineId,
+    'info',
     `Test readiness ${results.overall_status}: ` +
-    `${results.seed_data.records} seed records, ` +
-    `${results.test_cases.created} test cases created`);
+      `${results.seed_data.records} seed records, ` +
+      `${results.test_cases.created} test cases created`
+  );
 }
 
 function buildSpecContext(
   feature: Record<string, unknown> | null,
-  implRequest: Record<string, unknown> | null,
+  implRequest: Record<string, unknown> | null
 ): string {
   const parts: string[] = [];
   if (feature?.title) parts.push(`Feature: ${feature.title}`);
@@ -159,17 +193,20 @@ async function failReadiness(
   supabase: ReturnType<typeof createClient>,
   pipelineId: string,
   results: ReadinessResults,
-  error: string,
+  error: string
 ): Promise<void> {
   results.completed_at = new Date().toISOString();
   results.overall_status = 'failed';
 
-  await supabase.from('pipeline_runs').update({
-    status: 'completed',
-    current_stage: 'readiness_partial',
-    readiness_results: results,
-    completed_at: new Date().toISOString(),
-  }).eq('id', pipelineId);
+  await supabase
+    .from('pipeline_runs')
+    .update({
+      status: 'completed',
+      current_stage: 'readiness_partial',
+      readiness_results: results,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', pipelineId);
 
   await appendLog(supabase, pipelineId, 'error', `Test readiness failed: ${error}`);
 }

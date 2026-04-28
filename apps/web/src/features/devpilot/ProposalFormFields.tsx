@@ -44,7 +44,12 @@ interface ProposalFormFieldsProps {
   availableSections?: string[];
 }
 
-export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections = [] }: ProposalFormFieldsProps) {
+export function ProposalFormFields({
+  form,
+  isAdmin,
+  onUpdate,
+  availableSections = [],
+}: ProposalFormFieldsProps) {
   const [customSection, setCustomSection] = useState(false);
   const hasJourneys = form.journeys.length > 0;
 
@@ -88,7 +93,9 @@ export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections 
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700">User Journeys</span>
-            <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">SpecKit</span>
+            <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">
+              SpecKit
+            </span>
           </div>
           {form.journeys.map((j, idx) => (
             <JourneyFields
@@ -112,7 +119,6 @@ export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections 
           />
         </Field>
       )}
-
 
       {isAdmin && (
         <>
@@ -173,7 +179,9 @@ export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections 
                     <option value="">{form.specSection} (new)</option>
                   )}
                   {availableSections.map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
                 <button
@@ -193,8 +201,15 @@ export function ProposalFormFields({ form, isAdmin, onUpdate, availableSections 
   );
 }
 
-
-export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">

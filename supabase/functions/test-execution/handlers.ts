@@ -9,7 +9,7 @@ import { jsonResponse, errorResponse, SubmitResultsSchema, CreateTestCaseSchema 
 export async function handleSubmitResults(
   supabase: SupabaseClient,
   body: z.infer<typeof SubmitResultsSchema>,
-  userId: string,
+  userId: string
 ): Promise<Response> {
   const { feature_id, environment, results } = body;
 
@@ -31,7 +31,7 @@ export async function handleSubmitResults(
     return errorResponse(
       'INVALID_TEST_CASES',
       `Test case(s) not found for this feature: ${invalid.join(', ')}`,
-      400,
+      400
     );
   }
 
@@ -73,11 +73,12 @@ export async function handleSubmitResults(
 
 export async function handleGetHistory(
   supabase: SupabaseClient,
-  featureId: string,
+  featureId: string
 ): Promise<Response> {
   const { data, error } = await supabase
     .from('test_runs')
-    .select(`
+    .select(
+      `
       id,
       test_case_id,
       environment,
@@ -93,7 +94,8 @@ export async function handleGetHistory(
         test_code,
         feature_id
       )
-    `)
+    `
+    )
     .eq('test_cases.feature_id', featureId)
     .order('executed_at', { ascending: false })
     .limit(50);
@@ -107,7 +109,7 @@ export async function handleGetHistory(
 
 export async function handleReleaseSummary(
   supabase: SupabaseClient,
-  featureId: string,
+  featureId: string
 ): Promise<Response> {
   const { data: testCases, error } = await supabase
     .from('test_cases')
@@ -159,15 +161,21 @@ export async function handleReleaseSummary(
   }
 
   return jsonResponse({
-    total, passed, failed, notRun, lastRunAt, isReady,
-    autoVerified, humanVerified,
+    total,
+    passed,
+    failed,
+    notRun,
+    lastRunAt,
+    isReady,
+    autoVerified,
+    humanVerified,
   });
 }
 
 export async function handleCreateTestCase(
   supabase: SupabaseClient,
   body: unknown,
-  userId: string,
+  userId: string
 ): Promise<Response> {
   const validation = CreateTestCaseSchema.safeParse(body);
   if (!validation.success) {

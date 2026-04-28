@@ -49,10 +49,7 @@ const CATEGORY_MAP: Record<string, string> = {
 // ── Core Functions ──
 
 function getSupabase(): SupabaseClient {
-  return createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
+  return createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 }
 
 export async function captureFailure(input: CaptureFailureInput): Promise<CaptureResult> {
@@ -92,7 +89,7 @@ export async function captureFailure(input: CaptureFailureInput): Promise<Captur
 
 async function detectPattern(
   supabase: SupabaseClient,
-  input: CaptureFailureInput,
+  input: CaptureFailureInput
 ): Promise<{ detected: boolean; pattern_id?: string }> {
   try {
     const { count } = await supabase
@@ -112,31 +109,46 @@ async function detectPattern(
       .eq('error_code', input.error_code)
       .eq('error_type', input.error_type);
 
-    const uniqueFeatures = [...new Set((features ?? []).map(f => f.feature_id))];
+    const uniqueFeatures = [...new Set((features ?? []).map((f) => f.feature_id))];
     const category = CATEGORY_MAP[input.error_type] ?? 'other';
-    const description = `${input.error_type}/${input.error_code}: ${input.error_message}`.slice(0, 200);
-    const adaptationText = buildAdaptationText(input.error_type, input.error_code, count, input.error_message);
+    const description = `${input.error_type}/${input.error_code}: ${input.error_message}`.slice(
+      0,
+      200
+    );
+    const adaptationText = buildAdaptationText(
+      input.error_type,
+      input.error_code,
+      count,
+      input.error_message
+    );
 
     // Upsert pattern
     const { data: pattern } = await supabase
       .from('failure_patterns')
-      .upsert({
-        error_type: input.error_type,
-        error_code: input.error_code,
-        category,
-        description,
-        frequency: count,
-        affected_features: uniqueFeatures,
-        last_seen: new Date().toISOString(),
-        adaptation_text: adaptationText,
-        is_active: true,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'error_type,error_code' })
+      .upsert(
+        {
+          error_type: input.error_type,
+          error_code: input.error_code,
+          category,
+          description,
+          frequency: count,
+          affected_features: uniqueFeatures,
+          last_seen: new Date().toISOString(),
+          adaptation_text: adaptationText,
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'error_type,error_code' }
+      )
       .select('id')
       .single();
 
     // Check for constitution recommendation threshold
-    if (count >= RECOMMENDATION_THRESHOLD && uniqueFeatures.length >= MIN_FEATURES_FOR_RECOMMENDATION && pattern) {
+    if (
+      count >= RECOMMENDATION_THRESHOLD &&
+      uniqueFeatures.length >= MIN_FEATURES_FOR_RECOMMENDATION &&
+      pattern
+    ) {
       await maybeCreateRecommendation(supabase, pattern.id, input, count, uniqueFeatures);
     }
 
@@ -147,7 +159,12 @@ async function detectPattern(
   }
 }
 
-function buildAdaptationText(errorType: string, errorCode: string, count: number, message: string): string {
+function buildAdaptationText(
+  errorType: string,
+  errorCode: string,
+  count: number,
+  message: string
+): string {
   const shortMsg = message.slice(0, 100);
   if (errorType === 'constitution_reject') {
     return `Keep files under 300 lines — constitution reject has occurred ${count} times (${shortMsg})`;
@@ -166,7 +183,7 @@ async function maybeCreateRecommendation(
   patternId: string,
   input: CaptureFailureInput,
   count: number,
-  features: string[],
+  features: string[]
 ): Promise<void> {
   // Check if recommendation already exists for this pattern
   const { count: existing } = await supabase
@@ -177,20 +194,33 @@ async function maybeCreateRecommendation(
   if (existing && existing > 0) return;
 
   const title = `Add rule for ${input.error_code} (${CATEGORY_MAP[input.error_type] ?? 'other'})`;
-  const suggestedRule = buildAdaptationText(input.error_type, input.error_code, count, input.error_message);
+  const suggestedRule = buildAdaptationText(
+    input.error_type,
+    input.error_code,
+    count,
+    input.error_message
+  );
 
   await supabase.from('constitution_recommendations').insert({
     pattern_id: patternId,
     title,
     suggested_rule: suggestedRule,
-    evidence: { failure_count: count, affected_features: features, error_type: input.error_type, error_code: input.error_code },
+    evidence: {
+      failure_count: count,
+      affected_features: features,
+      error_type: input.error_type,
+      error_code: input.error_code,
+    },
     status: 'pending',
   });
 }
 
 // ── Adaptation Queries ──
 
-export async function getAdaptations(filePath: string, taskType: string): Promise<AdaptationResult> {
+export async function getAdaptations(
+  filePath: string,
+  taskType: string
+): Promise<AdaptationResult> {
   const supabase = getSupabase();
 
   try {
@@ -234,7 +264,11 @@ export async function getAdaptations(filePath: string, taskType: string): Promis
   }
 }
 
-function isRelevant(pattern: { error_type: string; category: string }, filePath: string, taskType: string): boolean {
+function isRelevant(
+  pattern: { error_type: string; category: string },
+  filePath: string,
+  taskType: string
+): boolean {
   // Constitution and complexity patterns are always relevant
   if (pattern.category === 'constitution_limit' || pattern.category === 'complexity') return true;
   // Lint/type patterns relevant to all code

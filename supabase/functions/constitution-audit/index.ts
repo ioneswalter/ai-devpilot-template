@@ -10,12 +10,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import {
-  success,
-  badRequest,
-  internalError,
-  corsResponse,
-} from '../_shared/response.ts';
+import { success, badRequest, internalError, corsResponse } from '../_shared/response.ts';
 import { verifyAdmin } from '../_shared/admin-auth.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -40,10 +35,7 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const versionId = url.searchParams.get('version_id');
     const ruleNumber = url.searchParams.get('rule_number');
-    const limit = Math.min(
-      parseInt(url.searchParams.get('limit') ?? '50', 10),
-      200
-    );
+    const limit = Math.min(parseInt(url.searchParams.get('limit') ?? '50', 10), 200);
     const offset = parseInt(url.searchParams.get('offset') ?? '0', 10);
 
     let query = supabase
@@ -90,7 +82,7 @@ Deno.serve(async (req: Request) => {
     const enriched = (entries ?? []).map((e: Record<string, unknown>) => ({
       ...e,
       version_from_label: e.version_from_id
-        ? versionLabels.get(e.version_from_id as string) ?? null
+        ? (versionLabels.get(e.version_from_id as string) ?? null)
         : null,
       version_to_label: versionLabels.get(e.version_to_id as string) ?? null,
     }));

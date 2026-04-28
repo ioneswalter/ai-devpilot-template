@@ -17,9 +17,9 @@ export function parseTestCasesText(text: string): ParsedTestCase[] {
 
   return text
     .split(/[\n\r]+/)
-    .map(line => line.trim())
-    .filter(line => line.length > 5)
-    .map(line => {
+    .map((line) => line.trim())
+    .filter((line) => line.length > 5)
+    .map((line) => {
       const typeMatch = line.match(/^\[(\w+)\]\s*/i);
       let test_type = 'manual';
       let title = line;
@@ -45,33 +45,28 @@ export function parseTestCasesText(text: string): ParsedTestCase[] {
 
       return { title, test_type, priority: 'medium' };
     })
-    .filter(tc => tc.title.length > 0);
+    .filter((tc) => tc.title.length > 0);
 }
 
 /**
  * Generate next available test case code for a specific feature
  * Format: TC-{feature_number}-{sequence} (e.g., TC-054-001 for FR-054)
  */
-export function generateTestCaseCode(
-  existingCodes: string[],
-  featureCode: string,
-): string {
+export function generateTestCaseCode(existingCodes: string[], featureCode: string): string {
   const featureNumMatch = featureCode.match(/(?:FR|J)-(\d+)/);
   const featureNum = featureNumMatch ? featureNumMatch[1] : '000';
 
   const prefix = `TC-${featureNum}-`;
 
   const featureTcNumbers = existingCodes
-    .filter(c => c.startsWith(prefix))
-    .map(c => {
+    .filter((c) => c.startsWith(prefix))
+    .map((c) => {
       const match = c.match(new RegExp(`^${prefix}(\\d+)$`));
       return match ? parseInt(match[1], 10) : 0;
     })
-    .filter(n => !isNaN(n) && n > 0);
+    .filter((n) => !isNaN(n) && n > 0);
 
-  const maxNumber = featureTcNumbers.length > 0
-    ? Math.max(...featureTcNumbers)
-    : 0;
+  const maxNumber = featureTcNumbers.length > 0 ? Math.max(...featureTcNumbers) : 0;
   return `${prefix}${String(maxNumber + 1).padStart(3, '0')}`;
 }
 
@@ -85,19 +80,13 @@ function normalizeTitle(title: string): string {
 }
 
 /** Check if two test case titles are duplicates */
-function isDuplicateTitle(
-  newTitle: string,
-  existingTitle: string,
-): boolean {
+function isDuplicateTitle(newTitle: string, existingTitle: string): boolean {
   const normalizedNew = normalizeTitle(newTitle);
   const normalizedExisting = normalizeTitle(existingTitle);
 
   if (normalizedNew === normalizedExisting) return true;
 
-  if (
-    normalizedNew.includes(normalizedExisting) ||
-    normalizedExisting.includes(normalizedNew)
-  ) {
+  if (normalizedNew.includes(normalizedExisting) || normalizedExisting.includes(normalizedNew)) {
     const lenDiff = Math.abs(normalizedNew.length - normalizedExisting.length);
     const maxLen = Math.max(normalizedNew.length, normalizedExisting.length);
     if (lenDiff / maxLen < 0.2) return true;
@@ -111,22 +100,18 @@ function isDuplicateTitle(
  */
 export function filterDuplicateTestCases(
   newTestCases: ParsedTestCase[],
-  existingTestCases: { title: string }[],
+  existingTestCases: { title: string }[]
 ): { unique: ParsedTestCase[]; duplicates: string[] } {
   const unique: ParsedTestCase[] = [];
   const duplicates: string[] = [];
 
   for (const tc of newTestCases) {
-    const isDupe = existingTestCases.some(existing =>
-      isDuplicateTitle(tc.title, existing.title)
-    );
+    const isDupe = existingTestCases.some((existing) => isDuplicateTitle(tc.title, existing.title));
 
     if (isDupe) {
       duplicates.push(tc.title);
     } else {
-      const isDupeInUnique = unique.some(u =>
-        isDuplicateTitle(tc.title, u.title)
-      );
+      const isDupeInUnique = unique.some((u) => isDuplicateTitle(tc.title, u.title));
       if (!isDupeInUnique) {
         unique.push(tc);
       } else {

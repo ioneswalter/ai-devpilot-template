@@ -26,16 +26,20 @@ export function EscalationBanner({
   const isAcknowledged = escalation.status === 'acknowledged';
 
   return (
-    <div className={`rounded-lg border p-3 space-y-2 ${
-      isOpen ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'
-    }`}>
+    <div
+      className={`rounded-lg border p-3 space-y-2 ${
+        isOpen ? 'bg-red-50 border-red-300' : 'bg-amber-50 border-amber-300'
+      }`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-lg">{isOpen ? '\u26A0\uFE0F' : '\u23F8\uFE0F'}</span>
           <div>
-            <h5 className={`text-xs font-semibold uppercase tracking-wider ${
-              isOpen ? 'text-red-800' : 'text-amber-800'
-            }`}>
+            <h5
+              className={`text-xs font-semibold uppercase tracking-wider ${
+                isOpen ? 'text-red-800' : 'text-amber-800'
+              }`}
+            >
               {isOpen ? 'SE Escalation Required' : 'Awaiting Manual Resolution'}
             </h5>
             <p className="text-xs text-gray-700 mt-0.5">

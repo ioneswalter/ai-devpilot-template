@@ -28,7 +28,12 @@ interface TestCaseExecutionCardProps {
   featureId?: string;
 }
 
-const RESULT_BUTTONS: { value: TestRunResult; label: string; activeClass: string; inactiveClass: string }[] = [
+const RESULT_BUTTONS: {
+  value: TestRunResult;
+  label: string;
+  activeClass: string;
+  inactiveClass: string;
+}[] = [
   {
     value: 'passed',
     label: 'Pass',
@@ -49,7 +54,13 @@ const RESULT_BUTTONS: { value: TestRunResult; label: string; activeClass: string
   },
 ];
 
-function PreviousStatusIndicator({ passed, lastRunResult }: { passed: boolean | null; lastRunResult?: TestRunResult | null }) {
+function PreviousStatusIndicator({
+  passed,
+  lastRunResult,
+}: {
+  passed: boolean | null;
+  lastRunResult?: TestRunResult | null;
+}) {
   // Use last run result if available (distinguishes skipped from not-run)
   if (lastRunResult === 'skipped') {
     return (
@@ -102,13 +113,14 @@ export function TestCaseExecutionCard({
     setShowGuided(false);
   };
 
-  const borderClass = result === 'passed'
-    ? 'border-green-200 bg-green-50/30'
-    : result === 'failed'
-      ? 'border-red-200 bg-red-50/30'
-      : result === 'skipped'
-        ? 'border-gray-200 bg-gray-50/30'
-        : '';
+  const borderClass =
+    result === 'passed'
+      ? 'border-green-200 bg-green-50/30'
+      : result === 'failed'
+        ? 'border-red-200 bg-red-50/30'
+        : result === 'skipped'
+          ? 'border-gray-200 bg-gray-50/30'
+          : '';
 
   return (
     <div className={`border rounded-lg p-3 transition-colors ${borderClass}`}>
@@ -161,7 +173,12 @@ export function TestCaseExecutionCard({
                     className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                      />
                     </svg>
                     AI Guide
                   </button>
@@ -172,7 +189,12 @@ export function TestCaseExecutionCard({
                     className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
                     </svg>
                     Notes
                   </button>
@@ -204,7 +226,6 @@ export function TestCaseExecutionCard({
               />
             </div>
           )}
-
         </div>
       </div>
     </div>

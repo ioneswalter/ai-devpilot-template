@@ -26,9 +26,7 @@ export function VisualCheckpointViewer({ checkpoints, onClose }: VisualCheckpoin
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
 
   if (checkpoints.length === 0) {
-    return (
-      <div className="text-xs text-gray-500 italic p-2">No visual checkpoints recorded.</div>
-    );
+    return <div className="text-xs text-gray-500 italic p-2">No visual checkpoints recorded.</div>;
   }
 
   const passedCount = checkpoints.filter((c) => c.passed).length;
@@ -39,18 +37,39 @@ export function VisualCheckpointViewer({ checkpoints, onClose }: VisualCheckpoin
     <div className="border border-purple-200 rounded-lg overflow-hidden">
       <div className="bg-purple-50 px-3 py-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          <svg
+            className="w-4 h-4 text-purple-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+            />
           </svg>
           <h4 className="text-xs font-semibold text-purple-800">
             Visual Checkpoints ({passedCount}/{checkpoints.length} passed)
           </h4>
         </div>
         <div className="flex items-center gap-2">
-          <CheckpointSummaryBadges passed={passedCount} failed={failedCount} cosmetic={cosmeticCount} />
+          <CheckpointSummaryBadges
+            passed={passedCount}
+            failed={failedCount}
+            cosmetic={cosmeticCount}
+          />
           {onClose && (
-            <button onClick={onClose} className="text-xs text-purple-500 hover:text-purple-700">Close</button>
+            <button onClick={onClose} className="text-xs text-purple-500 hover:text-purple-700">
+              Close
+            </button>
           )}
         </div>
       </div>
@@ -61,9 +80,9 @@ export function VisualCheckpointViewer({ checkpoints, onClose }: VisualCheckpoin
             key={cp.step_number}
             checkpoint={cp}
             expanded={expandedStep === cp.step_number}
-            onToggle={() => setExpandedStep(
-              expandedStep === cp.step_number ? null : cp.step_number,
-            )}
+            onToggle={() =>
+              setExpandedStep(expandedStep === cp.step_number ? null : cp.step_number)
+            }
           />
         ))}
       </div>
@@ -134,11 +153,15 @@ function CheckpointRow({
         </span>
         <span className="text-xs text-gray-700 flex-1 truncate">{checkpoint.explanation}</span>
         {checkpoint.confidence !== undefined && (
-          <span className="text-[10px] text-gray-400">{Math.round(checkpoint.confidence * 100)}%</span>
+          <span className="text-[10px] text-gray-400">
+            {Math.round(checkpoint.confidence * 100)}%
+          </span>
         )}
         <svg
           className={`w-3 h-3 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>

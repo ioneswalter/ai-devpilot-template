@@ -52,14 +52,17 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
     }
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.substring(7));
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(authHeader.substring(7));
     if (authError || !user) {
       return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
     }
@@ -70,7 +73,15 @@ Deno.serve(async (req) => {
     let featuresQuery = supabase
       .from('product_features')
       .select('id, status')
-      .in('status', ['proposed', 'reviewed', 'specified', 'in_development', 'in_testing', 'in_acceptance', 'released']);
+      .in('status', [
+        'proposed',
+        'reviewed',
+        'specified',
+        'in_development',
+        'in_testing',
+        'in_acceptance',
+        'released',
+      ]);
 
     if (featureIdParam) {
       featuresQuery = featuresQuery.eq('id', featureIdParam);
@@ -98,14 +109,51 @@ Deno.serve(async (req) => {
 
     // Batch fetch all stage data in parallel (include feature_version_id).
     // FR-130 v2.0 / J10: also fetch uat_packages (latest per feature) + uat_review_decisions for the UAT tile.
-    const [specResult, implResult, testBatch1, testBatch2, artifactResult, pipelineResult, uatPkgResult] = await Promise.all([
-      supabase.from('spec_reviews').select('feature_id, feature_version_id, status').in('feature_id', featureIds).order('created_at', { ascending: false }),
-      supabase.from('implementation_requests').select('feature_id, feature_version_id, status, code_applied').in('feature_id', featureIds).order('created_at', { ascending: false }),
-      supabase.from('test_cases').select('feature_id, feature_version_id, passed').in('feature_id', featureIds).range(0, 999),
-      supabase.from('test_cases').select('feature_id, feature_version_id, passed').in('feature_id', featureIds).range(1000, 2999),
-      supabase.from('feature_spec_artifacts').select('feature_id, artifact_type').in('feature_id', featureIds),
-      supabase.from('pipeline_runs').select('feature_id, feature_version_id, status, current_stage, completed_tasks, total_tasks, deploy_results').in('feature_id', featureIds).order('created_at', { ascending: false }),
-      supabase.from('uat_packages').select('id, feature_id, status, due_at, created_at').in('feature_id', featureIds).order('created_at', { ascending: false }),
+    const [
+      specResult,
+      implResult,
+      testBatch1,
+      testBatch2,
+      artifactResult,
+      pipelineResult,
+      uatPkgResult,
+    ] = await Promise.all([
+      supabase
+        .from('spec_reviews')
+        .select('feature_id, feature_version_id, status')
+        .in('feature_id', featureIds)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('implementation_requests')
+        .select('feature_id, feature_version_id, status, code_applied')
+        .in('feature_id', featureIds)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('test_cases')
+        .select('feature_id, feature_version_id, passed')
+        .in('feature_id', featureIds)
+        .range(0, 999),
+      supabase
+        .from('test_cases')
+        .select('feature_id, feature_version_id, passed')
+        .in('feature_id', featureIds)
+        .range(1000, 2999),
+      supabase
+        .from('feature_spec_artifacts')
+        .select('feature_id, artifact_type')
+        .in('feature_id', featureIds),
+      supabase
+        .from('pipeline_runs')
+        .select(
+          'feature_id, feature_version_id, status, current_stage, completed_tasks, total_tasks, deploy_results'
+        )
+        .in('feature_id', featureIds)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('uat_packages')
+        .select('id, feature_id, status, due_at, created_at')
+        .in('feature_id', featureIds)
+        .order('created_at', { ascending: false }),
     ]);
 
     // FR-130 v2.0: For each latest UAT package per feature, fetch decision counts + checklist totals.
@@ -119,8 +167,14 @@ Deno.serve(async (req) => {
     const checklistTotals = new Map<string, number>();
     if (latestPackageIds.length > 0) {
       const [decRes, itemRes] = await Promise.all([
-        supabase.from('uat_review_decisions').select('package_id, cycle_number, decision').in('package_id', latestPackageIds),
-        supabase.from('uat_checklist_items').select('package_id').in('package_id', latestPackageIds),
+        supabase
+          .from('uat_review_decisions')
+          .select('package_id, cycle_number, decision')
+          .in('package_id', latestPackageIds),
+        supabase
+          .from('uat_checklist_items')
+          .select('package_id')
+          .in('package_id', latestPackageIds),
       ]);
       uatDecisions = (decRes.data ?? []) as UatDecisionRow[];
       for (const it of itemRes.data ?? []) {
@@ -141,38 +195,62 @@ Deno.serve(async (req) => {
 
     // FR-149 v1.1: Filter pipeline records to current version
     const filterByVersion = <T extends { feature_id: string; feature_version_id?: string | null }>(
-      records: T[], fid: string,
+      records: T[],
+      fid: string
     ): T[] => {
       const currentVid = versionMap.get(fid);
-      if (!currentVid) return records.filter(r => r.feature_id === fid); // unversioned: show all
+      if (!currentVid) return records.filter((r) => r.feature_id === fid); // unversioned: show all
       // Versioned: show records matching current version OR NULL (pre-versioning records for v1.0)
-      return records.filter(r => r.feature_id === fid && (r.feature_version_id === currentVid || r.feature_version_id === null));
+      return records.filter(
+        (r) =>
+          r.feature_id === fid &&
+          (r.feature_version_id === currentVid || r.feature_version_id === null)
+      );
     };
 
-    const allSpecs = (specResult.data ?? []) as (SpecReviewRow & { feature_version_id?: string | null })[];
-    const allImpls = (implResult.data ?? []) as (ImplRequestRow & { feature_version_id?: string | null })[];
-    const allTests = (testResult.data ?? []) as (TestCaseRow & { feature_version_id?: string | null })[];
+    const allSpecs = (specResult.data ?? []) as (SpecReviewRow & {
+      feature_version_id?: string | null;
+    })[];
+    const allImpls = (implResult.data ?? []) as (ImplRequestRow & {
+      feature_version_id?: string | null;
+    })[];
+    const allTests = (testResult.data ?? []) as (TestCaseRow & {
+      feature_version_id?: string | null;
+    })[];
     const allArtifacts = (artifactResult.data ?? []) as SpecArtifactRow[];
-    const allPipelineRuns = (pipelineResult.data ?? []) as (PipelineRunRow & { feature_version_id?: string | null })[];
+    const allPipelineRuns = (pipelineResult.data ?? []) as (PipelineRunRow & {
+      feature_version_id?: string | null;
+    })[];
 
     // Check version_id from query param for per-version view
     const versionIdParam = url.searchParams.get('version_id');
 
     const pipelines = (features as FeatureRow[]).map((f) => {
       // If specific version_id requested, filter to that version only
-      const filterFn = <T extends { feature_id: string; feature_version_id?: string | null }>(records: T[]): T[] => {
+      const filterFn = <T extends { feature_id: string; feature_version_id?: string | null }>(
+        records: T[]
+      ): T[] => {
         if (versionIdParam) {
-          return records.filter(r => r.feature_id === f.id && (r.feature_version_id === versionIdParam || r.feature_version_id === null));
+          return records.filter(
+            (r) =>
+              r.feature_id === f.id &&
+              (r.feature_version_id === versionIdParam || r.feature_version_id === null)
+          );
         }
         return filterByVersion(records, f.id);
       };
 
       const latestPkg = latestPackagesByFeature.get(f.id);
-      const totalChecklist = latestPkg ? checklistTotals.get(latestPkg.id) ?? 0 : 0;
+      const totalChecklist = latestPkg ? (checklistTotals.get(latestPkg.id) ?? 0) : 0;
       return {
         feature_id: f.id,
         spec: computeSpecStage(filterFn(allSpecs), allArtifacts, f.id, f.status),
-        build: computeBuildStage(filterFn(allImpls), filterFn(allPipelineRuns) as PipelineRunRow[], f.id, f.status),
+        build: computeBuildStage(
+          filterFn(allImpls),
+          filterFn(allPipelineRuns) as PipelineRunRow[],
+          f.id,
+          f.status
+        ),
         test: computeTestStage(filterFn(allTests), f.id),
         uat: computeUatStage(allUatPackages, uatDecisions, totalChecklist, f.id, f.status),
         deploy: computeDeployStage(filterFn(allPipelineRuns) as PipelineRunRow[], f.id, f.status),

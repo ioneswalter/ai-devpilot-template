@@ -3,7 +3,13 @@
  * Creates pipeline_runs record, validates tasks, triggers first chain invocation
  */
 
-import { jsonResponse, errorResponse, appendLog, getEdgeFunctionUrl, type AuthContext } from './shared.ts';
+import {
+  jsonResponse,
+  errorResponse,
+  appendLog,
+  getEdgeFunctionUrl,
+  type AuthContext,
+} from './shared.ts';
 import { enqueuePipeline, linkPipelineToQueue } from './queue-manager.ts';
 
 export async function handleStart(req: Request, ctx: AuthContext): Promise<Response> {
@@ -71,13 +77,23 @@ export async function handleStart(req: Request, ctx: AuthContext): Promise<Respo
 
 /** Create pipeline run and start processing — used by both direct start and queue promotion */
 export async function createAndStartPipeline(
-  ctx: AuthContext, featureId: string, requestId: string, taskCount: number, queueEntryId?: string,
+  ctx: AuthContext,
+  featureId: string,
+  requestId: string,
+  taskCount: number,
+  queueEntryId?: string
 ): Promise<Response> {
   const { data: pipeline, error: createErr } = await ctx.supabase
     .from('pipeline_runs')
     .insert({
-      feature_id: featureId, request_id: requestId, status: 'running', current_stage: 'implementing',
-      total_tasks: taskCount, completed_tasks: 0, failed_tasks: 0, logs: [],
+      feature_id: featureId,
+      request_id: requestId,
+      status: 'running',
+      current_stage: 'implementing',
+      total_tasks: taskCount,
+      completed_tasks: 0,
+      failed_tasks: 0,
+      logs: [],
       queue_entry_id: queueEntryId ?? null,
     })
     .select('id')
@@ -91,14 +107,26 @@ export async function createAndStartPipeline(
   // Link queue entry to pipeline
   if (queueEntryId) await linkPipelineToQueue(ctx.supabase, queueEntryId, pipeline.id);
 
-  await ctx.supabase.from('implementation_requests')
-    .update({ status: 'implementing', updated_at: new Date().toISOString() }).eq('id', requestId);
+  await ctx.supabase
+    .from('implementation_requests')
+    .update({ status: 'implementing', updated_at: new Date().toISOString() })
+    .eq('id', requestId);
 
-  await appendLog(ctx.supabase, pipeline.id, 'info', `Pipeline started — ${taskCount} tasks to process`);
+  await appendLog(
+    ctx.supabase,
+    pipeline.id,
+    'info',
+    `Pipeline started — ${taskCount} tasks to process`
+  );
   triggerNextTask(pipeline.id, requestId);
 
   return jsonResponse({
-    data: { pipeline_id: pipeline.id, total_tasks: taskCount, status: 'running', queue_entry_id: queueEntryId ?? null },
+    data: {
+      pipeline_id: pipeline.id,
+      total_tasks: taskCount,
+      status: 'running',
+      queue_entry_id: queueEntryId ?? null,
+    },
   });
 }
 
@@ -112,14 +140,14 @@ function triggerNextTask(pipelineId: string, requestId: string): void {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${serviceKey}`,
+      Authorization: `Bearer ${serviceKey}`,
     },
     body: JSON.stringify({
       action: 'next',
       pipeline_id: pipelineId,
       request_id: requestId,
     }),
-  }).catch(err => {
+  }).catch((err) => {
     console.error('Failed to trigger next task:', err);
   });
 }

@@ -49,9 +49,7 @@ export function TestPipelineSteps({
   // "No data needed" only if a previous run completed successfully with zero records.
   // A 'partial' or 'error' status means generation FAILED — the feature still needs data.
   // A 'cleaned' status means data existed but was cleaned up — may need regeneration.
-  const noDataNeeded = datasets.some(
-    (d) => d.status === 'active' && d.records_created === 0,
-  );
+  const noDataNeeded = datasets.some((d) => d.status === 'active' && d.records_created === 0);
 
   // Step 2: Poll for test scripts (auto-detects when \generate-tests writes to DB)
   const { data: scriptCountRes } = useQuery({
@@ -82,7 +80,11 @@ export function TestPipelineSteps({
   const dataReady = hasData || noDataNeeded || justGenerated;
 
   // Step statuses
-  const dataStatus: StepStatus = datasetsLoading ? 'loading' : dataReady ? 'ready' : 'action-needed';
+  const dataStatus: StepStatus = datasetsLoading
+    ? 'loading'
+    : dataReady
+      ? 'ready'
+      : 'action-needed';
   const scriptsStatus: StepStatus = !dataReady
     ? 'blocked'
     : liveAutomatedCount === testCaseCount && testCaseCount > 0
@@ -91,7 +93,9 @@ export function TestPipelineSteps({
   // Allow running tests when data is ready and at least some scripts exist
   const canRun = dataReady && liveAutomatedCount > 0;
   const runStatus: StepStatus = canRun
-    ? (passedCount === testCaseCount && testCaseCount > 0 ? 'ready' : 'action-needed')
+    ? passedCount === testCaseCount && testCaseCount > 0
+      ? 'ready'
+      : 'action-needed'
     : 'blocked';
 
   const allPassed = passedCount === testCaseCount && testCaseCount > 0 && failedCount === 0;
@@ -104,10 +108,14 @@ export function TestPipelineSteps({
         title="Test Data"
         status={dataStatus}
         detail={
-          datasetsLoading ? 'Checking...'
-            : noDataNeeded ? 'No database records needed — this feature uses API-level testing'
-              : hasData ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
-                : datasets.some((d) => d.status === 'partial') ? 'Previous generation had errors — click Generate to retry'
+          datasetsLoading
+            ? 'Checking...'
+            : noDataNeeded
+              ? 'No database records needed — this feature uses API-level testing'
+              : hasData
+                ? `${activeDatasets} dataset${activeDatasets !== 1 ? 's' : ''} ready`
+                : datasets.some((d) => d.status === 'partial')
+                  ? 'Previous generation had errors — click Generate to retry'
                   : 'Generate test data for this feature'
         }
         action={
@@ -126,11 +134,21 @@ export function TestPipelineSteps({
                   <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   Generating...
                 </span>
-              ) : hasData ? 'Regenerate' : 'Generate'}
+              ) : hasData ? (
+                'Regenerate'
+              ) : (
+                'Generate'
+              )}
             </button>
           ) : undefined
         }
-        error={generateMut.isError ? (generateMut.error instanceof Error ? generateMut.error.message : 'Failed') : undefined}
+        error={
+          generateMut.isError
+            ? generateMut.error instanceof Error
+              ? generateMut.error.message
+              : 'Failed'
+            : undefined
+        }
         success={undefined}
       />
 
@@ -140,11 +158,16 @@ export function TestPipelineSteps({
         title="Test Scripts"
         status={scriptsStatus}
         detail={
-          scriptsStatus === 'blocked'
-            ? 'Generate test data first (step 1)'
-            : liveAutomatedCount === 0
-              ? <>No scripts — run <CopyableCommand command={`\\generate-tests ${featureCode}`} /> in Claude Code</>
-              : `${liveAutomatedCount}/${testCaseCount} test cases automated`
+          scriptsStatus === 'blocked' ? (
+            'Generate test data first (step 1)'
+          ) : liveAutomatedCount === 0 ? (
+            <>
+              No scripts — run <CopyableCommand command={`\\generate-tests ${featureCode}`} /> in
+              Claude Code
+            </>
+          ) : (
+            `${liveAutomatedCount}/${testCaseCount} test cases automated`
+          )
         }
         action={
           scriptsStatus !== 'blocked' && liveAutomatedCount > 0 && onRefresh ? (
@@ -207,22 +230,50 @@ function PipelineStep({
   success?: string;
 }) {
   const colors: Record<StepStatus, { bg: string; border: string; badge: string; text: string }> = {
-    ready: { bg: 'bg-green-50', border: 'border-green-200', badge: 'bg-green-600 text-white', text: 'text-green-700' },
-    'action-needed': { bg: 'bg-amber-50', border: 'border-amber-200', badge: 'bg-amber-500 text-white', text: 'text-amber-700' },
-    loading: { bg: 'bg-gray-50', border: 'border-gray-200', badge: 'bg-gray-400 text-white', text: 'text-gray-500' },
-    blocked: { bg: 'bg-gray-50', border: 'border-gray-200', badge: 'bg-gray-300 text-gray-500', text: 'text-gray-400' },
+    ready: {
+      bg: 'bg-green-50',
+      border: 'border-green-200',
+      badge: 'bg-green-600 text-white',
+      text: 'text-green-700',
+    },
+    'action-needed': {
+      bg: 'bg-amber-50',
+      border: 'border-amber-200',
+      badge: 'bg-amber-500 text-white',
+      text: 'text-amber-700',
+    },
+    loading: {
+      bg: 'bg-gray-50',
+      border: 'border-gray-200',
+      badge: 'bg-gray-400 text-white',
+      text: 'text-gray-500',
+    },
+    blocked: {
+      bg: 'bg-gray-50',
+      border: 'border-gray-200',
+      badge: 'bg-gray-300 text-gray-500',
+      text: 'text-gray-400',
+    },
   };
 
   const c = colors[status];
 
   return (
     <div className={`${c.bg} border ${c.border} rounded-lg px-3 py-2.5 flex items-center gap-3`}>
-      <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${c.badge}`}>
+      <span
+        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${c.badge}`}
+      >
         {status === 'ready' ? (
           <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
           </svg>
-        ) : number}
+        ) : (
+          number
+        )}
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

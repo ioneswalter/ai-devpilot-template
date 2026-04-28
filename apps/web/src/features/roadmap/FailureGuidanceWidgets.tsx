@@ -103,7 +103,11 @@ export function FixTestButton({ groupId, fileRef, featureCode, disabled }: FixTe
       onClick={handleCopy}
       disabled={isDisabled}
       title={noFile ? 'No source file identified' : `Copy \\fix-test command for group ${groupId}`}
-      aria-label={noFile ? 'Fix button disabled: no source file identified' : `Copy fix-test command for ${featureCode}`}
+      aria-label={
+        noFile
+          ? 'Fix button disabled: no source file identified'
+          : `Copy fix-test command for ${featureCode}`
+      }
       className={`px-2 py-1 text-[10px] font-medium rounded transition-colors ${
         copied
           ? 'bg-green-100 text-green-700'

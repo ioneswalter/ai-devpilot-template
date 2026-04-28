@@ -53,11 +53,14 @@ interface GuidedStepEvidence {
 function buildConversionPrompt(
   testCase: { title: string; steps: string; expected_result: string },
   evidence: GuidedStepEvidence[],
-  criteria: string[],
+  criteria: string[]
 ): string {
   const criteriaList = criteria.map((c, i) => `[${i}] ${c}`).join('\n');
   const evidenceList = evidence
-    .map((e) => `Step ${e.step_number}: ${e.action} on "${e.target}" — ${e.verdict} (expected: ${e.expected})`)
+    .map(
+      (e) =>
+        `Step ${e.step_number}: ${e.action} on "${e.target}" — ${e.verdict} (expected: ${e.expected})`
+    )
     .join('\n');
 
   return `Convert this manual test evidence into an automated test script.
@@ -103,7 +106,7 @@ RULES:
 export async function handleConvertManual(
   supabase: SupabaseClient,
   body: unknown,
-  userId: string,
+  userId: string
 ): Promise<Response> {
   const validation = ConvertSchema.safeParse(body);
   if (!validation.success) {
@@ -154,7 +157,7 @@ export async function handleConvertManual(
     return errorResponse(
       'NO_GUIDED_EVIDENCE',
       'No completed guided testing session found. Complete guided testing first.',
-      404,
+      404
     );
   }
 
@@ -189,7 +192,7 @@ export async function handleConvertManual(
     return errorResponse(
       'NO_GUIDED_EVIDENCE',
       'No step evidence found in test runs. Complete guided testing first.',
-      404,
+      404
     );
   }
 
@@ -214,8 +217,11 @@ export async function handleConvertManual(
     });
 
     logAIUsageFromEnv({
-      featureId: 'test-automation', adminId: 'system', modelId: AI_MODEL,
-      operationType: 'test_automation', inputTokens: response.usage?.input_tokens ?? 0,
+      featureId: 'test-automation',
+      adminId: 'system',
+      modelId: AI_MODEL,
+      operationType: 'test_automation',
+      inputTokens: response.usage?.input_tokens ?? 0,
       outputTokens: response.usage?.output_tokens ?? 0,
     });
 
@@ -238,18 +244,21 @@ export async function handleConvertManual(
     // Upsert script
     const { data: script, error: insertErr } = await supabase
       .from('automated_test_scripts')
-      .upsert({
-        test_case_id,
-        feature_id: testCase.feature_id,
-        script_steps: steps,
-        generation_source: 'manual_conversion',
-        generated_from_hash: hashText(criteriaText),
-        ai_model: AI_MODEL,
-        is_stale: false,
-        failure_count: 0,
-        generation_notes: notes,
-        created_by: userId,
-      }, { onConflict: 'test_case_id' })
+      .upsert(
+        {
+          test_case_id,
+          feature_id: testCase.feature_id,
+          script_steps: steps,
+          generation_source: 'manual_conversion',
+          generated_from_hash: hashText(criteriaText),
+          ai_model: AI_MODEL,
+          is_stale: false,
+          failure_count: 0,
+          generation_notes: notes,
+          created_by: userId,
+        },
+        { onConflict: 'test_case_id' }
+      )
       .select('id')
       .single();
 
@@ -265,16 +274,19 @@ export async function handleConvertManual(
       })
       .eq('id', test_case_id);
 
-    return jsonResponse({
-      data: {
-        script_id: script.id,
-        test_case_id,
-        step_count: steps.length,
-        source_session_id: sourceSessionId,
-        criterion_refs: criterionRefs,
-        validation_note: 'Run this script and compare results against guided session evidence',
+    return jsonResponse(
+      {
+        data: {
+          script_id: script.id,
+          test_case_id,
+          step_count: steps.length,
+          source_session_id: sourceSessionId,
+          criterion_refs: criterionRefs,
+          validation_note: 'Run this script and compare results against guided session evidence',
+        },
       },
-    }, 201);
+      201
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Conversion failed';
     return errorResponse('CONVERSION_ERROR', msg, 500);

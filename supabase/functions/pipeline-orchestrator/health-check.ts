@@ -11,7 +11,7 @@ import { promoteNextInQueue } from './queue-manager.ts';
 export async function handleHealthCheck(): Promise<Response> {
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
   const { data: stalePipelines } = await supabase
@@ -46,11 +46,21 @@ export async function handleHealthCheck(): Promise<Response> {
         })
         .eq('id', pipeline.id);
 
-      await appendLog(supabase, pipeline.id, 'error', 'Pipeline timed out after 1 hour of inactivity');
+      await appendLog(
+        supabase,
+        pipeline.id,
+        'error',
+        'Pipeline timed out after 1 hour of inactivity'
+      );
       timedOut++;
     } else if (age > fiveMin) {
       // Stale — restart the chain
-      await appendLog(supabase, pipeline.id, 'warn', `Restarting stale pipeline (${Math.round(age / 60000)}min since last heartbeat)`);
+      await appendLog(
+        supabase,
+        pipeline.id,
+        'warn',
+        `Restarting stale pipeline (${Math.round(age / 60000)}min since last heartbeat)`
+      );
 
       // Reset any stuck generating tasks
       await supabase
@@ -66,14 +76,14 @@ export async function handleHealthCheck(): Promise<Response> {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${serviceKey}`,
+          Authorization: `Bearer ${serviceKey}`,
         },
         body: JSON.stringify({
           action: 'next',
           pipeline_id: pipeline.id,
           request_id: pipeline.request_id,
         }),
-      }).catch(err => console.error('Health check restart error:', err));
+      }).catch((err) => console.error('Health check restart error:', err));
 
       restarted++;
     }
@@ -83,13 +93,21 @@ export async function handleHealthCheck(): Promise<Response> {
   let promoted = 0;
   try {
     await promoteNextInQueue(supabase);
-    const { count } = await supabase.from('pipeline_queue').select('id', { count: 'exact', head: true }).eq('status', 'queued');
+    const { count } = await supabase
+      .from('pipeline_queue')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'queued');
     promoted = count ?? 0;
   } catch (err) {
     console.error('Queue promotion error:', err);
   }
 
   return jsonResponse({
-    data: { checked: stalePipelines.length, restarted, timed_out: timedOut, queued_remaining: promoted },
+    data: {
+      checked: stalePipelines.length,
+      restarted,
+      timed_out: timedOut,
+      queued_remaining: promoted,
+    },
   });
 }

@@ -22,15 +22,20 @@ export function parseCriteria(criteria: unknown): string[] {
 /**
  * Collapsible description component - shows first N lines with expand/collapse
  */
-export function CollapsibleDescription({ text, maxLines = 3 }: { text: string; maxLines?: number }) {
+export function CollapsibleDescription({
+  text,
+  maxLines = 3,
+}: {
+  text: string;
+  maxLines?: number;
+}) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Split into lines and check if we need to truncate
-  const lines = text.split(/\n|(?<=[.!?])\s+/).filter(l => l.trim());
+  const lines = text.split(/\n|(?<=[.!?])\s+/).filter((l) => l.trim());
   const needsTruncation = lines.length > maxLines;
-  const displayText = needsTruncation && !isExpanded
-    ? lines.slice(0, maxLines).join('. ') + '...'
-    : text;
+  const displayText =
+    needsTruncation && !isExpanded ? lines.slice(0, maxLines).join('. ') + '...' : text;
 
   return (
     <div className="text-xs lg:text-sm text-gray-500">
@@ -82,7 +87,14 @@ export interface ProductFeature {
   implementing_features?: { [criterionIndex: number]: string[] };
 }
 
-export type FilterStatus = 'all' | 'released' | 'in_acceptance' | 'in_development' | 'proposed' | 'reviewed' | 'specified';
+export type FilterStatus =
+  | 'all'
+  | 'released'
+  | 'in_acceptance'
+  | 'in_development'
+  | 'proposed'
+  | 'reviewed'
+  | 'specified';
 export type FilterPriority = 'all' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5';
 export type FilterType = 'all' | 'journey' | 'functional_requirement';
 export type FilterCategory = 'all' | 'toolkit' | 'business_module' | 'internal' | 'none';

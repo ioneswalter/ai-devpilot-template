@@ -11,7 +11,8 @@ type SB = ReturnType<typeof createClient>;
 /** Handle notifications listing */
 export async function handleNotifications(supabase: SB, url: URL): Promise<Response> {
   const unreadOnly = url.searchParams.get('unread') !== 'false';
-  let query = supabase.from('pipeline_notifications')
+  let query = supabase
+    .from('pipeline_notifications')
     .select('*')
     .order('created_at', { ascending: false })
     .limit(20);
@@ -69,19 +70,44 @@ export async function handleConflictReport(supabase: SB, url: URL): Promise<Resp
 /** Handle learning insights */
 export async function handleLearningInsights(supabase: SB): Promise<Response> {
   const [pats, fails, recs, metrics] = await Promise.all([
-    supabase.from('failure_patterns').select('*').eq('is_active', true).order('frequency', { ascending: false }).limit(10),
-    supabase.from('pipeline_failures').select('id, error_type, error_code, error_message, file_path, outcome, created_at').order('created_at', { ascending: false }).limit(20),
-    supabase.from('constitution_recommendations').select('*').order('created_at', { ascending: false }).limit(10),
+    supabase
+      .from('failure_patterns')
+      .select('*')
+      .eq('is_active', true)
+      .order('frequency', { ascending: false })
+      .limit(10),
+    supabase
+      .from('pipeline_failures')
+      .select('id, error_type, error_code, error_message, file_path, outcome, created_at')
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('constitution_recommendations')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10),
     supabase.from('pipeline_failures').select('id', { count: 'exact', head: true }),
   ]);
-  const patCount = (await supabase.from('failure_patterns').select('id', { count: 'exact', head: true })).count ?? 0;
-  const activeCount = (await supabase.from('failure_patterns').select('id', { count: 'exact', head: true }).eq('is_active', true)).count ?? 0;
+  const patCount =
+    (await supabase.from('failure_patterns').select('id', { count: 'exact', head: true })).count ??
+    0;
+  const activeCount =
+    (
+      await supabase
+        .from('failure_patterns')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true)
+    ).count ?? 0;
   return jsonResponse({
     data: {
       top_patterns: pats.data ?? [],
       recent_failures: fails.data ?? [],
       recommendations: recs.data ?? [],
-      metrics: { total_failures: metrics.count ?? 0, patterns_detected: patCount, adaptations_active: activeCount },
+      metrics: {
+        total_failures: metrics.count ?? 0,
+        patterns_detected: patCount,
+        adaptations_active: activeCount,
+      },
     },
   });
 }

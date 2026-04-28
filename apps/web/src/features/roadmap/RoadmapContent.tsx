@@ -17,7 +17,13 @@ import type { PipelineStageName } from './pipeline-types';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { supabase } from '@/lib/supabase-client';
 
-export function RoadmapContent({ featureParam, isMember }: { featureParam?: string; isMember: boolean }) {
+export function RoadmapContent({
+  featureParam,
+  isMember,
+}: {
+  featureParam?: string;
+  isMember: boolean;
+}) {
   const roadmap = useRoadmapData(featureParam);
   const pipeline = usePipelineStatus();
   const { getFeatureCost } = useFeatureAICosts();
@@ -27,7 +33,9 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
   const [uatFeature, setUatFeature] = useState<ProductFeature | null>(null);
   const [showReleases, setShowReleases] = useState(false);
-  const [showFixTasks, setShowFixTasks] = useState(() => new URLSearchParams(window.location.search).get('fixTasks') === 'open');
+  const [showFixTasks, setShowFixTasks] = useState(
+    () => new URLSearchParams(window.location.search).get('fixTasks') === 'open'
+  );
   const [versionBumpFeature, setVersionBumpFeature] = useState<ProductFeature | null>(null);
 
   // FR-149: Fetch version labels for all versioned features
@@ -55,47 +63,56 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       });
   }, [roadmap.features]);
 
-  const getVersionLabel = useCallback((featureId: string): string | null => {
-    return versionLabelsRef.current[featureId] ?? null;
-  }, [versionLabelsLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  const getVersionLabel = useCallback(
+    (featureId: string): string | null => {
+      return versionLabelsRef.current[featureId] ?? null;
+    },
+    [versionLabelsLoaded]
+  ); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handlePipelineStageClick = useCallback((feature: ProductFeature, stage: PipelineStageName) => {
-    if (!roadmap.isAdmin) return;
-    if (!canAccessPanel(stage)) return;
+  const handlePipelineStageClick = useCallback(
+    (feature: ProductFeature, stage: PipelineStageName) => {
+      if (!roadmap.isAdmin) return;
+      if (!canAccessPanel(stage)) return;
 
-    // For released features, only open panels if there's actual SpecKit data
-    const pipelineData = pipeline.getPipeline(feature.id);
+      // For released features, only open panels if there's actual SpecKit data
+      const pipelineData = pipeline.getPipeline(feature.id);
 
-    switch (stage) {
-      case 'spec': {
-        // Only open spec panel if there's SpecKit data
-        if (pipelineData?.spec?.status === 'not_started') return;
-        // Refresh features to get latest status before opening panel
-        roadmap.fetchFeatures();
-        pipeline.invalidate();
-        setReviewingFeature(feature);
-        break;
+      switch (stage) {
+        case 'spec': {
+          // Only open spec panel if there's SpecKit data
+          if (pipelineData?.spec?.status === 'not_started') return;
+          // Refresh features to get latest status before opening panel
+          roadmap.fetchFeatures();
+          pipeline.invalidate();
+          setReviewingFeature(feature);
+          break;
+        }
+        case 'build': {
+          // Always allow opening build panel
+          setImplementingFeature(feature);
+          break;
+        }
+        case 'test':
+          setTestingFeature(feature);
+          break;
+        case 'deploy':
+          // FR-146: Open implementation panel to show deploy progress + release button
+          if (feature.status === 'released') return;
+          setImplementingFeature(feature);
+          break;
       }
-      case 'build': {
-        // Always allow opening build panel
-        setImplementingFeature(feature);
-        break;
-      }
-      case 'test':
-        setTestingFeature(feature);
-        break;
-      case 'deploy':
-        // FR-146: Open implementation panel to show deploy progress + release button
-        if (feature.status === 'released') return;
-        setImplementingFeature(feature);
-        break;
-    }
-  }, [roadmap.isAdmin, roadmap.handleTransitionRequest, pipeline]);
+    },
+    [roadmap.isAdmin, roadmap.handleTransitionRequest, pipeline]
+  );
 
-  const handleKanbanPipelineClick = useCallback((featureId: string, stage: PipelineStageName) => {
-    const feature = roadmap.features.find((f) => f.id === featureId);
-    if (feature) handlePipelineStageClick(feature, stage);
-  }, [roadmap.features, handlePipelineStageClick]);
+  const handleKanbanPipelineClick = useCallback(
+    (featureId: string, stage: PipelineStageName) => {
+      const feature = roadmap.features.find((f) => f.id === featureId);
+      if (feature) handlePipelineStageClick(feature, stage);
+    },
+    [roadmap.features, handlePipelineStageClick]
+  );
   useEffect(() => {
     if (reviewingFeature) {
       const updated = roadmap.features.find((f) => f.id === reviewingFeature.id);
@@ -114,7 +131,9 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       if (updated && updated !== uatFeature) setUatFeature(updated);
     } else if (roadmap.features.length > 0) {
       const param = new URLSearchParams(window.location.search).get('uat');
-      const f = param ? roadmap.features.find((x) => x.feature_code === param || x.id === param) : null;
+      const f = param
+        ? roadmap.features.find((x) => x.feature_code === param || x.id === param)
+        : null;
       if (f) setUatFeature(f);
     }
   }, [roadmap.features]);
@@ -137,8 +156,20 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
           <div className="container mx-auto px-4 text-center text-xs text-blue-600">
             <span className="flex items-center justify-center gap-1.5">
               <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
               Loading...
             </span>
@@ -185,13 +216,15 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
       {/* FR-116: Test-ready notification banner */}
       {roadmap.isAdmin && (
         <div className="container mx-auto px-4 mt-2">
-          <NotificationBanner onNavigateToFeature={(fId, tab) => {
-            const f = roadmap.features.find((feat) => feat.id === fId);
-            if (f) {
-              if (tab === 'uat') setUatFeature(f);
-              else setTestingFeature(f);
-            }
-          }} />
+          <NotificationBanner
+            onNavigateToFeature={(fId, tab) => {
+              const f = roadmap.features.find((feat) => feat.id === fId);
+              if (f) {
+                if (tab === 'uat') setUatFeature(f);
+                else setTestingFeature(f);
+              }
+            }}
+          />
         </div>
       )}
 
@@ -234,8 +267,12 @@ export function RoadmapContent({ featureParam, isMember }: { featureParam?: stri
 
       {/* AI Copilot (Admin Only) */}
       {roadmap.isAdmin && roadmap.copilotOpen && (
-        <CopilotPanel isOpen={roadmap.copilotOpen} onClose={() => roadmap.setCopilotOpen(false)}
-          selectedFeature={roadmap.selectedFeatureForCopilot} onFeatureUpdated={roadmap.handleFeatureUpdated} />
+        <CopilotPanel
+          isOpen={roadmap.copilotOpen}
+          onClose={() => roadmap.setCopilotOpen(false)}
+          selectedFeature={roadmap.selectedFeatureForCopilot}
+          onFeatureUpdated={roadmap.handleFeatureUpdated}
+        />
       )}
 
       <PipelineModals

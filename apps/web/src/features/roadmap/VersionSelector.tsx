@@ -21,7 +21,11 @@ interface VersionSelectorProps {
   onSelectVersion: (versionId: string | null) => void;
 }
 
-export function VersionSelector({ featureId, selectedVersionId, onSelectVersion }: VersionSelectorProps) {
+export function VersionSelector({
+  featureId,
+  selectedVersionId,
+  onSelectVersion,
+}: VersionSelectorProps) {
   const { data: versions, isLoading } = useQuery({
     queryKey: ['feature-versions-selector', featureId],
     queryFn: async () => {

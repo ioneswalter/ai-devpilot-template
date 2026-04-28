@@ -20,7 +20,10 @@ interface AutomatedExecuteDoneViewProps {
   markedCount: number;
   loadingRecs: boolean;
   recommendations: ImprovementRecommendation[];
-  onUpdateRecommendation: (id: string, status: 'accepted' | 'dismissed' | 'deferred') => Promise<void>;
+  onUpdateRecommendation: (
+    id: string,
+    status: 'accepted' | 'dismissed' | 'deferred'
+  ) => Promise<void>;
 }
 
 export function AutomatedExecuteDoneView({

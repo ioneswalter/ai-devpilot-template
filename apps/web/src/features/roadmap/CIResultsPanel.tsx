@@ -6,7 +6,11 @@
 import { useState } from 'react';
 import type { CIResults, CIStageResult } from '@/lib/api/admin-api';
 
-const CI_STAGE_LABELS: Record<string, string> = { typecheck: 'TypeScript', lint: 'ESLint', test: 'Tests' };
+const CI_STAGE_LABELS: Record<string, string> = {
+  typecheck: 'TypeScript',
+  lint: 'ESLint',
+  test: 'Tests',
+};
 
 function CIStageRow({ stage, result }: { stage: string; result: CIStageResult }) {
   const attempts = result?.attempts ?? [];
@@ -16,9 +20,11 @@ function CIStageRow({ stage, result }: { stage: string; result: CIStageResult })
   return (
     <div className="flex items-center justify-between py-1.5">
       <div className="flex items-center gap-2">
-        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-          result.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-        }`}>
+        <span
+          className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+            result.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          }`}
+        >
           {result.passed ? '\u2713' : '\u2717'}
         </span>
         <span className="text-xs font-medium text-gray-800">{CI_STAGE_LABELS[stage] ?? stage}</span>
@@ -26,7 +32,9 @@ function CIStageRow({ stage, result }: { stage: string; result: CIStageResult })
       <div className="flex items-center gap-2 text-xs text-gray-500">
         {attempts.length > 1 && <span>{attempts.length} attempts</span>}
         {!result.passed && errorCount > 0 && (
-          <span className="text-red-600">{errorCount} error{errorCount !== 1 ? 's' : ''}</span>
+          <span className="text-red-600">
+            {errorCount} error{errorCount !== 1 ? 's' : ''}
+          </span>
         )}
       </div>
     </div>
@@ -47,10 +55,18 @@ export function CIResultsPanel({ ciResults, onRerun, isRerunning }: CIResultsPan
   const allPassed = tc.passed && ln.passed && ts.passed;
   const [showErrors, setShowErrors] = useState(false);
 
-  const failedErrors: Array<{ stage: string; file: string; line: number; message: string; code: string }> = [];
+  const failedErrors: Array<{
+    stage: string;
+    file: string;
+    line: number;
+    message: string;
+    code: string;
+  }> = [];
   for (const [stage, result] of Object.entries(safeResults)) {
     if (!(result as CIStageResult).passed && (result as CIStageResult).attempts?.length > 0) {
-      const last = (result as CIStageResult).attempts[(result as CIStageResult).attempts.length - 1];
+      const last = (result as CIStageResult).attempts[
+        (result as CIStageResult).attempts.length - 1
+      ];
       for (const err of last?.errors ?? []) {
         failedErrors.push({ stage, ...err });
       }
@@ -58,9 +74,13 @@ export function CIResultsPanel({ ciResults, onRerun, isRerunning }: CIResultsPan
   }
 
   return (
-    <div className={`border rounded-lg p-3 space-y-2 ${allPassed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+    <div
+      className={`border rounded-lg p-3 space-y-2 ${allPassed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+    >
       <div className="flex items-center justify-between">
-        <h4 className={`text-xs font-semibold uppercase tracking-wider ${allPassed ? 'text-green-800' : 'text-red-800'}`}>
+        <h4
+          className={`text-xs font-semibold uppercase tracking-wider ${allPassed ? 'text-green-800' : 'text-red-800'}`}
+        >
           CI Validation {allPassed ? 'Passed' : 'Failed'}
         </h4>
         {!allPassed && (
@@ -75,7 +95,7 @@ export function CIResultsPanel({ ciResults, onRerun, isRerunning }: CIResultsPan
       </div>
 
       <div className="divide-y divide-gray-100">
-        {(['typecheck', 'lint', 'test'] as const).map(stage => (
+        {(['typecheck', 'lint', 'test'] as const).map((stage) => (
           <CIStageRow key={stage} stage={stage} result={safeResults[stage]} />
         ))}
       </div>
@@ -83,7 +103,7 @@ export function CIResultsPanel({ ciResults, onRerun, isRerunning }: CIResultsPan
       {failedErrors.length > 0 && (
         <div>
           <button
-            onClick={() => setShowErrors(v => !v)}
+            onClick={() => setShowErrors((v) => !v)}
             className="text-xs text-red-600 hover:underline"
           >
             {showErrors ? 'Hide errors' : `Show ${failedErrors.length} error(s)`}
@@ -91,9 +111,14 @@ export function CIResultsPanel({ ciResults, onRerun, isRerunning }: CIResultsPan
           {showErrors && (
             <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
               {failedErrors.map((err, i) => (
-                <div key={i} className="text-xs bg-white border border-red-100 rounded p-2 font-mono">
+                <div
+                  key={i}
+                  className="text-xs bg-white border border-red-100 rounded p-2 font-mono"
+                >
                   <span className="text-gray-400">[{CI_STAGE_LABELS[err.stage]}]</span>{' '}
-                  <span className="text-gray-600">{err.file}:{err.line}</span>{' '}
+                  <span className="text-gray-600">
+                    {err.file}:{err.line}
+                  </span>{' '}
                   <span className="text-red-700">{err.message}</span>
                 </div>
               ))}

@@ -3,20 +3,60 @@
  * Displays version, status, feature list, and release notes with edit capability
  */
 
-import { useState } from 'react'
-import { useReleases, useDeployRelease, type Release } from './useReleases'
-import { ReleaseFeatureList } from './ReleaseFeatureList'
-import { ReleaseNotesEditor } from './ReleaseNotesEditor'
+import { useState } from 'react';
+import { useReleases, useDeployRelease, type Release } from './useReleases';
+import { ReleaseFeatureList } from './ReleaseFeatureList';
+import { ReleaseNotesEditor } from './ReleaseNotesEditor';
 
 const ArrowLeftIcon = ({ className = '' }: { className?: string }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-)
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m12 19-7-7 7-7" />
+    <path d="M19 12H5" />
+  </svg>
+);
 const RocketIcon = ({ className = '' }: { className?: string }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
-)
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+    <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+    <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+    <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" />
+  </svg>
+);
 const LoaderIcon = ({ className = '' }: { className?: string }) => (
-  <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-)
+  <svg
+    className={className}
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+  </svg>
+);
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700' },
@@ -25,44 +65,40 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   deployed: { label: 'Deployed', className: 'bg-green-100 text-green-700' },
   failed: { label: 'Failed', className: 'bg-red-100 text-red-700' },
   rolled_back: { label: 'Rolled Back', className: 'bg-amber-100 text-amber-700' },
-}
+};
 
 function formatDate(dateString: string | undefined | null): string {
-  if (!dateString) return 'N/A'
+  if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  })
+  });
 }
 
 interface ReleaseDetailViewProps {
-  releaseId: string
-  onBack: () => void
-  onReleaseUpdated: () => void
-  onReleaseDeleted: () => void
+  releaseId: string;
+  onBack: () => void;
+  onReleaseUpdated: () => void;
+  onReleaseDeleted: () => void;
 }
 
-export function ReleaseDetailView({
-  releaseId,
-  onBack,
-  onReleaseUpdated,
-}: ReleaseDetailViewProps) {
-  const { data: releases, isLoading } = useReleases()
-  const deployMutation = useDeployRelease()
-  const [showNotes, setShowNotes] = useState(false)
-  const [deployError, setDeployError] = useState<string | null>(null)
+export function ReleaseDetailView({ releaseId, onBack, onReleaseUpdated }: ReleaseDetailViewProps) {
+  const { data: releases, isLoading } = useReleases();
+  const deployMutation = useDeployRelease();
+  const [showNotes, setShowNotes] = useState(false);
+  const [deployError, setDeployError] = useState<string | null>(null);
 
-  const release: Release | undefined = releases?.find(r => r.id === releaseId)
+  const release: Release | undefined = releases?.find((r) => r.id === releaseId);
 
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center">
         <LoaderIcon className="w-6 h-6 animate-spin text-gray-400" />
       </div>
-    )
+    );
   }
 
   if (!release) {
@@ -73,22 +109,23 @@ export function ReleaseDetailView({
           Back to releases
         </button>
       </div>
-    )
+    );
   }
 
-  const config = statusConfig[release.status] ?? statusConfig.draft
-  const canDeploy = release.status === 'draft' || release.status === 'ready' || release.status === 'scheduled'
-  const featureIds = release.features?.map(f => f.feature_id) ?? []
+  const config = statusConfig[release.status] ?? statusConfig.draft;
+  const canDeploy =
+    release.status === 'draft' || release.status === 'ready' || release.status === 'scheduled';
+  const featureIds = release.features?.map((f) => f.feature_id) ?? [];
 
   const handleDeploy = async () => {
-    setDeployError(null)
+    setDeployError(null);
     try {
-      await deployMutation.mutateAsync({ id: releaseId })
-      onReleaseUpdated()
+      await deployMutation.mutateAsync({ id: releaseId });
+      onReleaseUpdated();
     } catch (err) {
-      setDeployError(err instanceof Error ? err.message : 'Deploy failed')
+      setDeployError(err instanceof Error ? err.message : 'Deploy failed');
     }
-  }
+  };
 
   return (
     <div className="p-6 overflow-y-auto max-h-[70vh]">
@@ -166,7 +203,7 @@ export function ReleaseDetailView({
             name: release.name,
             version: release.version,
             status: release.status as 'draft' | 'scheduled' | 'deployed' | 'rolled_back',
-            features: (release.features ?? []).map(f => ({
+            features: (release.features ?? []).map((f) => ({
               id: f.feature_id,
               feature_code: f.feature_code ?? f.feature_id.slice(0, 8),
               title: f.title ?? 'Unknown Feature',
@@ -209,5 +246,5 @@ export function ReleaseDetailView({
         )}
       </div>
     </div>
-  )
+  );
 }

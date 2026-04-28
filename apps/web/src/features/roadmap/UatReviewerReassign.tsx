@@ -37,12 +37,17 @@ function useBpReassign(packageId: string, packageStatus: string) {
     const seen = new Set<string>();
     return (teamQuery.data?.assignments ?? [])
       .filter((a) => a.role_code === 'BP')
-      .filter((a) => { if (seen.has(a.user_id)) return false; seen.add(a.user_id); return true; });
+      .filter((a) => {
+        if (seen.has(a.user_id)) return false;
+        seen.add(a.user_id);
+        return true;
+      });
   }, [teamQuery.data]);
 
   const submit = async () => {
     if (!selected) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await uatReviewApi.reassignReviewer(packageId, selected);
       await queryClient.invalidateQueries({ queryKey: ['uat-package'] });
@@ -50,7 +55,9 @@ function useBpReassign(packageId: string, packageStatus: string) {
       setSelected('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Reassignment failed');
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return { selected, setSelected, busy, error, bpUsers, isLoading: teamQuery.isLoading, submit };
@@ -66,22 +73,33 @@ export function UatReviewerReassign({ packageId, currentReviewerName, packageSta
       <span className="text-gray-500">Reviewer:</span>
       <span className="text-gray-700 font-medium">{currentReviewerName ?? 'Unassigned'}</span>
       <select
-        value={r.selected} onChange={(e) => r.setSelected(e.target.value)}
+        value={r.selected}
+        onChange={(e) => r.setSelected(e.target.value)}
         disabled={r.busy || r.isLoading || noBPs}
         className="ml-2 text-xs border border-gray-300 rounded px-1.5 py-0.5 bg-white disabled:bg-gray-100"
         aria-label="Reassign reviewer"
       >
         <option value="">{noBPs ? 'No BPs assigned to delivery team' : 'Reassign to…'}</option>
         {r.bpUsers.map((u) => (
-          <option key={u.user_id} value={u.user_id}>{u.user_name || u.user_email}</option>
+          <option key={u.user_id} value={u.user_id}>
+            {u.user_name || u.user_email}
+          </option>
         ))}
       </select>
-      <button type="button" onClick={r.submit} disabled={!r.selected || r.busy}
+      <button
+        type="button"
+        onClick={r.submit}
+        disabled={!r.selected || r.busy}
         className="px-2 py-0.5 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
-        data-testid="uat-reviewer-reassign-submit">
+        data-testid="uat-reviewer-reassign-submit"
+      >
         {r.busy ? 'Saving…' : 'Reassign'}
       </button>
-      {r.error && <span className="text-red-600 text-[11px]" role="alert">{r.error}</span>}
+      {r.error && (
+        <span className="text-red-600 text-[11px]" role="alert">
+          {r.error}
+        </span>
+      )}
     </div>
   );
 }
