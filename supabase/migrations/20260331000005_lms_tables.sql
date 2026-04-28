@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS course_modules (
 );
 
 CREATE INDEX IF NOT EXISTS idx_course_modules_course ON course_modules (course_id);
+ALTER TABLE course_modules DROP CONSTRAINT IF EXISTS uq_course_module_order;
 ALTER TABLE course_modules ADD CONSTRAINT uq_course_module_order UNIQUE (course_id, sort_order);
 
 ALTER TABLE course_modules ENABLE ROW LEVEL SECURITY;
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS course_enrollments (
 CREATE INDEX IF NOT EXISTS idx_enrollments_course ON course_enrollments (course_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course_status ON course_enrollments (course_id, status);
 CREATE INDEX IF NOT EXISTS idx_enrollments_user ON course_enrollments (user_id);
+ALTER TABLE course_enrollments DROP CONSTRAINT IF EXISTS uq_enrollment_user_course;
 ALTER TABLE course_enrollments ADD CONSTRAINT uq_enrollment_user_course UNIQUE (course_id, user_id);
 
 ALTER TABLE course_enrollments ENABLE ROW LEVEL SECURITY;
@@ -67,6 +69,7 @@ CREATE TABLE IF NOT EXISTS module_progress (
 
 CREATE INDEX IF NOT EXISTS idx_progress_enrollment ON module_progress (enrollment_id);
 CREATE INDEX IF NOT EXISTS idx_progress_module ON module_progress (module_id);
+ALTER TABLE module_progress DROP CONSTRAINT IF EXISTS uq_progress_enrollment_module;
 ALTER TABLE module_progress ADD CONSTRAINT uq_progress_enrollment_module UNIQUE (enrollment_id, module_id);
 
 ALTER TABLE module_progress ENABLE ROW LEVEL SECURITY;
