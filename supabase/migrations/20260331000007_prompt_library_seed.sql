@@ -1,6 +1,12 @@
 -- Seed prompt library with categories and existing proven prompts
 -- Categories derived from the 18 AI Edge Functions audit
 
+-- system_prompt holds the literal proven prompt text. The seed below registers
+-- prompt metadata (slug, model, source_function, tags) ahead of a later
+-- backfill that extracts the actual prompt text from each source_function.
+-- Until then, allow NULL so this seed can land.
+ALTER TABLE prompt_templates ALTER COLUMN system_prompt DROP NOT NULL;
+
 INSERT INTO prompt_categories (id, slug, name, description, icon, sort_order) VALUES
   ('cat-impl', 'implementation_planning', 'Implementation Planning', 'Task breakdown, architecture decisions, and implementation plans from feature specs', 'code', 1),
   ('cat-codegen', 'code_generation', 'Code Generation', 'TypeScript code generation, task splitting, and test data creation', 'terminal', 2),
