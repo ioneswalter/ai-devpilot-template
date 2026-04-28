@@ -17,7 +17,7 @@
  * DELETE ?action=delete-script      — Delete an automated script
  */
 
-import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient, SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
