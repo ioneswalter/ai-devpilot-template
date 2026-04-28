@@ -19,7 +19,7 @@ BEGIN
       'FR-015',
       'International Address Support',
       'Improve profile registration with better address labeling for international users and AI-powered address validation that interprets, structures, and formats addresses for any country.',
-      ARRAY[
+      to_jsonb(ARRAY[
         'Address field includes clear labeling with expected format (street number, street name, neighbourhood, city, state/province, country, postal code)',
         'Address field shows examples for multiple countries (Australia, Portugal, USA, UK, etc.)',
         'AI validation button allows users to validate and structure their address',
@@ -27,7 +27,7 @@ BEGIN
         'User can review and confirm AI-structured address before saving',
         'System detects country from address patterns and postal codes',
         'Works with all countries supported in phone number selector'
-      ],
+      ]),
       'feature',
       'P2',
       'released',
