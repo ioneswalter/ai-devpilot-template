@@ -20,7 +20,7 @@ CREATE POLICY "Service role full access on ai_model_selections"
 -- Update operation_type check to include ideation and pipeline operations
 ALTER TABLE ai_usage_logs DROP CONSTRAINT IF EXISTS ai_usage_logs_operation_type_check;
 ALTER TABLE ai_usage_logs ADD CONSTRAINT ai_usage_logs_operation_type_check
-  CHECK (operation_type IN ('ideation', 'spec_review', 'implementation', 'code_review', 'test_generation', 'error_fixing', 'task_splitting', 'learning'));
+  CHECK (operation_type IN ('ideation', 'spec_review', 'code_generation', 'task_splitting', 'learning', 'test_data_gen', 'implementation', 'guided_testing', 'code_review', 'test_generation', 'error_fixing'));
 
 -- Update model pricing to current Claude models (March 2026)
 UPDATE ai_models SET is_active = false WHERE id IN ('claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307');

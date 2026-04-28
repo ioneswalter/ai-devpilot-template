@@ -33,5 +33,6 @@ ALTER TABLE ai_usage_logs
   ADD CONSTRAINT ai_usage_logs_operation_type_check
   CHECK (operation_type IN (
     'ideation', 'spec_review', 'code_generation', 'task_splitting',
-    'learning', 'test_data_gen', 'implementation'
+    'learning', 'test_data_gen', 'implementation', 'guided_testing',
+    'code_review', 'test_generation', 'error_fixing'
   ));
