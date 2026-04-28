@@ -106,6 +106,24 @@ export async function handleUpdateFeature(
     return errorResponse('DATABASE_ERROR', 'Failed to update feature', 500);
   }
 
+  // FR-149 v1.3: when parent transitions to 'released', sync the in-flight
+  // version row to 'released' so the structured versioning chain matches.
+  // Without this, the parent flips but the in-flight v1.N stays 'proposed',
+  // breaking pipeline UI and coverage queries (symptom: FR-145 release on
+  // 2026-04-28 showed parent=released but v1.1 row=proposed).
+  if (filteredUpdates.status === 'released') {
+    const { error: vErr } = await supabase
+      .from('feature_versions')
+      .update({ status: 'released' })
+      .eq('feature_id', feature_id)
+      .is('superseded_by', null)
+      .not('version_label', 'is', null)
+      .eq('status', 'proposed');
+    if (vErr) {
+      console.warn('FR-149 v1.3: in-flight version sync failed (non-fatal):', vErr.message);
+    }
+  }
+
   // Handle test cases if provided
   if (hasTestCases) {
     await appendTestCases(supabase, feature, test_cases_text!, userId, now);
