@@ -53,7 +53,9 @@ ALTER TABLE pipeline_notifications ADD CONSTRAINT pipeline_notifications_type_ch
 ALTER TABLE pipeline_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deploy_locks ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role full access on pipeline_queue" ON pipeline_queue;
 CREATE POLICY "Service role full access on pipeline_queue"
   ON pipeline_queue FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access on deploy_locks" ON deploy_locks;
 CREATE POLICY "Service role full access on deploy_locks"
   ON deploy_locks FOR ALL USING (true) WITH CHECK (true);

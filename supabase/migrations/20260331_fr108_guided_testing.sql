@@ -18,11 +18,13 @@ CREATE TABLE IF NOT EXISTS guided_test_sessions (
 -- RLS
 ALTER TABLE guided_test_sessions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "admin_guided_sessions_all" ON guided_test_sessions;
 CREATE POLICY "admin_guided_sessions_all" ON guided_test_sessions
   FOR ALL USING (
     EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()::text)
   );
 
+DROP POLICY IF EXISTS "service_role_guided_sessions" ON guided_test_sessions;
 CREATE POLICY "service_role_guided_sessions" ON guided_test_sessions
   FOR ALL USING (
     current_setting('role', true) = 'service_role'

@@ -26,14 +26,17 @@ CREATE INDEX IF NOT EXISTS idx_assessment_attempts_attempted_at
 
 ALTER TABLE assessment_attempts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own assessment attempts" ON assessment_attempts;
 CREATE POLICY "Users read own assessment attempts"
   ON assessment_attempts FOR SELECT
   USING (auth.uid() = (SELECT user_id FROM course_enrollments WHERE id = enrollment_id));
 
+DROP POLICY IF EXISTS "Users insert own assessment attempts" ON assessment_attempts;
 CREATE POLICY "Users insert own assessment attempts"
   ON assessment_attempts FOR INSERT
   WITH CHECK (auth.uid() = (SELECT user_id FROM course_enrollments WHERE id = enrollment_id));
 
+DROP POLICY IF EXISTS "Service role full access assessment_attempts" ON assessment_attempts;
 CREATE POLICY "Service role full access assessment_attempts"
   ON assessment_attempts FOR ALL
   USING (auth.role() = 'service_role');
@@ -55,14 +58,17 @@ CREATE INDEX IF NOT EXISTS idx_certificates_verification_code ON certificates(ve
 
 ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own certificates" ON certificates;
 CREATE POLICY "Users read own certificates"
   ON certificates FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Public read certificates by verification code" ON certificates;
 CREATE POLICY "Public read certificates by verification code"
   ON certificates FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Service role full access certificates" ON certificates;
 CREATE POLICY "Service role full access certificates"
   ON certificates FOR ALL
   USING (auth.role() = 'service_role');
@@ -85,10 +91,12 @@ CREATE INDEX IF NOT EXISTS idx_course_payments_course_id ON course_payments(cour
 
 ALTER TABLE course_payments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users read own course payments" ON course_payments;
 CREATE POLICY "Users read own course payments"
   ON course_payments FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Service role full access course_payments" ON course_payments;
 CREATE POLICY "Service role full access course_payments"
   ON course_payments FOR ALL
   USING (auth.role() = 'service_role');

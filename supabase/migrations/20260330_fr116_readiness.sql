@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS pipeline_notifications (
 ALTER TABLE pipeline_notifications ENABLE ROW LEVEL SECURITY;
 
 -- 5. RLS policy: admins can read all notifications
+DROP POLICY IF EXISTS "Admins can read notifications" ON pipeline_notifications;
 CREATE POLICY "Admins can read notifications" ON pipeline_notifications
   FOR SELECT USING (
     EXISTS (
@@ -37,6 +38,7 @@ CREATE POLICY "Admins can read notifications" ON pipeline_notifications
   );
 
 -- 6. RLS policy: admins can update (mark read)
+DROP POLICY IF EXISTS "Admins can update notifications" ON pipeline_notifications;
 CREATE POLICY "Admins can update notifications" ON pipeline_notifications
   FOR UPDATE USING (
     EXISTS (
@@ -45,6 +47,7 @@ CREATE POLICY "Admins can update notifications" ON pipeline_notifications
   );
 
 -- 7. RLS policy: service role can insert (pipeline creates notifications)
+DROP POLICY IF EXISTS "Service can insert notifications" ON pipeline_notifications;
 CREATE POLICY "Service can insert notifications" ON pipeline_notifications
   FOR INSERT WITH CHECK (true);
 

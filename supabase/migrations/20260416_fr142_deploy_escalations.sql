@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS deploy_escalations (
 );
 
 -- Indexes
-CREATE INDEX idx_deploy_escalations_pipeline ON deploy_escalations(pipeline_id);
-CREATE INDEX idx_deploy_escalations_status ON deploy_escalations(status);
+CREATE INDEX IF NOT EXISTS idx_deploy_escalations_pipeline ON deploy_escalations(pipeline_id);
+CREATE INDEX IF NOT EXISTS idx_deploy_escalations_status ON deploy_escalations(status);
 
 -- RLS
 ALTER TABLE deploy_escalations ENABLE ROW LEVEL SECURITY;

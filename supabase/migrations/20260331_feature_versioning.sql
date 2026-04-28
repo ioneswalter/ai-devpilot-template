@@ -25,6 +25,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_feature_versions_unique ON feature_version
 -- RLS: admins can read/write, authenticated users can read
 ALTER TABLE feature_versions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can manage feature versions" ON feature_versions;
 CREATE POLICY "Admins can manage feature versions"
   ON feature_versions FOR ALL
   USING (true)

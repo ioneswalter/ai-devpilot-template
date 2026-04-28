@@ -7,10 +7,13 @@ ALTER TABLE ai_usage_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_model_selections ENABLE ROW LEVEL SECURITY;
 
 -- Service role full access policies
+DROP POLICY IF EXISTS "Service role full access on ai_models" ON ai_models;
 CREATE POLICY "Service role full access on ai_models"
   ON ai_models FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access on ai_usage_logs" ON ai_usage_logs;
 CREATE POLICY "Service role full access on ai_usage_logs"
   ON ai_usage_logs FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access on ai_model_selections" ON ai_model_selections;
 CREATE POLICY "Service role full access on ai_model_selections"
   ON ai_model_selections FOR ALL USING (true) WITH CHECK (true);
 

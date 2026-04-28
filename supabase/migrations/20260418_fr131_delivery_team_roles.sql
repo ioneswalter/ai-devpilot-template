@@ -23,10 +23,12 @@ ON CONFLICT (role_code) DO NOTHING;
 -- RLS for delivery_role_types
 ALTER TABLE delivery_role_types ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can read role types" ON delivery_role_types;
 CREATE POLICY "Authenticated users can read role types"
   ON delivery_role_types FOR SELECT
   TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Admin can manage role types" ON delivery_role_types;
 CREATE POLICY "Admin can manage role types"
   ON delivery_role_types FOR ALL
   TO authenticated USING (
@@ -49,10 +51,12 @@ CREATE INDEX IF NOT EXISTS idx_role_assignments_role ON delivery_role_assignment
 -- RLS for delivery_role_assignments
 ALTER TABLE delivery_role_assignments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can read role assignments" ON delivery_role_assignments;
 CREATE POLICY "Authenticated users can read role assignments"
   ON delivery_role_assignments FOR SELECT
   TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "Admin can manage role assignments" ON delivery_role_assignments;
 CREATE POLICY "Admin can manage role assignments"
   ON delivery_role_assignments FOR ALL
   TO authenticated USING (
@@ -74,12 +78,14 @@ CREATE INDEX IF NOT EXISTS idx_role_change_log_user ON role_change_log(user_id, 
 -- RLS for role_change_log
 ALTER TABLE role_change_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admin can read role change log" ON role_change_log;
 CREATE POLICY "Admin can read role change log"
   ON role_change_log FOR SELECT
   TO authenticated USING (
     EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()::text)
   );
 
+DROP POLICY IF EXISTS "Service role can write role change log" ON role_change_log;
 CREATE POLICY "Service role can write role change log"
   ON role_change_log FOR INSERT
   TO authenticated WITH CHECK (true);

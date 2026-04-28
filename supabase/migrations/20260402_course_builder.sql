@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS module_assessments (
 );
 
 ALTER TABLE module_assessments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_module_assessments" ON module_assessments;
 CREATE POLICY "service_role_all_module_assessments" ON module_assessments FOR ALL USING (true) WITH CHECK (true);
 
 -- ── quiz_questions ──
@@ -33,10 +34,11 @@ CREATE TABLE IF NOT EXISTS quiz_questions (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_quiz_questions_module ON quiz_questions (module_id);
-CREATE INDEX idx_quiz_questions_order ON quiz_questions (module_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_quiz_questions_module ON quiz_questions (module_id);
+CREATE INDEX IF NOT EXISTS idx_quiz_questions_order ON quiz_questions (module_id, sort_order);
 
 ALTER TABLE quiz_questions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_quiz_questions" ON quiz_questions;
 CREATE POLICY "service_role_all_quiz_questions" ON quiz_questions FOR ALL USING (true) WITH CHECK (true);
 
 -- ── course_templates ──
@@ -49,9 +51,10 @@ CREATE TABLE IF NOT EXISTS course_templates (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_course_templates_category ON course_templates (category);
+CREATE INDEX IF NOT EXISTS idx_course_templates_category ON course_templates (category);
 
 ALTER TABLE course_templates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_course_templates" ON course_templates;
 CREATE POLICY "service_role_all_course_templates" ON course_templates FOR ALL USING (true) WITH CHECK (true);
 
 -- ── template_modules ──
@@ -64,9 +67,10 @@ CREATE TABLE IF NOT EXISTS template_modules (
   UNIQUE (template_id, sort_order)
 );
 
-CREATE INDEX idx_template_modules_template ON template_modules (template_id);
+CREATE INDEX IF NOT EXISTS idx_template_modules_template ON template_modules (template_id);
 
 ALTER TABLE template_modules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_template_modules" ON template_modules;
 CREATE POLICY "service_role_all_template_modules" ON template_modules FOR ALL USING (true) WITH CHECK (true);
 
 -- ── image_prompts ──
@@ -83,7 +87,8 @@ CREATE TABLE IF NOT EXISTS image_prompts (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_image_prompts_module ON image_prompts (module_id);
+CREATE INDEX IF NOT EXISTS idx_image_prompts_module ON image_prompts (module_id);
 
 ALTER TABLE image_prompts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_image_prompts" ON image_prompts;
 CREATE POLICY "service_role_all_image_prompts" ON image_prompts FOR ALL USING (true) WITH CHECK (true);

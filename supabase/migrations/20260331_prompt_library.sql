@@ -101,18 +101,27 @@ ALTER TABLE prompt_ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_learnings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sdlc_shortcuts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public read for prompt categories" ON prompt_categories;
 CREATE POLICY "Public read for prompt categories" ON prompt_categories FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admin manage prompt categories" ON prompt_categories;
 CREATE POLICY "Admin manage prompt categories" ON prompt_categories FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public read for active prompts" ON prompt_templates;
 CREATE POLICY "Public read for active prompts" ON prompt_templates FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Admin manage prompts" ON prompt_templates;
 CREATE POLICY "Admin manage prompts" ON prompt_templates FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Authenticated users can rate" ON prompt_ratings;
 CREATE POLICY "Authenticated users can rate" ON prompt_ratings FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public read active learnings" ON ai_learnings;
 CREATE POLICY "Public read active learnings" ON ai_learnings FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Admin manage learnings" ON ai_learnings;
 CREATE POLICY "Admin manage learnings" ON ai_learnings FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public read active shortcuts" ON sdlc_shortcuts;
 CREATE POLICY "Public read active shortcuts" ON sdlc_shortcuts FOR SELECT USING (is_active = true);
+DROP POLICY IF EXISTS "Admin manage shortcuts" ON sdlc_shortcuts;
 CREATE POLICY "Admin manage shortcuts" ON sdlc_shortcuts FOR ALL USING (true) WITH CHECK (true);
 
 COMMENT ON TABLE prompt_categories IS 'Categories for organizing AI prompt templates by task type';

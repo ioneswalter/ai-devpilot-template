@@ -14,12 +14,13 @@ CREATE TABLE IF NOT EXISTS feature_spec_artifacts (
   UNIQUE (feature_id, artifact_type, file_name)
 );
 
-CREATE INDEX idx_feature_spec_artifacts_feature_id ON feature_spec_artifacts(feature_id);
-CREATE INDEX idx_feature_spec_artifacts_type ON feature_spec_artifacts(artifact_type);
+CREATE INDEX IF NOT EXISTS idx_feature_spec_artifacts_feature_id ON feature_spec_artifacts(feature_id);
+CREATE INDEX IF NOT EXISTS idx_feature_spec_artifacts_type ON feature_spec_artifacts(artifact_type);
 
 -- RLS: Only admins can read/write spec artifacts
 ALTER TABLE feature_spec_artifacts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admins can manage spec artifacts" ON feature_spec_artifacts;
 CREATE POLICY "Admins can manage spec artifacts"
   ON feature_spec_artifacts
   FOR ALL
@@ -31,6 +32,7 @@ CREATE POLICY "Admins can manage spec artifacts"
   );
 
 -- Service role bypass for Edge Functions
+DROP POLICY IF EXISTS "Service role full access to spec artifacts" ON feature_spec_artifacts;
 CREATE POLICY "Service role full access to spec artifacts"
   ON feature_spec_artifacts
   FOR ALL

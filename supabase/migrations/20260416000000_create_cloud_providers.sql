@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS cloud_providers (
 );
 
 -- Indexes
-CREATE INDEX idx_cloud_providers_is_primary ON cloud_providers (is_primary) WHERE is_primary = true;
+CREATE INDEX IF NOT EXISTS idx_cloud_providers_is_primary ON cloud_providers (is_primary) WHERE is_primary = true;
 
 -- RLS
 ALTER TABLE cloud_providers ENABLE ROW LEVEL SECURITY;
@@ -65,6 +65,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS cloud_providers_updated_at ON cloud_providers;
 CREATE TRIGGER cloud_providers_updated_at
   BEFORE UPDATE ON cloud_providers
   FOR EACH ROW

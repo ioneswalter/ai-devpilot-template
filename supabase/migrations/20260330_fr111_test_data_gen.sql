@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS test_data_sets (
 ALTER TABLE test_data_sets ENABLE ROW LEVEL SECURITY;
 
 -- Admin-only access
+DROP POLICY IF EXISTS "admin_test_data_sets_all" ON test_data_sets;
 CREATE POLICY "admin_test_data_sets_all" ON test_data_sets
   FOR ALL USING (
     EXISTS (SELECT 1 FROM admin_users WHERE user_id = auth.uid()::text)

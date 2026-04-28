@@ -56,9 +56,12 @@ ALTER TABLE pipeline_failures ENABLE ROW LEVEL SECURITY;
 ALTER TABLE failure_patterns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE constitution_recommendations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role full access on pipeline_failures" ON pipeline_failures;
 CREATE POLICY "Service role full access on pipeline_failures"
   ON pipeline_failures FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access on failure_patterns" ON failure_patterns;
 CREATE POLICY "Service role full access on failure_patterns"
   ON failure_patterns FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Service role full access on constitution_recommendations" ON constitution_recommendations;
 CREATE POLICY "Service role full access on constitution_recommendations"
   ON constitution_recommendations FOR ALL USING (true) WITH CHECK (true);

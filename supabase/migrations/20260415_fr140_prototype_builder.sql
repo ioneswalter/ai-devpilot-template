@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS prototype_versions (
   UNIQUE(conversation_id, version_number)
 );
 
-CREATE INDEX idx_prototype_versions_conv ON prototype_versions(conversation_id);
-CREATE INDEX idx_prototype_versions_current ON prototype_versions(conversation_id, is_current);
+CREATE INDEX IF NOT EXISTS idx_prototype_versions_conv ON prototype_versions(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_prototype_versions_current ON prototype_versions(conversation_id, is_current);
 
 -- Prototype Attachments: links finalised prototype to a feature
 -- Note: product_features.id is TEXT (not UUID)
@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS prototype_attachments (
 -- RLS: prototype_versions
 ALTER TABLE prototype_versions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own conversation prototypes" ON prototype_versions;
 CREATE POLICY "Users can view own conversation prototypes"
   ON prototype_versions FOR SELECT
   USING (
@@ -44,10 +45,12 @@ CREATE POLICY "Users can view own conversation prototypes"
     )
   );
 
+DROP POLICY IF EXISTS "Service role can insert prototypes" ON prototype_versions;
 CREATE POLICY "Service role can insert prototypes"
   ON prototype_versions FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role can update prototypes" ON prototype_versions;
 CREATE POLICY "Service role can update prototypes"
   ON prototype_versions FOR UPDATE
   USING (true);
@@ -55,10 +58,12 @@ CREATE POLICY "Service role can update prototypes"
 -- RLS: prototype_attachments
 ALTER TABLE prototype_attachments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view prototype attachments" ON prototype_attachments;
 CREATE POLICY "Authenticated users can view prototype attachments"
   ON prototype_attachments FOR SELECT
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Service role can insert prototype attachments" ON prototype_attachments;
 CREATE POLICY "Service role can insert prototype attachments"
   ON prototype_attachments FOR INSERT
   WITH CHECK (true);

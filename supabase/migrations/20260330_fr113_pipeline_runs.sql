@@ -1,7 +1,7 @@
 -- FR-113: Server-Side Pipeline Orchestration
 -- Creates pipeline_runs table for server-side pipeline state tracking
 
-CREATE TABLE pipeline_runs (
+CREATE TABLE IF NOT EXISTS pipeline_runs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   feature_id TEXT NOT NULL REFERENCES product_features(id) ON DELETE CASCADE,
   request_id UUID NOT NULL REFERENCES implementation_requests(id) ON DELETE CASCADE,
@@ -26,9 +26,9 @@ CREATE TABLE pipeline_runs (
 );
 
 -- Indexes
-CREATE INDEX idx_pipeline_runs_feature ON pipeline_runs(feature_id);
-CREATE INDEX idx_pipeline_runs_request ON pipeline_runs(request_id);
-CREATE INDEX idx_pipeline_runs_running ON pipeline_runs(status) WHERE status = 'running';
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_feature ON pipeline_runs(feature_id);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_request ON pipeline_runs(request_id);
+CREATE INDEX IF NOT EXISTS idx_pipeline_runs_running ON pipeline_runs(status) WHERE status = 'running';
 
 -- Enable RLS
 ALTER TABLE pipeline_runs ENABLE ROW LEVEL SECURITY;
@@ -67,6 +67,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_pipeline_runs_updated_at ON pipeline_runs;
 CREATE TRIGGER set_pipeline_runs_updated_at
   BEFORE UPDATE ON pipeline_runs
   FOR EACH ROW

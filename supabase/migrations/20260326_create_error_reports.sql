@@ -31,6 +31,7 @@ create index if not exists idx_error_reports_status on public.error_reports (sta
 alter table public.error_reports enable row level security;
 
 -- Admin-only access (uses admin_users table)
+DROP POLICY IF EXISTS "Admins can read error reports" ON public.error_reports;
 create policy "Admins can read error reports"
   on public.error_reports for select
   using (
@@ -40,6 +41,7 @@ create policy "Admins can read error reports"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can insert error reports" ON public.error_reports;
 create policy "Admins can insert error reports"
   on public.error_reports for insert
   with check (
@@ -49,6 +51,7 @@ create policy "Admins can insert error reports"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can update error reports" ON public.error_reports;
 create policy "Admins can update error reports"
   on public.error_reports for update
   using (
@@ -59,6 +62,7 @@ create policy "Admins can update error reports"
   );
 
 -- Service role bypass for Edge Functions
+DROP POLICY IF EXISTS "Service role full access to error reports" ON public.error_reports;
 create policy "Service role full access to error reports"
   on public.error_reports for all
   using (auth.role() = 'service_role');

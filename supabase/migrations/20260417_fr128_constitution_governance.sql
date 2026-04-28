@@ -83,21 +83,25 @@ ALTER TABLE constitution_audit_log ENABLE ROW LEVEL SECURITY;
 ALTER TABLE template_bindings ENABLE ROW LEVEL SECURITY;
 
 -- Authenticated users can read all constitution data
+DROP POLICY IF EXISTS "authenticated_read_constitution_versions" ON constitution_versions;
 CREATE POLICY "authenticated_read_constitution_versions"
   ON constitution_versions FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "authenticated_read_constitution_rules" ON constitution_rules;
 CREATE POLICY "authenticated_read_constitution_rules"
   ON constitution_rules FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "authenticated_read_constitution_audit_log" ON constitution_audit_log;
 CREATE POLICY "authenticated_read_constitution_audit_log"
   ON constitution_audit_log FOR SELECT
   TO authenticated
   USING (true);
 
+DROP POLICY IF EXISTS "authenticated_read_template_bindings" ON template_bindings;
 CREATE POLICY "authenticated_read_template_bindings"
   ON template_bindings FOR SELECT
   TO authenticated
@@ -106,46 +110,55 @@ CREATE POLICY "authenticated_read_template_bindings"
 -- Only admin (via service role) can write
 -- Edge Functions use service_role key which bypasses RLS
 -- These policies block direct client writes
+DROP POLICY IF EXISTS "deny_client_insert_constitution_versions" ON constitution_versions;
 CREATE POLICY "deny_client_insert_constitution_versions"
   ON constitution_versions FOR INSERT
   TO authenticated
   WITH CHECK (false);
 
+DROP POLICY IF EXISTS "deny_client_update_constitution_versions" ON constitution_versions;
 CREATE POLICY "deny_client_update_constitution_versions"
   ON constitution_versions FOR UPDATE
   TO authenticated
   USING (false);
 
+DROP POLICY IF EXISTS "deny_client_delete_constitution_versions" ON constitution_versions;
 CREATE POLICY "deny_client_delete_constitution_versions"
   ON constitution_versions FOR DELETE
   TO authenticated
   USING (false);
 
+DROP POLICY IF EXISTS "deny_client_insert_constitution_rules" ON constitution_rules;
 CREATE POLICY "deny_client_insert_constitution_rules"
   ON constitution_rules FOR INSERT
   TO authenticated
   WITH CHECK (false);
 
+DROP POLICY IF EXISTS "deny_client_update_constitution_rules" ON constitution_rules;
 CREATE POLICY "deny_client_update_constitution_rules"
   ON constitution_rules FOR UPDATE
   TO authenticated
   USING (false);
 
+DROP POLICY IF EXISTS "deny_client_delete_constitution_rules" ON constitution_rules;
 CREATE POLICY "deny_client_delete_constitution_rules"
   ON constitution_rules FOR DELETE
   TO authenticated
   USING (false);
 
+DROP POLICY IF EXISTS "deny_client_insert_audit_log" ON constitution_audit_log;
 CREATE POLICY "deny_client_insert_audit_log"
   ON constitution_audit_log FOR INSERT
   TO authenticated
   WITH CHECK (false);
 
+DROP POLICY IF EXISTS "deny_client_insert_template_bindings" ON template_bindings;
 CREATE POLICY "deny_client_insert_template_bindings"
   ON template_bindings FOR INSERT
   TO authenticated
   WITH CHECK (false);
 
+DROP POLICY IF EXISTS "deny_client_update_template_bindings" ON template_bindings;
 CREATE POLICY "deny_client_update_template_bindings"
   ON template_bindings FOR UPDATE
   TO authenticated

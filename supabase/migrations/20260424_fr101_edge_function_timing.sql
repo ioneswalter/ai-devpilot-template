@@ -27,6 +27,7 @@ COMMENT ON TABLE edge_function_timing_logs IS
 -- RLS: admins and service role only. Anonymous and authenticated cannot read.
 ALTER TABLE edge_function_timing_logs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "edge_function_timing_logs_admin_read" ON edge_function_timing_logs;
 CREATE POLICY "edge_function_timing_logs_admin_read"
   ON edge_function_timing_logs
   FOR SELECT

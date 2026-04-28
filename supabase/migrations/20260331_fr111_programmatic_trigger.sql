@@ -14,6 +14,7 @@ CREATE INDEX IF NOT EXISTS idx_test_data_sets_pipeline_run
   ON test_data_sets(pipeline_run_id) WHERE pipeline_run_id IS NOT NULL;
 
 -- Service-role policy for pipeline/copilot access (bypasses user auth)
+DROP POLICY IF EXISTS "service_role_test_data_sets" ON test_data_sets;
 CREATE POLICY "service_role_test_data_sets" ON test_data_sets
   FOR ALL USING (
     current_setting('role', true) = 'service_role'

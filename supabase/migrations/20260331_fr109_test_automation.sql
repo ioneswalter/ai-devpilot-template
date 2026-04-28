@@ -88,21 +88,25 @@ ALTER TABLE automated_test_scripts ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'automated_test_scripts' AND policyname = 'Admin can read auto scripts') THEN
+    DROP POLICY IF EXISTS "Admin can read auto scripts" ON automated_test_scripts;
     CREATE POLICY "Admin can read auto scripts"
       ON automated_test_scripts FOR SELECT
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'automated_test_scripts' AND policyname = 'Admin can insert auto scripts') THEN
+    DROP POLICY IF EXISTS "Admin can insert auto scripts" ON automated_test_scripts;
     CREATE POLICY "Admin can insert auto scripts"
       ON automated_test_scripts FOR INSERT
       WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'automated_test_scripts' AND policyname = 'Admin can update auto scripts') THEN
+    DROP POLICY IF EXISTS "Admin can update auto scripts" ON automated_test_scripts;
     CREATE POLICY "Admin can update auto scripts"
       ON automated_test_scripts FOR UPDATE
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'automated_test_scripts' AND policyname = 'Service role full access auto scripts') THEN
+    DROP POLICY IF EXISTS "Service role full access auto scripts" ON automated_test_scripts;
     CREATE POLICY "Service role full access auto scripts"
       ON automated_test_scripts FOR ALL
       USING (auth.role() = 'service_role')
@@ -116,16 +120,19 @@ ALTER TABLE visual_checkpoints ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'visual_checkpoints' AND policyname = 'Admin can read visual checkpoints') THEN
+    DROP POLICY IF EXISTS "Admin can read visual checkpoints" ON visual_checkpoints;
     CREATE POLICY "Admin can read visual checkpoints"
       ON visual_checkpoints FOR SELECT
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'visual_checkpoints' AND policyname = 'Admin can insert visual checkpoints') THEN
+    DROP POLICY IF EXISTS "Admin can insert visual checkpoints" ON visual_checkpoints;
     CREATE POLICY "Admin can insert visual checkpoints"
       ON visual_checkpoints FOR INSERT
       WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'visual_checkpoints' AND policyname = 'Service role full access visual checkpoints') THEN
+    DROP POLICY IF EXISTS "Service role full access visual checkpoints" ON visual_checkpoints;
     CREATE POLICY "Service role full access visual checkpoints"
       ON visual_checkpoints FOR ALL
       USING (auth.role() = 'service_role')
@@ -139,11 +146,13 @@ ALTER TABLE automation_coverage_cache ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'automation_coverage_cache' AND policyname = 'Admin can read coverage cache') THEN
+    DROP POLICY IF EXISTS "Admin can read coverage cache" ON automation_coverage_cache;
     CREATE POLICY "Admin can read coverage cache"
       ON automation_coverage_cache FOR SELECT
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'automation_coverage_cache' AND policyname = 'Service role full access coverage cache') THEN
+    DROP POLICY IF EXISTS "Service role full access coverage cache" ON automation_coverage_cache;
     CREATE POLICY "Service role full access coverage cache"
       ON automation_coverage_cache FOR ALL
       USING (auth.role() = 'service_role')
@@ -163,6 +172,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_auto_scripts_updated_at ON automated_test_scripts;
 CREATE TRIGGER set_auto_scripts_updated_at
   BEFORE UPDATE ON automated_test_scripts
   FOR EACH ROW

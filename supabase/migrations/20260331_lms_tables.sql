@@ -12,10 +12,11 @@ CREATE TABLE IF NOT EXISTS lms_courses (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_lms_courses_category ON lms_courses (service_category);
-CREATE INDEX idx_lms_courses_status ON lms_courses (status);
+CREATE INDEX IF NOT EXISTS idx_lms_courses_category ON lms_courses (service_category);
+CREATE INDEX IF NOT EXISTS idx_lms_courses_status ON lms_courses (status);
 
 ALTER TABLE lms_courses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_lms_courses" ON lms_courses;
 CREATE POLICY "service_role_all_lms_courses" ON lms_courses FOR ALL USING (true) WITH CHECK (true);
 
 -- ── course_modules ──
@@ -27,10 +28,11 @@ CREATE TABLE IF NOT EXISTS course_modules (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_course_modules_course ON course_modules (course_id);
+CREATE INDEX IF NOT EXISTS idx_course_modules_course ON course_modules (course_id);
 ALTER TABLE course_modules ADD CONSTRAINT uq_course_module_order UNIQUE (course_id, sort_order);
 
 ALTER TABLE course_modules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_course_modules" ON course_modules;
 CREATE POLICY "service_role_all_course_modules" ON course_modules FOR ALL USING (true) WITH CHECK (true);
 
 -- ── course_enrollments ──
@@ -44,12 +46,13 @@ CREATE TABLE IF NOT EXISTS course_enrollments (
   completed_at timestamptz
 );
 
-CREATE INDEX idx_enrollments_course ON course_enrollments (course_id);
-CREATE INDEX idx_enrollments_course_status ON course_enrollments (course_id, status);
-CREATE INDEX idx_enrollments_user ON course_enrollments (user_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_course ON course_enrollments (course_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_course_status ON course_enrollments (course_id, status);
+CREATE INDEX IF NOT EXISTS idx_enrollments_user ON course_enrollments (user_id);
 ALTER TABLE course_enrollments ADD CONSTRAINT uq_enrollment_user_course UNIQUE (course_id, user_id);
 
 ALTER TABLE course_enrollments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_course_enrollments" ON course_enrollments;
 CREATE POLICY "service_role_all_course_enrollments" ON course_enrollments FOR ALL USING (true) WITH CHECK (true);
 
 -- ── module_progress ──
@@ -62,9 +65,10 @@ CREATE TABLE IF NOT EXISTS module_progress (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_progress_enrollment ON module_progress (enrollment_id);
-CREATE INDEX idx_progress_module ON module_progress (module_id);
+CREATE INDEX IF NOT EXISTS idx_progress_enrollment ON module_progress (enrollment_id);
+CREATE INDEX IF NOT EXISTS idx_progress_module ON module_progress (module_id);
 ALTER TABLE module_progress ADD CONSTRAINT uq_progress_enrollment_module UNIQUE (enrollment_id, module_id);
 
 ALTER TABLE module_progress ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all_module_progress" ON module_progress;
 CREATE POLICY "service_role_all_module_progress" ON module_progress FOR ALL USING (true) WITH CHECK (true);

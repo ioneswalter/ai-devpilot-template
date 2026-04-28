@@ -144,21 +144,25 @@ ALTER TABLE api_verification_tests ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_verification_tests' AND policyname = 'Admin can read api tests') THEN
+    DROP POLICY IF EXISTS "Admin can read api tests" ON api_verification_tests;
     CREATE POLICY "Admin can read api tests"
       ON api_verification_tests FOR SELECT
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_verification_tests' AND policyname = 'Admin can insert api tests') THEN
+    DROP POLICY IF EXISTS "Admin can insert api tests" ON api_verification_tests;
     CREATE POLICY "Admin can insert api tests"
       ON api_verification_tests FOR INSERT
       WITH CHECK (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_verification_tests' AND policyname = 'Admin can update api tests') THEN
+    DROP POLICY IF EXISTS "Admin can update api tests" ON api_verification_tests;
     CREATE POLICY "Admin can update api tests"
       ON api_verification_tests FOR UPDATE
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_verification_tests' AND policyname = 'Service role full access api tests') THEN
+    DROP POLICY IF EXISTS "Service role full access api tests" ON api_verification_tests;
     CREATE POLICY "Service role full access api tests"
       ON api_verification_tests FOR ALL
       USING (auth.role() = 'service_role')
@@ -172,16 +176,19 @@ ALTER TABLE test_failure_guidance ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'test_failure_guidance' AND policyname = 'Admin can read guidance') THEN
+    DROP POLICY IF EXISTS "Admin can read guidance" ON test_failure_guidance;
     CREATE POLICY "Admin can read guidance"
       ON test_failure_guidance FOR SELECT
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'test_failure_guidance' AND policyname = 'Admin can manage guidance') THEN
+    DROP POLICY IF EXISTS "Admin can manage guidance" ON test_failure_guidance;
     CREATE POLICY "Admin can manage guidance"
       ON test_failure_guidance FOR UPDATE
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'test_failure_guidance' AND policyname = 'Service role full access guidance') THEN
+    DROP POLICY IF EXISTS "Service role full access guidance" ON test_failure_guidance;
     CREATE POLICY "Service role full access guidance"
       ON test_failure_guidance FOR ALL
       USING (auth.role() = 'service_role')
@@ -195,16 +202,19 @@ ALTER TABLE improvement_recommendations ENABLE ROW LEVEL SECURITY;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'improvement_recommendations' AND policyname = 'Admin can read recommendations') THEN
+    DROP POLICY IF EXISTS "Admin can read recommendations" ON improvement_recommendations;
     CREATE POLICY "Admin can read recommendations"
       ON improvement_recommendations FOR SELECT
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'improvement_recommendations' AND policyname = 'Admin can manage recommendations') THEN
+    DROP POLICY IF EXISTS "Admin can manage recommendations" ON improvement_recommendations;
     CREATE POLICY "Admin can manage recommendations"
       ON improvement_recommendations FOR UPDATE
       USING (EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'improvement_recommendations' AND policyname = 'Service role full access recommendations') THEN
+    DROP POLICY IF EXISTS "Service role full access recommendations" ON improvement_recommendations;
     CREATE POLICY "Service role full access recommendations"
       ON improvement_recommendations FOR ALL
       USING (auth.role() = 'service_role')
@@ -224,6 +234,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS set_api_tests_updated_at ON api_verification_tests;
 CREATE TRIGGER set_api_tests_updated_at
   BEFORE UPDATE ON api_verification_tests
   FOR EACH ROW
