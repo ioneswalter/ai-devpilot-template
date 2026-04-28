@@ -67,14 +67,14 @@ BEGIN
       'FR-059',
       'Job Rescheduling Negotiation',
       'Enable job rescheduling with a negotiation workflow where either party (provider or customer) can request a schedule change. The other party can approve, counter-propose, or cancel the deal. Maximum 3 counter-proposals allowed before must approve or cancel. Work is blocked during negotiation.',
-      ARRAY[
+      to_jsonb(ARRAY[
         'Either party can request schedule change with proposed datetime and reason',
         'Other party can APPROVE, COUNTER-PROPOSE, or CANCEL',
         'Maximum 3 counter-proposals allowed before requiring approval or cancellation',
         'Work status updates blocked during active negotiation',
         'BID_ACCEPTED status shows job as already scheduled from bid timeline',
         'Cancel triggers escrow refund and notifies both parties'
-      ],
+      ]),
       'feature',
       'P1',
       'released',
