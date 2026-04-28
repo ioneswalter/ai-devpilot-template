@@ -34,7 +34,7 @@ BEGIN
       CREATE POLICY "Users delete own notifications"
       ON notifications FOR DELETE
       TO authenticated
-      USING (recipient_id = auth.uid());
+      USING (recipient_id = auth.uid()::text);
     END IF;
   END IF;
 END $$;

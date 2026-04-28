@@ -24,10 +24,10 @@ CREATE POLICY "Admins can manage spec artifacts"
   ON feature_spec_artifacts
   FOR ALL
   USING (
-    auth.uid() IN (SELECT user_id FROM admin_users)
+    auth.uid()::text IN (SELECT user_id FROM admin_users)
   )
   WITH CHECK (
-    auth.uid() IN (SELECT user_id FROM admin_users)
+    auth.uid()::text IN (SELECT user_id FROM admin_users)
   );
 
 -- Service role bypass for Edge Functions

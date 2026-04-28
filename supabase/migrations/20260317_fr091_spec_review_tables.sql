@@ -11,38 +11,38 @@ ALTER TABLE IF EXISTS review_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Admin can read spec reviews"
   ON spec_reviews FOR SELECT
   USING (
-    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 CREATE POLICY "Admin can insert spec reviews"
   ON spec_reviews FOR INSERT
   WITH CHECK (
-    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 CREATE POLICY "Admin can update spec reviews"
   ON spec_reviews FOR UPDATE
   USING (
-    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 -- review_items: Admin-only access
 CREATE POLICY "Admin can read review items"
   ON review_items FOR SELECT
   USING (
-    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 CREATE POLICY "Admin can insert review items"
   ON review_items FOR INSERT
   WITH CHECK (
-    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 CREATE POLICY "Admin can update review items"
   ON review_items FOR UPDATE
   USING (
-    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid())
+    EXISTS (SELECT 1 FROM admin_users WHERE admin_users.user_id = auth.uid()::text)
   );
 
 -- Service role bypass (for Edge Functions)
