@@ -97,13 +97,7 @@ export type FilterStatus =
   | 'specified';
 export type FilterPriority = 'all' | 'P1' | 'P2' | 'P3' | 'P4' | 'P5';
 export type FilterType = 'all' | 'journey' | 'functional_requirement';
-export type FilterCategory =
-  | 'all'
-  | 'toolkit'
-  | 'business_module'
-  | 'internal'
-  | 'quality_code'
-  | 'none';
+export type FilterCategory = 'all' | 'toolkit' | 'business_module' | 'internal' | 'none';
 export type FilterSection = 'all' | string;
 
 /** Convert database feature to UI feature */

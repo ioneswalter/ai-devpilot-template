@@ -83,7 +83,7 @@ export interface AdminProposal {
   description: string;
   acceptance_criteria: string[];
   priority: 'P1' | 'P2' | 'P3' | 'P4';
-  category: 'toolkit' | 'business_module' | 'quality_code' | null;
+  category: 'toolkit' | 'business_module' | null;
   spec_section: string;
   problem_statement?: string;
   solution?: string;
