@@ -75,14 +75,14 @@ export function RoadmapContent({
       if (!roadmap.isAdmin) return;
       if (!canAccessPanel(stage)) return;
 
-      // For released features, only open panels if there's actual SpecKit data
-      const pipelineData = pipeline.getPipeline(feature.id);
-
       switch (stage) {
         case 'spec': {
-          // Only open spec panel if there's SpecKit data
-          if (pipelineData?.spec?.status === 'not_started') return;
-          // Refresh features to get latest status before opening panel
+          // SpecReviewPanel handles every state: it renders SpecReviewStartView
+          // with `needsProposalReview` for a proposed feature and
+          // `needsSpecGeneration` for a reviewed feature that has no
+          // spec_reviews row yet — both surface the next-step CLI command.
+          // (Earlier code short-circuited on spec.status === 'not_started',
+          //  which was the bug behind FR-141 ignoring the click after review.)
           roadmap.fetchFeatures();
           pipeline.invalidate();
           setReviewingFeature(feature);
