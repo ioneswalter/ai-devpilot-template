@@ -146,6 +146,7 @@ export function ProposalFormFields({
               <option value="">None</option>
               <option value="toolkit">Toolkit</option>
               <option value="business_module">Business Module</option>
+              <option value="quality_code">Quality Code</option>
             </select>
           </Field>
 

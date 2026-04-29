@@ -48,7 +48,7 @@ const proposalSchema = z.object({
     description: z.string().min(1, 'Description is required'),
     acceptance_criteria: z.array(z.string()).min(1, 'At least one criterion required'),
     priority: z.enum(['P1', 'P2', 'P3', 'P4']).optional(),
-    category: z.enum(['toolkit', 'business_module']).nullable().optional(),
+    category: z.enum(['toolkit', 'business_module', 'quality_code']).nullable().optional(),
     spec_section: z.string().optional(),
     journeys: z.array(journeySchema).optional(),
     test_cases: z

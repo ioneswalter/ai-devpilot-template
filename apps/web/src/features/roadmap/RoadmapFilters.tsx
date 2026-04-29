@@ -145,6 +145,7 @@ export function RoadmapFilters({
               <option value="toolkit">Toolkit</option>
               <option value="business_module">Business Module</option>
               {isAdmin && <option value="internal">Internal</option>}
+              <option value="quality_code">Quality Code</option>
               <option value="none">Uncategorised</option>
             </select>
 
