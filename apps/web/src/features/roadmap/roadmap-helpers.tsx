@@ -85,6 +85,8 @@ export interface ProductFeature {
   related_user_stories?: string[];
   /** For journeys: maps each acceptance criterion index to the feature(s) that implement it */
   implementing_features?: { [criterionIndex: number]: string[] };
+  /** FR-141: count of curated UAT scenarios attached to this feature (0 if none) */
+  scenario_count?: number;
 }
 
 export type FilterStatus =
@@ -119,6 +121,7 @@ export const dbToUiFeature = (dbFeature: ProductFeatureDB): ProductFeature => {
     implementing_features: implFeatures || undefined,
     created_at: dbFeature.created_at,
     updated_at: dbFeature.updated_at,
+    scenario_count: dbFeature.scenario_count ?? 0,
     test_cases: dbFeature.test_cases.map((tc) => ({
       id: tc.id,
       test_code: tc.test_code,

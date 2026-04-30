@@ -116,12 +116,17 @@ export function TestRunStatusView({
           >
             Close
           </button>
-          {allPassed && featureStatus !== 'released' && !isDeployed && (
+          {allPassed && featureStatus === 'in_testing' && (
+            <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+              Click the UAT pill to start Acceptance
+            </span>
+          )}
+          {allPassed && featureStatus === 'in_acceptance' && !isDeployed && (
             <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
               Run <CopyableCommand command={'\\deploy'} className="bg-amber-100" /> before releasing
             </span>
           )}
-          {allPassed && featureStatus !== 'released' && isDeployed && (
+          {allPassed && featureStatus !== 'released' && featureStatus !== 'in_testing' && isDeployed && (
             <button
               onClick={onComplete}
               className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"

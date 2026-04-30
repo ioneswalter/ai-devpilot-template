@@ -45,6 +45,19 @@ Deno.serve(async (req) => {
       );
     }
 
+    // FR-141: per-feature curated UAT scenario count for the Roadmap badge.
+    const { data: scenarioRows } = await supabase
+      .from('uat_scenarios')
+      .select('feature_id')
+      .eq('review_status', 'curated')
+      .not('feature_id', 'is', null);
+    const scenarioCounts = new Map<string, number>();
+    for (const row of scenarioRows ?? []) {
+      const fid = row.feature_id as string | null;
+      if (!fid) continue;
+      scenarioCounts.set(fid, (scenarioCounts.get(fid) ?? 0) + 1);
+    }
+
     // Format response - map database fields to API response format
     const formattedFeatures = (features || []).map((feature) => ({
       id: feature.id,
@@ -61,6 +74,7 @@ Deno.serve(async (req) => {
       implementing_features: feature.implementing_features || null,
       created_at: feature.created_at,
       updated_at: feature.updated_at,
+      scenario_count: scenarioCounts.get(feature.id) ?? 0,
       test_cases: (feature.test_cases || []).map((tc: Record<string, unknown>) => ({
         id: tc.id,
         test_code: tc.test_code,

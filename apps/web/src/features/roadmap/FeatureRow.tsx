@@ -116,6 +116,14 @@ export function FeatureRow({
                 {feature.test_cases.length} test{feature.test_cases.length > 1 ? 's' : ''}
               </span>
             )}
+            {feature.scenario_count != null && feature.scenario_count > 0 && (
+              <span
+                className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded"
+                title="BP-curated UAT scenarios"
+              >
+                ✨ {feature.scenario_count} scenario{feature.scenario_count > 1 ? 's' : ''}
+              </span>
+            )}
             {aiCost != null && aiCost > 0 && (
               <span
                 className="text-xs text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded"

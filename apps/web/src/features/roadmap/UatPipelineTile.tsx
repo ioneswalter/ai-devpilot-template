@@ -100,12 +100,10 @@ function TileButton({
     >
       {isDone ? <CheckIcon /> : <CircleIcon />}
       <span>UAT</span>
-      {status.cycleNumber > 1 && (
-        <span className="hidden lg:inline text-[10px] opacity-75">
-          · Cycle {status.cycleNumber}
-        </span>
+      {status.label && status.label !== 'Not Started' && status.label !== 'UAT' && (
+        <span className="hidden lg:inline text-[10px] opacity-75">· {status.label}</span>
       )}
-      <CoverageBar counts={status.decisionCounts} />
+      {status.packageStatus === 'in_review' && <CoverageBar counts={status.decisionCounts} />}
       {overdue && (
         <span
           className="ml-0.5 px-1 py-px rounded text-[9px] font-bold uppercase tracking-wide bg-red-100 text-red-700 border border-red-300"

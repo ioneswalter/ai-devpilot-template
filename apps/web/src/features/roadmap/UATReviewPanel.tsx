@@ -3,7 +3,7 @@
  * Shows package header, spec version warning, checklist items, and approval bar.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUATPackage } from './useUATPackage';
 import { useSubmitReview, useReviewContext } from '@/features/uat/hooks/useUatReview';
 import { UatReviewerReassign } from './UatReviewerReassign';
@@ -78,7 +78,7 @@ export function UATReviewPanel({
   }
 
   if (showSuccess) {
-    return <UATSuccessView result={showSuccess} featureCode={featureCode} />;
+    return <UATSuccessView result={showSuccess} featureCode={featureCode} onClose={onClose} />;
   }
 
   return (
@@ -117,7 +117,15 @@ function buildPrototypeMap(
   return map;
 }
 
-function UATSuccessView({ result, featureCode }: { result: UatSubmitResult; featureCode: string }) {
+function UATSuccessView({
+  result,
+  featureCode,
+  onClose,
+}: {
+  result: UatSubmitResult;
+  featureCode: string;
+  onClose: () => void;
+}) {
   const status = result.package.status;
   const fixTaskCount = result.fix_cycle_tasks_created.length;
   const isApproved = status === 'approved';
@@ -126,6 +134,12 @@ function UATSuccessView({ result, featureCode }: { result: UatSubmitResult; feat
     : status === 'rejected'
       ? 'UAT Rejected'
       : 'Review Submitted';
+
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
   return (
     <div className="flex flex-col items-center justify-center h-full gap-3 p-8">
       <div
@@ -143,6 +157,13 @@ function UATSuccessView({ result, featureCode }: { result: UatSubmitResult; feat
           {fixTaskCount} fix-cycle task{fixTaskCount === 1 ? '' : 's'} dispatched to engineering.
         </p>
       )}
+      <button
+        onClick={onClose}
+        className="mt-4 px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+      >
+        Done
+      </button>
+      <p className="text-[11px] text-gray-400">Auto-closing in 3 seconds…</p>
     </div>
   );
 }

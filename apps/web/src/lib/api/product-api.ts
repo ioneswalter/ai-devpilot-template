@@ -31,6 +31,8 @@ export interface ProductFeatureDB {
   implementing_features: Record<string, string[]> | null;
   created_at: string;
   updated_at: string;
+  /** FR-141: count of curated UAT scenarios attached to this feature (0 if none) */
+  scenario_count?: number;
   test_cases: TestCaseDB[];
 }
 

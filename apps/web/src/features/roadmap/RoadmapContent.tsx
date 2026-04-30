@@ -8,6 +8,8 @@ import { RoadmapFilters } from './RoadmapFilters';
 import { FeatureListView } from './FeatureListView';
 import { AdminModals } from './AdminModals';
 import { PipelineModals } from './PipelineModals';
+import { UatStartModal } from './UatStartModal';
+import { DeployStartModal } from './DeployStartModal';
 import { usePipelineStatus } from './usePipelineStatus';
 import { useFeatureAICosts } from './useFeatureAICosts';
 import { NotificationBanner } from './NotificationBanner';
@@ -32,6 +34,8 @@ export function RoadmapContent({
   const [implementingFeature, setImplementingFeature] = useState<ProductFeature | null>(null);
   const [testingFeature, setTestingFeature] = useState<ProductFeature | null>(null);
   const [uatFeature, setUatFeature] = useState<ProductFeature | null>(null);
+  const [uatStartFeature, setUatStartFeature] = useState<ProductFeature | null>(null);
+  const [deployStartFeature, setDeployStartFeature] = useState<ProductFeature | null>(null);
   const [showReleases, setShowReleases] = useState(false);
   const [showFixTasks, setShowFixTasks] = useState(
     () => new URLSearchParams(window.location.search).get('fixTasks') === 'open'
@@ -96,10 +100,28 @@ export function RoadmapContent({
         case 'test':
           setTestingFeature(feature);
           break;
+        case 'uat':
+          // List-view equivalent of dragging to the Acceptance column on the Board.
+          // Drag-and-drop path (handleTransitionConfirm in useRoadmapData) is unchanged;
+          // this just gives admins a click target on the pipeline bar.
+          if (feature.status === 'in_testing') {
+            setUatStartFeature(feature);
+          } else {
+            // Package already exists (in_acceptance or beyond) — open review panel.
+            setUatFeature(feature);
+          }
+          break;
         case 'deploy':
           // FR-146: Open implementation panel to show deploy progress + release button
           if (feature.status === 'released') return;
-          setImplementingFeature(feature);
+          // UAT-approved features get the Release modal with a copyable \deploy snippet,
+          // matching the UAT pill pattern. Other statuses keep the existing implementation
+          // panel (used for in-flight deploys, build progress, etc.).
+          if (feature.status === 'in_acceptance') {
+            setDeployStartFeature(feature);
+          } else {
+            setImplementingFeature(feature);
+          }
           break;
       }
     },
@@ -290,6 +312,26 @@ export function RoadmapContent({
         setShowFixTasks={setShowFixTasks}
         onFetchFeatures={roadmap.fetchFeatures}
         onPipelineInvalidate={pipeline.invalidate}
+      />
+      <UatStartModal
+        feature={uatStartFeature}
+        onClose={() => {
+          // Closing the modal — refresh so the pipeline bar reflects the new
+          // in_acceptance status if the user got as far as Start before closing.
+          setUatStartFeature(null);
+          roadmap.fetchFeatures();
+          pipeline.invalidate();
+        }}
+        onContinueToReview={(f) => {
+          setUatStartFeature(null);
+          roadmap.fetchFeatures();
+          pipeline.invalidate();
+          setUatFeature(f);
+        }}
+      />
+      <DeployStartModal
+        feature={deployStartFeature}
+        onClose={() => setDeployStartFeature(null)}
       />
       <AdminModals
         features={roadmap.features}

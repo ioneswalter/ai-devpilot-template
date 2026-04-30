@@ -1,27 +1,18 @@
 <!--
   SYNC IMPACT REPORT
   ==================
-  Version Change: 2.3.0 → 2.4.0
-  Rationale: MINOR version bump - Added Principle XI: Verification-Driven
-             Implementation. Establishes incremental verification, smaller
-             delivery batches, and structured defect resolution as mandatory
-             quality gates. Driven by user feedback on defect rates in
-             AI-generated features.
-
-  Key Additions:
-  - New Principle XI: Verification-Driven Implementation (NON-NEGOTIABLE)
-  - Covers: task-level verification gates, incremental delivery by journey,
-    post-implementation self-review, structured defect tracing, regression checks
-  - New command: \speckit.fix for structured defect resolution
-
-  Templates Requiring Updates:
-  - CLAUDE.md - Add Verification-Driven Implementation principle summary
-  - speckit.implement.md - Add verification gates between tasks
-  - build.md - Add verification gates
-
-  Date: 2026-04-05
+  Version Change: 2.4.0 → 2.4.1
+  Rationale: PATCH bump — Reword Principle XI's "Incremental Delivery by Journey"
+             to "Incremental Delivery by Implementation Phase" to disambiguate from
+             OwnYourGig's Customer Journey product entity (J-XXX rows). Clarify that
+             implementation phases are author-side pacing within a single \build pass,
+             NOT pipeline stage exits. The pipeline is single-pass per feature
+             (spec → build → test → uat → release); never pause \build to ask user
+             confirmation between phases.
+  Date: 2026-04-30
 
   Previous Version History:
+  - 2.3.0 → 2.4.0 (2026-04-05): Added Principle XI: Verification-Driven Implementation.
   - 2.2.0 → 2.3.0 (2026-03-30): Added Principle X: AI-Driven Implementation
     Pipeline (FR-105).
   - 2.1.0 → 2.2.0 (2026-03-04): Added Deployment & Hosting subsection to
@@ -364,11 +355,12 @@ AI-generated code has consistently produced integration defects when tasks are e
   - For Edge Functions: Does the function deploy? Does it respond correctly to a test request?
   - For frontend tasks: Does the component render without errors? Does the UI state behave correctly?
   - **DO NOT proceed to the next task until the current task is verified working**
-- **Incremental Delivery by Journey**:
-  - Implement P1 journey first, verify with user, then proceed to P2
-  - Each journey must be independently testable before moving to the next
-  - Never implement all journeys at once — smaller batches catch issues earlier
-  - User verification between journeys is a quality gate, not a bottleneck
+- **Incremental Delivery by Implementation Phase** (developer discipline, NOT pipeline gating):
+  - Within a single `\build` pass, implement the P1 phase first, then P2, then P3 — verifying each phase before moving on.
+  - "Phase" here means an implementation priority slice within one feature, NOT a Customer Journey (which is the OwnYourGig product entity `J-XXX` in `product_features` with `feature_type='journey'`). Never label these implementation phases "Journey 1, Journey 2…".
+  - Each phase must be internally verifiable (compiles, deploys, renders) before moving to the next phase.
+  - **Do NOT pause `\build` to ask the user for confirmation between phases.** The pipeline is single-pass per feature (`spec → build → test → uat → release`); pausing mid-build at fake phase boundaries leaves `implementation_requests` and `pipeline_runs` in a half-populated state the pipeline was never designed to model.
+  - User verification happens once at the end of `\build`, via `pnpm verify:feature FR-XXX --stage build`, not phase-by-phase.
 - **Post-Implementation Self-Review** (before declaring any feature complete):
   - Error handling: Every async handler has try/catch with visible error UI
   - Type safety: No `any` types, all API contracts match between frontend and Edge Functions
@@ -677,4 +669,4 @@ Tracking** section of `plan.md`:
   choices
 - Component storybook (if implemented) for UI component documentation
 
-**Version**: 2.4.0 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-04-05
+**Version**: 2.4.1 | **Ratified**: 2025-11-03 | **Last Amended**: 2026-04-30

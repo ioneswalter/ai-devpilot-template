@@ -214,7 +214,7 @@ async function runNegativeCases(
 export async function handleExecuteApiTest(
   supabase: SupabaseClient,
   body: unknown,
-  _userId: string,
+  userId: string,
   callerToken?: string
 ): Promise<Response> {
   const validation = ExecuteSchema.safeParse(body);
@@ -291,6 +291,32 @@ export async function handleExecuteApiTest(
       .from('test_cases')
       .update({ passed: result === 'passed' })
       .eq('id', test.test_case_id);
+
+    // FR-145 release-gate evidence: every API run MUST write a test_runs row.
+    // Without this, api_verification_tests.last_run_result tracks the result but the
+    // verifier (which reads test_runs) cannot see API evidence.
+    await supabase.from('test_runs').insert({
+      id: crypto.randomUUID(),
+      test_case_id: test.test_case_id,
+      environment: 'development',
+      result,
+      duration_ms: Date.now() - startTime,
+      error_message: result === 'passed'
+        ? null
+        : `${allAssertions.filter((a) => !a.passed).length} assertion(s) failed`,
+      evidence: {
+        type: 'api',
+        test_id,
+        endpoint: test.endpoint,
+        method: test.method,
+        status: apiResult.status,
+        assertions: allAssertions,
+        negative_cases: negativeCaseResults,
+        setup_success: setupSuccess,
+      },
+      executed_by: userId,
+      executed_at: new Date().toISOString(),
+    });
 
     return jsonResponse({
       data: {

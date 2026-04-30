@@ -297,6 +297,19 @@ Deno.serve(async (req) => {
     // FR-140: Attach prototype
     const prototypeAttachment = await attachPrototype(supabase, conversation_id, feature.id);
 
+    // FR-141: Link any curated UAT scenarios on this conversation to the new feature.
+    // Drafts are intentionally NOT linked — only curated scenarios travel downstream.
+    const { count: scenarioCount, error: scenarioLinkErr } = await supabase
+      .from('uat_scenarios')
+      .update({ feature_id: feature.id, updated_at: new Date().toISOString() }, { count: 'exact' })
+      .eq('conversation_id', conversation_id)
+      .is('feature_id', null)
+      .eq('review_status', 'curated')
+      .select('id', { count: 'exact', head: true });
+    if (scenarioLinkErr) {
+      console.error('FR-141 link curated scenarios failed:', scenarioLinkErr);
+    }
+
     return jsonResponse(
       {
         data: {
@@ -305,6 +318,7 @@ Deno.serve(async (req) => {
           speckit_spec: specMarkdown,
           speckit_research: researchMarkdown,
           prototype_attachment: prototypeAttachment,
+          scenario_count: scenarioCount ?? 0,
         },
       },
       201
