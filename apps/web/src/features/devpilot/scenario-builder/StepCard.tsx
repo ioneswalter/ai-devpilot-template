@@ -14,7 +14,10 @@ interface StepCardProps {
   step: ScenarioStep;
   scenarioType: 'happy_path' | 'edge_case';
   onDecisionChange: (decision: StepDecision) => void;
-  onEditCommit: (next: { user_action: string; expected_outcome?: string }) => Promise<unknown> | void;
+  onEditCommit: (next: {
+    user_action: string;
+    expected_outcome?: string;
+  }) => Promise<unknown> | void;
   isSaving?: boolean;
 }
 
@@ -25,7 +28,13 @@ const DECISION_BORDER: Record<StepDecision, string> = {
   rejected: 'border-rose-300 opacity-60',
 };
 
-export function StepCard({ step, scenarioType, onDecisionChange, onEditCommit, isSaving }: StepCardProps) {
+export function StepCard({
+  step,
+  scenarioType,
+  onDecisionChange,
+  onEditCommit,
+  isSaving,
+}: StepCardProps) {
   const [isEditing, setIsEditing] = useState(false);
 
   const handleEditStart = () => {
@@ -47,7 +56,12 @@ export function StepCard({ step, scenarioType, onDecisionChange, onEditCommit, i
       <StepVisual scenarioType={scenarioType} stepNumber={step.step_number} />
       <div className="p-3 space-y-2">
         {isEditing ? (
-          <StepCardEditor step={step} onSave={handleEditSave} onCancel={() => setIsEditing(false)} isSaving={isSaving} />
+          <StepCardEditor
+            step={step}
+            onSave={handleEditSave}
+            onCancel={() => setIsEditing(false)}
+            isSaving={isSaving}
+          />
         ) : (
           <StepBody
             step={step}
@@ -83,7 +97,13 @@ function StepBody({ step, disabled, onAccept, onEdit, onReject }: StepBodyProps)
           <div className="text-sm text-gray-700 leading-snug">{step.expected_outcome}</div>
         </div>
       )}
-      <DecisionStrip decision={step.decision} onAccept={onAccept} onEdit={onEdit} onReject={onReject} disabled={disabled} />
+      <DecisionStrip
+        decision={step.decision}
+        onAccept={onAccept}
+        onEdit={onEdit}
+        onReject={onReject}
+        disabled={disabled}
+      />
     </>
   );
 }

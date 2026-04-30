@@ -28,7 +28,12 @@ function summariseDecisions(steps: ScenarioStep[]) {
   return { accepted, edited, rejected, pending };
 }
 
-export function ScenarioStoryboard({ scenario, onPatchSteps, onDelete, isSaving }: ScenarioStoryboardProps) {
+export function ScenarioStoryboard({
+  scenario,
+  onPatchSteps,
+  onDelete,
+  isSaving,
+}: ScenarioStoryboardProps) {
   const [collapsed, setCollapsed] = useState(false);
   const counts = useMemo(() => summariseDecisions(scenario.steps), [scenario.steps]);
 
@@ -38,7 +43,11 @@ export function ScenarioStoryboard({ scenario, onPatchSteps, onDelete, isSaving 
   };
 
   return (
-    <section className="border border-gray-200 rounded-lg bg-white" data-testid="scenario-storyboard" data-scenario-type={scenario.scenario_type}>
+    <section
+      className="border border-gray-200 rounded-lg bg-white"
+      data-testid="scenario-storyboard"
+      data-scenario-type={scenario.scenario_type}
+    >
       <StoryboardHeader
         scenario={scenario}
         counts={counts}
@@ -56,14 +65,18 @@ export function ScenarioStoryboard({ scenario, onPatchSteps, onDelete, isSaving 
                 step={step}
                 scenarioType={scenario.scenario_type}
                 isSaving={isSaving}
-                onDecisionChange={(decision: StepDecision) => updateStep(step.step_number, { decision })}
+                onDecisionChange={(decision: StepDecision) =>
+                  updateStep(step.step_number, { decision })
+                }
                 onEditCommit={(next) =>
                   updateStep(step.step_number, {
                     user_action: next.user_action,
                     expected_outcome: next.expected_outcome,
                     decision: 'edited',
-                    ai_original:
-                      step.ai_original ?? { user_action: step.user_action, expected_outcome: step.expected_outcome },
+                    ai_original: step.ai_original ?? {
+                      user_action: step.user_action,
+                      expected_outcome: step.expected_outcome,
+                    },
                   })
                 }
               />

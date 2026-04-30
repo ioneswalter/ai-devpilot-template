@@ -94,7 +94,14 @@ async function checkSpec(client: pg.Client, code: string): Promise<Check[]> {
     detail: specDir ? `found ${path.basename(specDir)}` : 'no specs/ subdirectory',
   });
   if (specDir) {
-    for (const file of ['spec.md', 'plan.md', 'tasks.md', 'research.md', 'data-model.md', 'quickstart.md']) {
+    for (const file of [
+      'spec.md',
+      'plan.md',
+      'tasks.md',
+      'research.md',
+      'data-model.md',
+      'quickstart.md',
+    ]) {
       const p = path.join(specDir, file);
       checks.push({ name: `spec_file:${file}`, ok: fs.existsSync(p), detail: p });
     }
@@ -264,9 +271,10 @@ async function checkTest(client: pg.Client, code: string): Promise<Check[]> {
     checks.push({
       name: 'every test_case has passing test_runs evidence',
       ok: missing.length === 0,
-      detail: missing.length === 0
-        ? `${passing.size}/${ids.length} passing`
-        : `${missing.length} cases without passing run`,
+      detail:
+        missing.length === 0
+          ? `${passing.size}/${ids.length} passing`
+          : `${missing.length} cases without passing run`,
     });
   }
 
@@ -305,7 +313,9 @@ async function main() {
     console.log(`  ${c.ok ? '✓' : '✗'} ${c.name} — ${c.detail}`);
   }
   if (failed.length > 0) {
-    console.log(`\nFAIL — ${failed.length} check(s) failed. Fix and re-run before declaring ${stage} complete.`);
+    console.log(
+      `\nFAIL — ${failed.length} check(s) failed. Fix and re-run before declaring ${stage} complete.`
+    );
     process.exit(1);
   }
   console.log(`\nPASS — ${stage} stage is fully populated.`);

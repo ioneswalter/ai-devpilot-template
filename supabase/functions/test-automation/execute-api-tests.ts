@@ -301,9 +301,10 @@ export async function handleExecuteApiTest(
       environment: 'development',
       result,
       duration_ms: Date.now() - startTime,
-      error_message: result === 'passed'
-        ? null
-        : `${allAssertions.filter((a) => !a.passed).length} assertion(s) failed`,
+      error_message:
+        result === 'passed'
+          ? null
+          : `${allAssertions.filter((a) => !a.passed).length} assertion(s) failed`,
       evidence: {
         type: 'api',
         test_id,

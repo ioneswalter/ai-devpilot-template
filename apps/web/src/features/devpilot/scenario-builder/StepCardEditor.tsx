@@ -45,8 +45,20 @@ export function StepCardEditor({ step, onSave, onCancel, isSaving }: StepCardEdi
       <EditorField label="Expected outcome" value={expectedOutcome} onChange={setExpectedOutcome} />
       {error && <div className="text-xs text-rose-600">{error}</div>}
       <div className="flex gap-2 justify-end">
-        <button type="button" onClick={onCancel} disabled={isSaving} className="px-3 py-1 text-xs rounded bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
-        <button type="button" onClick={handleSave} disabled={isSaving} className="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isSaving}
+          className="px-3 py-1 text-xs rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="px-3 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+        >
           {isSaving ? 'Saving…' : 'Save edit'}
         </button>
       </div>

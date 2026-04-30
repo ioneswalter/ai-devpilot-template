@@ -57,7 +57,8 @@ function ReReviewBanner({ cycle }: { cycle: number }) {
   if (cycle <= 1) return null;
   return (
     <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 text-xs text-blue-700">
-      Re-review — submitting will record cycle {cycle}. Previous cycle decisions appear under each item.
+      Re-review — submitting will record cycle {cycle}. Previous cycle decisions appear under each
+      item.
     </div>
   );
 }
@@ -73,7 +74,8 @@ function SpecVersionMismatchBanner({ pkg }: { pkg: SpecMismatchPkg }) {
     <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700 flex items-center gap-2">
       <span>Warning:</span>
       <span>
-        Spec updated since package generation (v{pkg.spec_version_at_creation} → v{pkg.current_spec_version}).
+        Spec updated since package generation (v{pkg.spec_version_at_creation} → v
+        {pkg.current_spec_version}).
       </span>
     </div>
   );

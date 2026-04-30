@@ -38,14 +38,14 @@ export function DeployStartModal({ feature, onClose }: DeployStartModalProps) {
     <Modal isOpen={!!feature} onClose={onClose} size="md">
       <div className="p-6 space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
-            Release {feature.feature_code}
-          </h2>
+          <h2 className="text-lg font-semibold text-gray-900">Release {feature.feature_code}</h2>
           <p className="text-sm text-gray-600 mt-1">{feature.title}</p>
         </div>
 
         <div className="text-sm text-gray-700 space-y-2">
-          <p>UAT is approved. Running <code className="font-mono text-gray-900">\deploy</code> will:</p>
+          <p>
+            UAT is approved. Running <code className="font-mono text-gray-900">\deploy</code> will:
+          </p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
             <li>Run constitution + typecheck pre-deploy scans</li>
             <li>Commit any pending changes and push to the deploy branch</li>

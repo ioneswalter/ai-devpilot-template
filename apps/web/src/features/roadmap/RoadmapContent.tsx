@@ -329,10 +329,7 @@ export function RoadmapContent({
           setUatFeature(f);
         }}
       />
-      <DeployStartModal
-        feature={deployStartFeature}
-        onClose={() => setDeployStartFeature(null)}
-      />
+      <DeployStartModal feature={deployStartFeature} onClose={() => setDeployStartFeature(null)} />
       <AdminModals
         features={roadmap.features}
         editingFeature={roadmap.editingFeature}

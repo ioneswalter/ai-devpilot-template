@@ -24,7 +24,9 @@ export function PanelBody(props: PanelBodyProps) {
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6">
       {props.isLoading && (
-        <div className="flex items-center justify-center text-sm text-gray-400 py-8">Loading scenarios…</div>
+        <div className="flex items-center justify-center text-sm text-gray-400 py-8">
+          Loading scenarios…
+        </div>
       )}
       {isEmpty && <EmptyState />}
 
@@ -58,7 +60,8 @@ export function PanelBody(props: PanelBodyProps) {
 
       {props.curatedCount > 0 && (
         <div className="rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-          {props.curatedCount} curated scenario{props.curatedCount === 1 ? '' : 's'} already saved on this conversation. Submitting the proposal will link them to the new feature.
+          {props.curatedCount} curated scenario{props.curatedCount === 1 ? '' : 's'} already saved
+          on this conversation. Submitting the proposal will link them to the new feature.
         </div>
       )}
     </div>
@@ -70,7 +73,9 @@ function EmptyState() {
     <div className="text-center text-sm text-gray-500 py-12 max-w-md mx-auto">
       <p className="font-medium text-gray-700 mb-2">No scenarios yet</p>
       <p>
-        Click <span className="font-semibold">Generate UAT scenarios</span> to have the AI draft happy paths and edge cases from this conversation. You will then accept, edit, or reject each step.
+        Click <span className="font-semibold">Generate UAT scenarios</span> to have the AI draft
+        happy paths and edge cases from this conversation. You will then accept, edit, or reject
+        each step.
       </p>
     </div>
   );

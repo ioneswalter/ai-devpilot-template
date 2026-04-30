@@ -96,6 +96,12 @@ interface GenBag {
 }
 
 function collectErrors(s: ErrorBag, g: GenBag): Error[] {
-  return [s.listError, g.generationError, s.createError, s.patchError, s.curateError, s.deleteError]
-    .filter((e): e is Error => e instanceof Error);
+  return [
+    s.listError,
+    g.generationError,
+    s.createError,
+    s.patchError,
+    s.curateError,
+    s.deleteError,
+  ].filter((e): e is Error => e instanceof Error);
 }

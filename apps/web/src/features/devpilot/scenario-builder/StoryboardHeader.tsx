@@ -22,13 +22,27 @@ export function StoryboardHeader(props: StoryboardHeaderProps) {
     <header className="flex items-start justify-between p-3 border-b border-gray-100">
       <HeaderText scenario={props.scenario} counts={props.counts} />
       <div className="flex items-center gap-1.5 shrink-0 ml-2">
-        <button type="button" onClick={props.onToggleCollapse} className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200" aria-expanded={!props.collapsed}>
+        <button
+          type="button"
+          onClick={props.onToggleCollapse}
+          className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+          aria-expanded={!props.collapsed}
+        >
           {props.collapsed ? 'Expand' : 'Collapse'}
         </button>
         {confirmDelete ? (
-          <DeleteConfirmRow onConfirm={props.onDelete} onCancel={() => setConfirmDelete(false)} disabled={props.isSaving} />
+          <DeleteConfirmRow
+            onConfirm={props.onDelete}
+            onCancel={() => setConfirmDelete(false)}
+            disabled={props.isSaving}
+          />
         ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className="text-xs px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100" aria-label="Delete scenario">
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="text-xs px-2 py-1 rounded bg-rose-50 text-rose-700 hover:bg-rose-100"
+            aria-label="Delete scenario"
+          >
             Delete
           </button>
         )}
@@ -47,16 +61,22 @@ function HeaderText({ scenario, counts }: HeaderTextProps) {
   return (
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2">
-        <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${isHappy ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+        <span
+          className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${isHappy ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}
+        >
           {isHappy ? 'Happy Path' : 'Edge Case'}
         </span>
         <h3 className="text-sm font-semibold text-gray-900 truncate">{scenario.title}</h3>
       </div>
       {!isHappy && scenario.trigger_condition && (
-        <p className="mt-1 text-xs text-amber-700"><span className="font-medium">Trigger:</span> {scenario.trigger_condition}</p>
+        <p className="mt-1 text-xs text-amber-700">
+          <span className="font-medium">Trigger:</span> {scenario.trigger_condition}
+        </p>
       )}
       {!isHappy && scenario.expected_behavior && (
-        <p className="mt-0.5 text-xs text-amber-700"><span className="font-medium">Expected behaviour:</span> {scenario.expected_behavior}</p>
+        <p className="mt-0.5 text-xs text-amber-700">
+          <span className="font-medium">Expected behaviour:</span> {scenario.expected_behavior}
+        </p>
       )}
       <div className="mt-1 flex gap-2 text-[11px] text-gray-500">
         <span>{scenario.steps.length} steps</span>
@@ -78,8 +98,22 @@ interface DeleteConfirmRowProps {
 function DeleteConfirmRow({ onConfirm, onCancel, disabled }: DeleteConfirmRowProps) {
   return (
     <>
-      <button type="button" onClick={() => void onConfirm()} disabled={disabled} className="text-xs px-2 py-1 rounded bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50" aria-label="Confirm delete scenario">Confirm delete</button>
-      <button type="button" onClick={onCancel} className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200">Cancel</button>
+      <button
+        type="button"
+        onClick={() => void onConfirm()}
+        disabled={disabled}
+        className="text-xs px-2 py-1 rounded bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
+        aria-label="Confirm delete scenario"
+      >
+        Confirm delete
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700 hover:bg-gray-200"
+      >
+        Cancel
+      </button>
     </>
   );
 }

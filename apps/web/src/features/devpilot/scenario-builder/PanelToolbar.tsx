@@ -38,7 +38,11 @@ export function PanelToolbar(props: PanelToolbarProps) {
         {props.isCurating ? 'Saving…' : 'Save scenarios'}
       </button>
       <div className="ml-auto">
-        <AddScenarioMenu conversationId={props.conversationId} onAdd={props.onAdd} isAdding={props.isAdding} />
+        <AddScenarioMenu
+          conversationId={props.conversationId}
+          onAdd={props.onAdd}
+          isAdding={props.isAdding}
+        />
       </div>
     </div>
   );

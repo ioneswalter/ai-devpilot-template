@@ -103,7 +103,9 @@ export function UatStartModal({ feature, onClose, onContinueToReview }: UatStart
         ) : (
           <>
             <div className="text-sm text-gray-700 space-y-2">
-              <p>The package was generated and the status is now <strong>In Acceptance</strong>.</p>
+              <p>
+                The package was generated and the status is now <strong>In Acceptance</strong>.
+              </p>
               <p>Copy the command below and run it in Claude Code to drive the BP review:</p>
             </div>
             <div>
