@@ -12,6 +12,8 @@ interface PipelineStageProps {
   status: StageStatus;
   isAdmin: boolean;
   onClick?: () => void;
+  /** FR-159: feature_code for stable E2E selector (`pipeline-stage-{stage}-{featureCode}`). Optional. */
+  featureCode?: string;
 }
 
 const STAGE_LABELS: Record<PipelineStageName, string> = {
@@ -68,7 +70,7 @@ function CheckIcon() {
   );
 }
 
-export function PipelineStage({ stage, status, isAdmin, onClick }: PipelineStageProps) {
+export function PipelineStage({ stage, status, isAdmin, onClick, featureCode }: PipelineStageProps) {
   const safeStatus = status ?? { status: 'not_started' as const, label: 'Not Started' };
   const isDone = safeStatus.status === 'completed' || safeStatus.status === 'warning';
   const styles = STATUS_STYLES[safeStatus.status] ?? STATUS_STYLES.not_started;
@@ -92,6 +94,7 @@ export function PipelineStage({ stage, status, isAdmin, onClick }: PipelineStage
       title={`${STAGE_LABELS[stage]}: ${safeStatus.label}`}
       aria-label={`${STAGE_LABELS[stage]} stage: ${safeStatus.label}`}
       aria-disabled={!isClickable}
+      data-testid={`pipeline-stage-${stage}${featureCode ? '-' + featureCode : ''}`}
       tabIndex={isClickable ? 0 : -1}
     >
       {isDone ? <CheckIcon /> : <CircleIcon />}

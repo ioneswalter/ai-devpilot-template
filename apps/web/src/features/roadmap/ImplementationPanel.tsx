@@ -7,10 +7,9 @@ import { CopyableCommand } from '@/components/ui/CopyableCommand';
 import { useImplementation } from './useImplementation';
 import { ImplementationStartForm } from './ImplementationStartForm';
 import { ImplementationLog } from './ImplementationLog';
-import { ImplementationFooter } from './ImplementationFooter';
 import { ImplementationSummary } from './ImplementationSummary';
 import { AddTaskForm } from './AddTaskForm';
-import { WriteCodeFlow } from './WriteCodeFlow';
+import { BuildApplyAction } from './BuildApplyAction';
 import { PipelineStatusSection } from './PipelineStatusSection';
 import { LearningInsightsPanel } from './LearningInsightsPanel';
 import { PipelineDashboard } from './PipelineDashboard';
@@ -38,13 +37,53 @@ export function ImplementationPanel({
   const logRef = useRef<HTMLDivElement>(null);
   const hasScrolledToLog = useRef(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isWritingCode, setIsWritingCode] = useState(false);
   const [ready, setReady] = useState(false);
   const [isAcceptingAll, setIsAcceptingAll] = useState(false);
   const [complianceBlocked, setComplianceBlocked] = useState(false);
   const handleComplianceBlocked = useCallback((blocked: boolean) => {
     setComplianceBlocked(blocked);
   }, []);
+
+  // FR-159: derived state for the unified Apply affordance.
+  const buildStateQuery = useQuery({
+    queryKey: ['fr159-build-state', featureId],
+    queryFn: async () => {
+      const [{ data: feature }, { data: irs }, { data: runs }] = await Promise.all([
+        supabase
+          .from('product_features')
+          .select('is_pipeline_bootstrap')
+          .eq('id', featureId)
+          .single(),
+        supabase
+          .from('implementation_requests')
+          .select('code_applied, code_applied_at')
+          .eq('feature_id', featureId)
+          .eq('code_applied', true)
+          .order('code_applied_at', { ascending: false })
+          .limit(1),
+        supabase
+          .from('pipeline_runs')
+          .select('id, status')
+          .eq('feature_id', featureId)
+          .eq('status', 'running')
+          .limit(1),
+      ]);
+      const featureCodeApplied = (irs?.length ?? 0) > 0;
+      return {
+        isPipelineBootstrap: !!feature?.is_pipeline_bootstrap,
+        featureCodeApplied,
+        codeAppliedAt: irs?.[0]?.code_applied_at ?? null,
+        buildInProgress: (runs?.length ?? 0) > 0,
+      };
+    },
+    staleTime: 5_000,
+  });
+  const buildState = buildStateQuery.data ?? {
+    isPipelineBootstrap: false,
+    featureCodeApplied: false,
+    codeAppliedAt: null,
+    buildInProgress: false,
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 800);
@@ -331,21 +370,7 @@ export function ImplementationPanel({
           />
         )}
 
-        {isWritingCode && (
-          <WriteCodeFlow
-            files={impl.taskItems
-              .filter((t) => t.implementation_status === 'completed' && t.generated_code)
-              .map((t) => ({ title: t.title, filePath: t.file_path, code: t.generated_code! }))}
-            onComplete={() => {
-              setIsWritingCode(false);
-              impl.markCodeApplied();
-            }}
-            onCancel={() => setIsWritingCode(false)}
-          />
-        )}
-
-        {!isWritingCode &&
-          !impl.isImplementing &&
+        {!impl.isImplementing &&
           !impl.canImplement &&
           (impl.implementedCount > 0 || impl.failedImplCount > 0) && (
             <ImplementationSummary
@@ -358,22 +383,47 @@ export function ImplementationPanel({
           )}
       </div>
 
-      <ImplementationFooter
-        isImplementing={impl.isImplementing}
-        canImplement={impl.canImplement}
-        isComplete={!impl.canImplement && impl.implementedCount > 0 && !isWritingCode}
-        codeApplied={impl.request?.code_applied ?? false}
-        complianceBlocked={complianceBlocked}
-        taskCount={impl.taskItems.length}
-        pendingCount={impl.pendingCount}
-        acceptedCount={impl.acceptedCount}
-        rejectedCount={impl.rejectedCount}
-        implementedCount={impl.implementedCount}
-        failedImplCount={impl.failedImplCount}
-        onImplement={() => impl.startImplementation()}
-        onWriteCode={() => setIsWritingCode(true)}
-        onClose={onComplete}
-      />
+      {/* FR-159: Unified Apply action — replaces ImplementationFooter buttons + WriteCodeFlow. */}
+      <div className="border-t flex-shrink-0 p-3 bg-gray-50 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-gray-500">{impl.pendingCount} pending</span>
+          <span className="text-green-600">{impl.acceptedCount} accepted</span>
+          <span className="text-red-500">{impl.rejectedCount} rejected</span>
+          {impl.implementedCount > 0 && (
+            <span className="text-blue-600">{impl.implementedCount} generated</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onComplete}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+          >
+            Close
+          </button>
+          {impl.canImplement && !impl.isImplementing && (
+            <button
+              onClick={() => impl.startImplementation()}
+              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Implement ({impl.acceptedCount - impl.implementedCount - impl.failedImplCount})
+            </button>
+          )}
+          <BuildApplyAction
+            featureCode={featureCode}
+            featureId={featureId}
+            taskItems={impl.taskItems}
+            isPipelineBootstrap={buildState.isPipelineBootstrap}
+            featureCodeApplied={buildState.featureCodeApplied}
+            buildInProgress={buildState.buildInProgress}
+            codeAppliedAt={buildState.codeAppliedAt}
+            complianceBlocked={complianceBlocked}
+            onApplied={async () => {
+              await impl.markCodeApplied();
+              await buildStateQuery.refetch();
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

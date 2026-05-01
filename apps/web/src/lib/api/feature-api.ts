@@ -369,6 +369,10 @@ export interface ImplementationTaskItem {
   file_path: string;
   task_type: 'create' | 'modify' | 'test' | 'config';
   source: 'ai_generated' | 'manual';
+  // FR-159: origin of the *code* (distinct from `source`, which is task origin).
+  // Added 2026-05-01 — defaults to 'ai_generated'; backfill set 'hand_written'
+  // on bootstrap features whose generated_code was already on disk.
+  code_source?: 'ai_generated' | 'hand_written' | 'mixed';
   decision: 'pending' | 'accepted' | 'rejected' | 'modified';
   decided_by: string | null;
   decided_at: string | null;

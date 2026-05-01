@@ -34,6 +34,16 @@ const DEFAULT_UAT: UatStageDetail = {
   dueAt: null,
 };
 
+function defaultStages(): FeaturePipelineState {
+  return {
+    spec: DEFAULT_STAGE,
+    build: DEFAULT_STAGE,
+    test: DEFAULT_STAGE,
+    uat: DEFAULT_UAT,
+    deploy: DEFAULT_STAGE,
+  } as FeaturePipelineState;
+}
+
 function StageSkeleton() {
   return (
     <div className="flex items-center gap-1.5 py-1.5" aria-label="Pipeline status loading">
@@ -91,6 +101,7 @@ function StageOrTile({
       status={stages[stage] ?? DEFAULT_STAGE}
       isAdmin={isAdmin}
       onClick={onStageClick ? () => onStageClick(stage) : undefined}
+      featureCode={featureCode}
     />
   );
 }
@@ -111,15 +122,7 @@ export function PipelineBar({
     return null;
   if (isLoading) return <StageSkeleton />;
 
-  const stages =
-    pipeline ??
-    ({
-      spec: DEFAULT_STAGE,
-      build: DEFAULT_STAGE,
-      test: DEFAULT_STAGE,
-      uat: DEFAULT_UAT,
-      deploy: DEFAULT_STAGE,
-    } as FeaturePipelineState);
+  const stages = pipeline ?? defaultStages();
   const visible = STAGE_ORDER.filter((s) => !canAccessPanel || canAccessPanel(s));
 
   return (
