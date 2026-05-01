@@ -70,7 +70,13 @@ function CheckIcon() {
   );
 }
 
-export function PipelineStage({ stage, status, isAdmin, onClick, featureCode }: PipelineStageProps) {
+export function PipelineStage({
+  stage,
+  status,
+  isAdmin,
+  onClick,
+  featureCode,
+}: PipelineStageProps) {
   const safeStatus = status ?? { status: 'not_started' as const, label: 'Not Started' };
   const isDone = safeStatus.status === 'completed' || safeStatus.status === 'warning';
   const styles = STATUS_STYLES[safeStatus.status] ?? STATUS_STYLES.not_started;

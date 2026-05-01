@@ -118,7 +118,8 @@ export function BuildApplyAction({
   );
 
   if (affordance === 'pipeline_bootstrap') return <PipelineBootstrapNotice />;
-  if (affordance === 'already_applied') return <AlreadyAppliedIndicator codeAppliedAt={codeAppliedAt} />;
+  if (affordance === 'already_applied')
+    return <AlreadyAppliedIndicator codeAppliedAt={codeAppliedAt} />;
   if (affordance === 'build_in_progress') return <DisabledBuildInProgress />;
 
   return (
@@ -199,12 +200,7 @@ function AlreadyAppliedIndicator({ codeAppliedAt }: { codeAppliedAt: string | nu
       className="px-3 py-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md inline-flex items-center gap-2"
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5 13l4 4L19 7"
-        />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
       </svg>
       <span>
         Code already applied <span className="text-emerald-600">· {when}</span>
@@ -221,8 +217,8 @@ function PipelineBootstrapNotice() {
     >
       <div className="font-medium mb-0.5">Hand-implemented — apply via Claude Code</div>
       <div className="text-amber-600">
-        This feature modifies the AI DevPilot pipeline itself, so it is hand-applied rather than
-        run through the auto-implementer.
+        This feature modifies the AI DevPilot pipeline itself, so it is hand-applied rather than run
+        through the auto-implementer.
       </div>
     </div>
   );
