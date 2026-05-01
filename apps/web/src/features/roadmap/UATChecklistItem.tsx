@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import type { UatChecklistItemData } from '@/lib/api/uat-api';
 import type { UatPriorCycle, UatPrototypeRef } from '@/lib/api/uat-review-api';
+import { PrototypeIframe } from '@/features/devpilot/PrototypeIframe';
 
 interface UATChecklistItemProps {
   item: UatChecklistItemData;
@@ -75,7 +76,9 @@ export function UATChecklistItem({
 
 function PrototypePreviewInline({ prototype }: { prototype: UatPrototypeRef }) {
   const [open, setOpen] = useState(false);
-  const isHtml = prototype.prototype_type === 'ui' || prototype.prototype_type === 'ui_mockup';
+  // FR-156: render via the shared PrototypeIframe so Spec Review and UAT Review
+  // produce identical output (same CSP mode, same sandbox, same stale-content
+  // fallback). Replaces the previous inline iframe + raw-text branching.
   return (
     <div className="bg-indigo-50 border border-indigo-100 rounded p-2 mb-2">
       <button
@@ -86,19 +89,11 @@ function PrototypePreviewInline({ prototype }: { prototype: UatPrototypeRef }) {
       </button>
       {open && prototype.content && (
         <div className="mt-2">
-          {isHtml ? (
-            <iframe
-              srcDoc={prototype.content}
-              sandbox="allow-scripts"
-              className="w-full h-64 border border-indigo-200 rounded bg-white"
-              title={`Prototype ${prototype.id}`}
-            />
-          ) : (
-            <pre className="text-[10px] bg-white border border-indigo-200 rounded p-2 max-h-48 overflow-auto">
-              {prototype.content.slice(0, 1500)}
-              {prototype.content.length > 1500 ? '\n...' : ''}
-            </pre>
-          )}
+          <PrototypeIframe
+            content={prototype.content}
+            prototypeType={prototype.prototype_type}
+            featureCode={`UAT-${prototype.id}`}
+          />
         </div>
       )}
       {open && !prototype.content && (
