@@ -198,7 +198,10 @@ function DesktopBadgesColumn({
 }) {
   return (
     <div className="hidden lg:flex items-start gap-2 flex-shrink-0">
-      {/* Badges stacked vertically (right-aligned) so the title/pipeline area gets more horizontal room */}
+      {/* Badges + admin actions stacked vertically (right-aligned) so the
+          title/pipeline area keeps maximum horizontal room — prevents the
+          right column from stretching wide enough to clip pipeline labels
+          like "Deploy · Released" on the left. */}
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-1">
           {getCategoryBadge(feature.category)}
@@ -213,8 +216,20 @@ function DesktopBadgesColumn({
             {currentVersionLabel}
           </span>
         )}
+        {isAdmin && feature.status === 'released' && onNewVersion && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNewVersion(feature);
+            }}
+            className="px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
+            title="Create a new version"
+          >
+            New Version
+          </button>
+        )}
       </div>
-      {/* Admin buttons */}
+      {/* Admin icon buttons (link criteria for journeys, edit/delete for early-stage features) */}
       {isAdmin && (
         <div className="flex items-center gap-1 ml-2">
           {feature.feature_type === 'journey' && (
@@ -234,18 +249,6 @@ function DesktopBadgesColumn({
                   d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
                 />
               </svg>
-            </button>
-          )}
-          {feature.status === 'released' && onNewVersion && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onNewVersion(feature);
-              }}
-              className="px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
-              title="Create a new version"
-            >
-              New Version
             </button>
           )}
           {['proposed', 'specified'].includes(feature.status) && (
