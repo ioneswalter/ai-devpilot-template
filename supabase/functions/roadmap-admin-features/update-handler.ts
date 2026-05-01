@@ -185,6 +185,20 @@ async function validateTestGate(
   supabase: SupabaseClient,
   featureId: string
 ): Promise<Response | null> {
+  // Pipeline-bootstrap exemption: features that modify the pipeline itself
+  // are hand-implemented and verified via UAT against quickstart recipes —
+  // the navigate/click/assert framework cannot express extension-side hooks,
+  // page-realm script execution, filesystem inspection, or CLI invocations.
+  // The UAT gate (checkUatReleaseGate) remains in force for these features.
+  const { data: feature } = await supabase
+    .from('product_features')
+    .select('is_pipeline_bootstrap')
+    .eq('id', featureId)
+    .maybeSingle();
+  if (feature?.is_pipeline_bootstrap) {
+    return null;
+  }
+
   const { data: testCases } = await supabase
     .from('test_cases')
     .select('id, test_code')
