@@ -8,7 +8,12 @@ import type { ReactNode } from 'react';
 import { UATChecklistItem } from './UATChecklistItem';
 import type { useUATPackage } from './useUATPackage';
 import type { useSubmitReview } from '@/features/uat/hooks/useUatReview';
-import type { UatPriorCycle, UatPrototypeRef, UatSubmitResult } from '@/lib/api/uat-review-api';
+import type {
+  UatPriorCycle,
+  UatPrototypeRef,
+  UatSubmitResult,
+  BpReviewProjection,
+} from '@/lib/api/uat-review-api';
 
 interface UATReviewTabProps {
   uat: ReturnType<typeof useUATPackage>;
@@ -16,6 +21,12 @@ interface UATReviewTabProps {
   currentCycle: number;
   priorCyclesByItem: Map<string, UatPriorCycle[]>;
   prototypeByItem: Map<string, UatPrototypeRef>;
+  projectionByItem: Map<string, BpReviewProjection>;
+  featureId: string;
+  onMetadataChange: (
+    itemId: string,
+    m: { observation_text?: string; evidence_path?: string | null; ai_caption?: string | null }
+  ) => void;
   isReviewable: boolean;
   approvalBar: ReactNode;
 }
@@ -25,6 +36,9 @@ export function UATReviewTab({
   currentCycle,
   priorCyclesByItem,
   prototypeByItem,
+  projectionByItem,
+  featureId,
+  onMetadataChange,
   approvalBar,
 }: UATReviewTabProps) {
   const pkg = uat.package!;
@@ -41,6 +55,9 @@ export function UATReviewTab({
             item={item}
             priorCycles={priorCyclesByItem.get(item.id) ?? []}
             prototype={prototypeByItem.get(item.id) ?? null}
+            projection={projectionByItem.get(item.id) ?? null}
+            featureId={featureId}
+            onMetadataChange={onMetadataChange}
             onDecision={(itemId, decision, feedback) =>
               uat.updateItem({ itemId, decision, feedback }).catch(() => {})
             }
