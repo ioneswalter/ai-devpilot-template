@@ -102,6 +102,12 @@ export function RoadmapHeader({
                     >
                       Playbook
                     </button>
+                    <button
+                      onClick={() => navigate({ to: '/devpilot-split' })}
+                      className="px-2 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded text-[10px] font-medium text-center"
+                    >
+                      Split
+                    </button>
                   </>
                 )}
               </div>
@@ -263,6 +269,22 @@ export function RoadmapHeader({
                   />
                 </svg>
                 Playbook
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => navigate({ to: '/devpilot-split' })}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-xs font-medium"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7l5 5m0 0l-5 5m5-5H6"
+                  />
+                </svg>
+                Split
               </button>
             )}
           </div>

@@ -5,6 +5,7 @@ import { appendLog } from './shared.ts';
 import { runTestReadiness } from './test-readiness.ts';
 import { releaseDeployLock } from './deploy-lock.ts';
 import type { DeployStepResult } from './deploy-steps.ts';
+import { devpilotPostStatus, DevpilotApiError } from '../_shared/devpilot-client.ts';
 
 const MAX_RETRIES = 3;
 
@@ -54,6 +55,8 @@ export async function completeDeploy(
       .join(', ') || 'no server-side artifacts';
 
   await appendLog(supabase, pipelineId, 'info', `Deployment complete: ${summary}`);
+
+  await postGithubStatusIfLinked(supabase, pipelineId, 'success', `Pipeline succeeded — ${summary}`);
 
   // FR-116: Chain to test readiness after successful deploy
   try {
@@ -116,4 +119,42 @@ export async function failDeploy(
     .eq('id', requestId);
 
   await appendLog(supabase, pipelineId, 'warn', 'Deployment failed — manual intervention required');
+
+  const failedArtifact = failedStep ? failedStep.artifact : 'unknown step';
+  await postGithubStatusIfLinked(
+    supabase,
+    pipelineId,
+    'failure',
+    `Pipeline failed at: ${failedArtifact}`
+  );
+}
+
+/**
+ * FR-147 — post a status check + summary comment to the linked PR if this run
+ * was created via the GitHub App. Best-effort: any failure is logged and
+ * swallowed so pipeline lifecycle is not blocked by GitHub side issues.
+ */
+async function postGithubStatusIfLinked(
+  supabase: ReturnType<typeof createClient>,
+  pipelineId: string,
+  state: 'success' | 'failure',
+  summary: string
+): Promise<void> {
+  const { data: run } = await supabase
+    .from('pipeline_runs')
+    .select('github_installation_id')
+    .eq('id', pipelineId)
+    .maybeSingle<{ github_installation_id: string | null }>();
+  if (!run?.github_installation_id) return;
+
+  try {
+    await devpilotPostStatus({
+      pipeline_run_id: pipelineId,
+      state,
+      summary_markdown: `## DevPilot pipeline ${state === 'success' ? '✓' : '✗'}\n\n${summary}\n`,
+    });
+  } catch (err) {
+    const detail = err instanceof DevpilotApiError ? JSON.stringify(err.response) : String(err);
+    await appendLog(supabase, pipelineId, 'warn', `GitHub status post failed: ${detail}`);
+  }
 }
