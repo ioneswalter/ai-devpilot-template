@@ -51,6 +51,9 @@ const FR162_SCOPE_TABLES = [
   // FR-163 J1 + J3 additions (29 → 31)
   'api_keys',
   'api_audit_log',
+  // FR-167 J1 + J2 additions (31 → 33)
+  'ai_usage_logs',
+  'usage_rollups',
 ];
 
 // All application tables that MUST have RLS enabled
