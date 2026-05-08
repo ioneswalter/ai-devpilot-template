@@ -31,6 +31,7 @@ export interface PipelineRunRow {
 }
 
 export interface TestCaseRow {
+  id: string;
   feature_id: string;
   feature_version_id?: string | null; // FR-149 v1.1
   passed: boolean | null;
@@ -138,14 +139,21 @@ export function computeBuildStage(
   return { status: 'not_started', label: 'Not Started' };
 }
 
-export function computeTestStage(testCases: TestCaseRow[], featureId: string): StageStatus {
+export function computeTestStage(
+  testCases: TestCaseRow[],
+  featureId: string,
+  passingTestCaseIds: Set<string>
+): StageStatus {
+  // FR-106 v2 / J3 — pill counts test_runs evidence (passingTestCaseIds) instead of
+  // test_cases.passed. The flag is kept honest by FR-145's enforce_test_runs_evidence
+  // trigger, but reading test_runs directly is the authoritative source-of-truth.
   const cases = testCases.filter((tc) => tc.feature_id === featureId);
   if (cases.length === 0) return { status: 'not_started', label: 'Not Started' };
 
   const allNull = cases.every((tc) => tc.passed === null);
   if (allNull) return { status: 'not_started', label: 'Not Run' };
 
-  const passed = cases.filter((tc) => tc.passed === true).length;
+  const passed = cases.filter((tc) => passingTestCaseIds.has(tc.id)).length;
   const failed = cases.filter((tc) => tc.passed === false).length;
   const total = cases.length;
 

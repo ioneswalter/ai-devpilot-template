@@ -130,12 +130,12 @@ Deno.serve(async (req) => {
         .order('created_at', { ascending: false }),
       supabase
         .from('test_cases')
-        .select('feature_id, feature_version_id, passed')
+        .select('id, feature_id, feature_version_id, passed')
         .in('feature_id', featureIds)
         .range(0, 999),
       supabase
         .from('test_cases')
-        .select('feature_id, feature_version_id, passed')
+        .select('id, feature_id, feature_version_id, passed')
         .in('feature_id', featureIds)
         .range(1000, 2999),
       supabase
@@ -188,6 +188,24 @@ Deno.serve(async (req) => {
       data: [...(testBatch1.data ?? []), ...(testBatch2.data ?? [])],
       error: testBatch1.error || testBatch2.error,
     };
+
+    // FR-106 v2 / J3 — fetch passing test_runs so the kanban Test pill counts
+    // authoritative evidence (test_runs.result IN ('passed','pass')) instead of
+    // the test_cases.passed flag. The flag is kept honest by FR-145 v1.3's
+    // enforce_test_runs_evidence trigger, but reading test_runs directly is
+    // the source-of-truth and protects against any future drift.
+    const allTestCaseIds = (testResult.data ?? []).map((tc) => tc.id as string);
+    const passingTestCaseIds = new Set<string>();
+    if (allTestCaseIds.length > 0) {
+      const { data: runs } = await supabase
+        .from('test_runs')
+        .select('test_case_id')
+        .in('test_case_id', allTestCaseIds)
+        .in('result', ['passed', 'pass']);
+      for (const r of runs ?? []) {
+        passingTestCaseIds.add(r.test_case_id as string);
+      }
+    }
 
     if (specResult.error) return errorResponse('DB_ERROR', specResult.error.message, 500);
     if (implResult.error) return errorResponse('DB_ERROR', implResult.error.message, 500);
@@ -251,7 +269,7 @@ Deno.serve(async (req) => {
           f.id,
           f.status
         ),
-        test: computeTestStage(filterFn(allTests), f.id),
+        test: computeTestStage(filterFn(allTests), f.id, passingTestCaseIds),
         uat: computeUatStage(allUatPackages, uatDecisions, totalChecklist, f.id, f.status),
         deploy: computeDeployStage(filterFn(allPipelineRuns) as PipelineRunRow[], f.id, f.status),
       };
