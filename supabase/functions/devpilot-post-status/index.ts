@@ -206,16 +206,17 @@ async function loadInstallationStatus(
   return data;
 }
 
-type ParseResult =
-  | { ok: true; body: RequestBody }
-  | { ok: false; response: Response };
+type ParseResult = { ok: true; body: RequestBody } | { ok: false; response: Response };
 async function parseBody(req: Request): Promise<ParseResult> {
   try {
     const raw = await req.json();
     return { ok: true, body: RequestSchema.parse(raw) };
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return { ok: false, response: json({ error: 'Validation failed', details: err.errors }, 400) };
+      return {
+        ok: false,
+        response: json({ error: 'Validation failed', details: err.errors }, 400),
+      };
     }
     return { ok: false, response: json({ error: 'Invalid JSON body' }, 400) };
   }

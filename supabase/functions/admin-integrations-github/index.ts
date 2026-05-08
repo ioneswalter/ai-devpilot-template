@@ -163,7 +163,11 @@ async function lookupAdminEmail(
   userId: string | null
 ): Promise<string | null> {
   if (!userId) return null;
-  const { data } = await supabase.from('admin_users').select('email').eq('user_id', userId).maybeSingle();
+  const { data } = await supabase
+    .from('admin_users')
+    .select('email')
+    .eq('user_id', userId)
+    .maybeSingle();
   return data?.email ?? null;
 }
 

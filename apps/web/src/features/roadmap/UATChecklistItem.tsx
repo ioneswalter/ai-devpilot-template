@@ -6,11 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import type { UatChecklistItemData } from '@/lib/api/uat-api';
-import type {
-  UatPriorCycle,
-  UatPrototypeRef,
-  BpReviewProjection,
-} from '@/lib/api/uat-review-api';
+import type { UatPriorCycle, UatPrototypeRef, BpReviewProjection } from '@/lib/api/uat-review-api';
 import { BpProjectionView } from './BpProjectionView';
 import { EvidenceCaptureCell } from './EvidenceCaptureCell';
 import { uatReviewApi } from '@/lib/api/uat-review-api';

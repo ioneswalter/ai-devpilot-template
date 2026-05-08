@@ -151,7 +151,9 @@ function ObservationField({
       <label className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1 mb-1">
         Observation
         {aiCaption && value === aiCaption && (
-          <span className="text-violet-600 normal-case font-medium">✨ AI suggestion (editable)</span>
+          <span className="text-violet-600 normal-case font-medium">
+            ✨ AI suggestion (editable)
+          </span>
         )}
       </label>
       <textarea
@@ -194,7 +196,9 @@ function EvidenceRow({
     return (
       <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded px-2 py-1">
         <span className="text-xs text-emerald-700">📎 Evidence captured</span>
-        <code className="text-[10px] text-emerald-800 font-mono truncate flex-1">{evidencePath}</code>
+        <code className="text-[10px] text-emerald-800 font-mono truncate flex-1">
+          {evidencePath}
+        </code>
         <button
           onClick={onClear}
           disabled={disabled}
@@ -208,7 +212,9 @@ function EvidenceRow({
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Evidence required</p>
+      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+        Evidence required
+      </p>
       {extensionDetected ? (
         <button
           onClick={onAutoCapture}

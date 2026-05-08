@@ -72,10 +72,7 @@ function PanelHeader({ featureCode, collapsed, onToggle, prototypeType }: PanelH
       </button>
       <p className="text-[11px] text-indigo-500">
         Iterate with{' '}
-        <CopyableCommand
-          command={`\\iterate-prototype ${featureCode}`}
-          className="bg-indigo-100"
-        />
+        <CopyableCommand command={`\\iterate-prototype ${featureCode}`} className="bg-indigo-100" />
       </p>
     </div>
   );

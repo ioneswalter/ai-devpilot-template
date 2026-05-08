@@ -56,7 +56,12 @@ export async function completeDeploy(
 
   await appendLog(supabase, pipelineId, 'info', `Deployment complete: ${summary}`);
 
-  await postGithubStatusIfLinked(supabase, pipelineId, 'success', `Pipeline succeeded — ${summary}`);
+  await postGithubStatusIfLinked(
+    supabase,
+    pipelineId,
+    'success',
+    `Pipeline succeeded — ${summary}`
+  );
 
   // FR-116: Chain to test readiness after successful deploy
   try {

@@ -120,9 +120,7 @@ async function handleRequest(req: Request): Promise<Response> {
   return json(result, 200);
 }
 
-type ParseResult =
-  | { ok: true; body: RequestBody }
-  | { ok: false; response: Response };
+type ParseResult = { ok: true; body: RequestBody } | { ok: false; response: Response };
 
 async function parseBody(req: Request): Promise<ParseResult> {
   try {
@@ -130,7 +128,10 @@ async function parseBody(req: Request): Promise<ParseResult> {
     return { ok: true, body: RequestSchema.parse(raw) };
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return { ok: false, response: json({ error: 'Validation failed', details: err.errors }, 400) };
+      return {
+        ok: false,
+        response: json({ error: 'Validation failed', details: err.errors }, 400),
+      };
     }
     return { ok: false, response: json({ error: 'Invalid JSON body' }, 400) };
   }
@@ -171,7 +172,12 @@ async function createBranchAndPr(token: string, req: RequestBody): Promise<Branc
     req.feature_branch,
     req.base_branch
   );
-  return { pr_url: pr.html_url, pr_number: pr.number, branch: req.feature_branch, commit_sha: commitSha };
+  return {
+    pr_url: pr.html_url,
+    pr_number: pr.number,
+    branch: req.feature_branch,
+    commit_sha: commitSha,
+  };
 }
 
 async function updatePipelineRun(
