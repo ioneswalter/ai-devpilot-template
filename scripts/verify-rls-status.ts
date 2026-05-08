@@ -16,6 +16,40 @@ if (!connectionString) {
   process.exit(1);
 }
 
+// FR-162 J4 — DevPilot multi-tenancy scope set. Every table here must have
+// RLS enabled AND a `<table>_tenant_isolation` policy.
+const FR162_SCOPE_TABLES = [
+  'product_features',
+  'feature_versions',
+  'feature_spec_artifacts',
+  'spec_reviews',
+  'review_items',
+  'implementation_requests',
+  'implementation_task_items',
+  'pipeline_runs',
+  'pipeline_queue',
+  'pipeline_failures',
+  'pipeline_notifications',
+  'test_cases',
+  'test_runs',
+  'test_data_sets',
+  'test_failure_guidance',
+  'automated_test_scripts',
+  'api_verification_tests',
+  'uat_packages',
+  'uat_checklist_items',
+  'uat_review_decisions',
+  'uat_review_audit',
+  'uat_scenarios',
+  'bp_review_projections',
+  'feature_dependencies',
+  'feature_comments',
+  'feature_ratings',
+  'prompt_templates',
+  'prompt_categories',
+  'prompt_ratings',
+];
+
 // All application tables that MUST have RLS enabled
 const EXPECTED_TABLES = [
   // Core business tables
@@ -40,17 +74,11 @@ const EXPECTED_TABLES = [
   'cms_content_blocks',
   'cms_global_config',
   // Roadmap governance
-  'feature_comments',
-  'feature_ratings',
   'admin_users',
   // Internal/tooling
   'service_categories',
-  'product_features',
-  'test_cases',
   'releases',
   'release_features',
-  'test_runs',
-  'feature_dependencies',
   // Marketplace
   'marketplace_posts',
   'marketplace_bids',
@@ -66,6 +94,8 @@ const EXPECTED_TABLES = [
   // FR-087: Provider verification
   'provider_certifications',
   'provider_documents',
+  // FR-162: DevPilot multi-tenancy scope set (29 tables)
+  ...FR162_SCOPE_TABLES,
 ];
 
 // System tables excluded from audit
@@ -81,21 +111,16 @@ const USER_DATA_TABLES = [
   'provider_documents',
 ];
 
-// Tables with public SELECT access (CMS, roadmap, reference data)
+// Tables with public SELECT access (CMS, reference data — NOT DevPilot scope set,
+// since FR-162 dropped permissive public read policies on those tables).
 const PUBLIC_READ_TABLES = [
   'cms_pages',
   'cms_sections',
   'cms_content_blocks',
   'cms_global_config',
   'service_categories',
-  'product_features',
-  'test_cases',
   'releases',
   'release_features',
-  'test_runs',
-  'feature_dependencies',
-  'feature_comments',
-  'feature_ratings',
   'admin_users',
   'marketplace_posts',
   'marketplace_bids',
@@ -105,7 +130,10 @@ const PUBLIC_READ_TABLES = [
   'invoices',
 ];
 
-// Tables that must have service_role access (for Edge Functions)
+// Tables that must have service_role access (for Edge Functions). Note: Postgres
+// service role bypasses RLS natively, so an explicit policy isn't strictly required
+// — but a named "service_role" policy serves as documentation. FR-162 scope tables
+// are NOT listed here: we rely on Postgres BYPASS rather than per-table policies.
 const SERVICE_ROLE_TABLES = [
   'customers',
   'service_providers',
@@ -122,12 +150,8 @@ const SERVICE_ROLE_TABLES = [
   'notifications',
   'additional_work_escrows',
   'service_categories',
-  'product_features',
-  'test_cases',
   'releases',
   'release_features',
-  'test_runs',
-  'feature_dependencies',
   'marketplace_posts',
   'marketplace_bids',
   'rate_limit_log',
@@ -341,6 +365,35 @@ async function verifyRLS(): Promise<void> {
         `Tables checked: ${SERVICE_ROLE_TABLES.length}`,
         serviceRoleIssues.length === 0 ? 'All tables have service_role bypass policies' : '',
         ...serviceRoleIssues.map((i) => `  FAIL: ${i}`),
+      ].filter(Boolean),
+    });
+
+    // ===== TC-FR162-J4-01: DevPilot scope set has tenant_isolation policy =====
+    const fr162Issues: string[] = [];
+    for (const tableName of FR162_SCOPE_TABLES) {
+      const table = tableMap.get(tableName);
+      const policies = policyMap.get(tableName) || [];
+      const isolationPolicy = policies.find(
+        (p) => p.policyname === `${tableName}_tenant_isolation`
+      );
+      if (!table) {
+        fr162Issues.push(`${tableName}: table not found`);
+      } else if (!table.rowsecurity) {
+        fr162Issues.push(`${tableName}: RLS NOT enabled`);
+      } else if (!isolationPolicy) {
+        fr162Issues.push(`${tableName}: missing ${tableName}_tenant_isolation policy`);
+      }
+    }
+    results.push({
+      code: 'TC-FR162-J4-01',
+      title: 'DevPilot scope set has RLS + tenant_isolation policy',
+      passed: fr162Issues.length === 0,
+      details: [
+        `Scoped tables: ${FR162_SCOPE_TABLES.length}`,
+        fr162Issues.length === 0
+          ? `All ${FR162_SCOPE_TABLES.length} tables protected by tenant_isolation policy`
+          : '',
+        ...fr162Issues.map((i) => `  FAIL: ${i}`),
       ].filter(Boolean),
     });
 
