@@ -22,6 +22,8 @@ import {
   type UatDecisionRow,
 } from './compute-stages.ts';
 import { getCurrentVersionId } from '../_shared/version-utils.ts';
+import { withApiGateway, type GatewayContext } from '../_shared/api-gateway.ts';
+import { isApiKeyShape } from '../_shared/api-key-helpers.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,6 +42,18 @@ function errorResponse(code: string, message: string, status: number) {
   return jsonResponse({ error: { code, message } }, status);
 }
 
+/**
+ * FR-163 J1 — Gateway-aware handler for pipeline-status.
+ * When called with a DevPilot API key, routes through withApiGateway which
+ * resolves tenant_id and passes it via GatewayContext. The query block then
+ * filters product_features by ctx.tenantId explicitly (service role bypasses
+ * RLS — application-layer enforcement). Legacy user-JWT path (kanban) is
+ * unchanged.
+ */
+async function handleGatewayCall(req: Request, ctx: GatewayContext): Promise<Response> {
+  return runPipelineStatusQueries(req, ctx.supabase, ctx.tenantId);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -49,14 +63,19 @@ Deno.serve(async (req) => {
     return errorResponse('METHOD_NOT_ALLOWED', 'Use GET', 405);
   }
 
+  // FR-163 J1 detect-and-route: API key → gateway, user JWT → legacy path.
+  const authHeader = req.headers.get('Authorization') ?? '';
+  if (authHeader.startsWith('Bearer ') && isApiKeyShape(authHeader.slice(7).trim())) {
+    return withApiGateway(handleGatewayCall)(req);
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    if (!authHeader.startsWith('Bearer ')) {
       return errorResponse('UNAUTHORIZED', 'Missing authorization token', 401);
     }
     const {
@@ -67,6 +86,23 @@ Deno.serve(async (req) => {
       return errorResponse('UNAUTHORIZED', 'Invalid authentication token', 401);
     }
 
+    return runPipelineStatusQueries(req, supabase, null);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    return errorResponse('INTERNAL_ERROR', message, 500);
+  }
+});
+
+/**
+ * Core query block. tenantId !== null → application-layer tenant filter (gateway path).
+ * tenantId === null → no explicit filter (legacy user-JWT path; RLS scopes via auth.jwt() COALESCE).
+ */
+async function runPipelineStatusQueries(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string | null
+): Promise<Response> {
+  try {
     const url = new URL(req.url);
     const featureIdParam = url.searchParams.get('feature_id');
 
@@ -83,6 +119,10 @@ Deno.serve(async (req) => {
         'released',
       ]);
 
+    if (tenantId) {
+      // FR-163 gateway path: explicit tenant filter (service role bypasses RLS)
+      featuresQuery = featuresQuery.eq('tenant_id', tenantId);
+    }
     if (featureIdParam) {
       featuresQuery = featuresQuery.eq('id', featureIdParam);
     }
@@ -280,4 +320,4 @@ Deno.serve(async (req) => {
     const message = err instanceof Error ? err.message : 'Internal server error';
     return errorResponse('INTERNAL_ERROR', message, 500);
   }
-});
+}

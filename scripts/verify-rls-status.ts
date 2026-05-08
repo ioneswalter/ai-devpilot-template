@@ -48,6 +48,9 @@ const FR162_SCOPE_TABLES = [
   'prompt_templates',
   'prompt_categories',
   'prompt_ratings',
+  // FR-163 J1 + J3 additions (29 → 31)
+  'api_keys',
+  'api_audit_log',
 ];
 
 // All application tables that MUST have RLS enabled

@@ -18,6 +18,12 @@ import {
   handleDeleteFeature,
   handleGetAdmin,
 } from './other-handlers.ts';
+import {
+  handleApiKeyIssue,
+  handleApiKeyRotate,
+  handleApiKeyRevoke,
+  handleApiKeyList,
+} from './api-key-handlers.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -54,6 +60,20 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(Boolean);
     const action = pathParts[pathParts.length - 1];
+
+    // FR-163 J2 — API key lifecycle endpoints
+    if (req.method === 'POST' && action === 'api-key-issue') {
+      return await handleApiKeyIssue(req, supabase, user.id);
+    }
+    if (req.method === 'POST' && action === 'api-key-rotate') {
+      return await handleApiKeyRotate(req, supabase, user.id);
+    }
+    if (req.method === 'POST' && action === 'api-key-revoke') {
+      return await handleApiKeyRevoke(req, supabase);
+    }
+    if (req.method === 'GET' && action === 'api-keys') {
+      return await handleApiKeyList(req, supabase);
+    }
 
     // POST - Create a new feature or journey
     if (req.method === 'POST' && action !== 'request-implementation') {
