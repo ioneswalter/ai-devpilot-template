@@ -54,6 +54,9 @@ const FR162_SCOPE_TABLES = [
   // FR-167 J1 + J2 additions (31 → 33)
   'ai_usage_logs',
   'usage_rollups',
+  // FR-164 J1 additions (33 → 35)
+  'ai_learnings',
+  'ideation_conversations',
 ];
 
 // All application tables that MUST have RLS enabled
@@ -186,6 +189,13 @@ interface TestResult {
   title: string;
   passed: boolean;
   details: string[];
+}
+
+interface VisibilityUnionReport {
+  ok: boolean;
+  passed: number;
+  total: number;
+  checks: Array<{ name: string; pass: boolean; expected: number; actual: number }>;
 }
 
 async function verifyRLS(): Promise<void> {
@@ -374,33 +384,73 @@ async function verifyRLS(): Promise<void> {
       ].filter(Boolean),
     });
 
-    // ===== TC-FR162-J4-01: DevPilot scope set has tenant_isolation policy =====
+    // ===== TC-FR162-J4-01: DevPilot scope set has tenant-isolation enforcement =====
+    // FR-164 J2: prompt_templates and ai_learnings replaced their _tenant_isolation
+    // policy with a _visibility union policy. Either policy name satisfies the check.
+    const VISIBILITY_UNION_TABLES = new Set(['prompt_templates', 'ai_learnings']);
     const fr162Issues: string[] = [];
     for (const tableName of FR162_SCOPE_TABLES) {
       const table = tableMap.get(tableName);
       const policies = policyMap.get(tableName) || [];
-      const isolationPolicy = policies.find(
-        (p) => p.policyname === `${tableName}_tenant_isolation`
-      );
+      const expectedPolicy = VISIBILITY_UNION_TABLES.has(tableName)
+        ? `${tableName}_visibility`
+        : `${tableName}_tenant_isolation`;
+      const isolationPolicy = policies.find((p) => p.policyname === expectedPolicy);
       if (!table) {
         fr162Issues.push(`${tableName}: table not found`);
       } else if (!table.rowsecurity) {
         fr162Issues.push(`${tableName}: RLS NOT enabled`);
       } else if (!isolationPolicy) {
-        fr162Issues.push(`${tableName}: missing ${tableName}_tenant_isolation policy`);
+        fr162Issues.push(`${tableName}: missing ${expectedPolicy} policy`);
       }
     }
     results.push({
       code: 'TC-FR162-J4-01',
-      title: 'DevPilot scope set has RLS + tenant_isolation policy',
+      title: 'DevPilot scope set has RLS + tenant-isolation policy',
       passed: fr162Issues.length === 0,
       details: [
         `Scoped tables: ${FR162_SCOPE_TABLES.length}`,
         fr162Issues.length === 0
-          ? `All ${FR162_SCOPE_TABLES.length} tables protected by tenant_isolation policy`
+          ? `All ${FR162_SCOPE_TABLES.length} tables protected (33 by tenant_isolation, 2 by visibility union)`
           : '',
         ...fr162Issues.map((i) => `  FAIL: ${i}`),
       ].filter(Boolean),
+    });
+
+    // ===== TC-FR164-J2-01: visibility union RLS isolates private + exposes shared =====
+    let visibilityUnionPassed = false;
+    let visibilityUnionDetail = '';
+    try {
+      const ownTenant = '33572eed-cc64-451e-a9dd-b332c272106c';
+      const { rows: smokeTenants } = await client.query<{ id: string }>(
+        `SELECT id FROM public.tenants WHERE code = 'fr164-smoke' LIMIT 1`
+      );
+      const otherTenant = smokeTenants[0]?.id;
+      if (!otherTenant) {
+        visibilityUnionDetail = 'SKIPPED: tenants.code=fr164-smoke fixture missing';
+        visibilityUnionPassed = true;
+      } else {
+        const { rows } = await client.query<{ result: VisibilityUnionReport }>(
+          `SELECT public.verify_visibility_union($1::uuid, $2::uuid) AS result`,
+          [ownTenant, otherTenant]
+        );
+        const report = rows[0]?.result;
+        visibilityUnionPassed = report?.ok === true;
+        visibilityUnionDetail = report?.ok
+          ? `Both tenant-isolation checks pass (${report.passed}/${report.total})`
+          : (report?.checks ?? [])
+              .filter((c) => !c.pass)
+              .map((c) => `  FAIL: ${c.name} expected=${c.expected} actual=${c.actual}`)
+              .join('\n') || 'verify_visibility_union returned no report';
+      }
+    } catch (err) {
+      visibilityUnionDetail = `Exception: ${err instanceof Error ? err.message : String(err)}`;
+    }
+    results.push({
+      code: 'TC-FR164-J2-01',
+      title: 'Visibility union policy isolates private + exposes shared rows',
+      passed: visibilityUnionPassed,
+      details: [visibilityUnionDetail],
     });
 
     // ===== TC-FR062-07: Script runs successfully =====
