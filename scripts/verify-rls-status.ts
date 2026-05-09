@@ -57,6 +57,8 @@ const FR162_SCOPE_TABLES = [
   // FR-164 J1 additions (33 → 35)
   'ai_learnings',
   'ideation_conversations',
+  // FR-166 J1 addition (35 → 36)
+  'tenant_provisioning_audit',
 ];
 
 // All application tables that MUST have RLS enabled
@@ -411,7 +413,7 @@ async function verifyRLS(): Promise<void> {
       details: [
         `Scoped tables: ${FR162_SCOPE_TABLES.length}`,
         fr162Issues.length === 0
-          ? `All ${FR162_SCOPE_TABLES.length} tables protected (33 by tenant_isolation, 2 by visibility union)`
+          ? `All ${FR162_SCOPE_TABLES.length} tables protected (${FR162_SCOPE_TABLES.length - 2} by tenant_isolation, 2 by visibility union)`
           : '',
         ...fr162Issues.map((i) => `  FAIL: ${i}`),
       ].filter(Boolean),
