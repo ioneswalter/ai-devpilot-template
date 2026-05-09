@@ -117,7 +117,10 @@ async function performPromotion(
   callerTenantId: string,
   promotedBy: string,
   body: PromotionBody
-): Promise<{ result?: PromotionResult; error?: { code: string; status: number; message: string } }> {
+): Promise<{
+  result?: PromotionResult;
+  error?: { code: string; status: number; message: string };
+}> {
   const { data: row, error: rowErr } = await supabase
     .from(body.source_table)
     .select('*')
@@ -128,7 +131,11 @@ async function performPromotion(
 
   if (row.tenant_id !== callerTenantId) {
     return {
-      error: { code: 'TENANT_MISMATCH', status: 403, message: 'Caller tenant differs from source row tenant' },
+      error: {
+        code: 'TENANT_MISMATCH',
+        status: 403,
+        message: 'Caller tenant differs from source row tenant',
+      },
     };
   }
 
@@ -155,7 +162,8 @@ async function performPromotion(
     .select('code, name')
     .eq('id', row.tenant_id)
     .single();
-  if (!tenant) return { error: { code: 'INTERNAL_ERROR', status: 500, message: 'Tenant not found' } };
+  if (!tenant)
+    return { error: { code: 'INTERNAL_ERROR', status: 500, message: 'Tenant not found' } };
 
   const cols = TEXT_COLUMNS_BY_TABLE[body.source_table] ?? [];
   const { newValues, diff } = anonymise(row, tenant.code, tenant.name, cols);
@@ -189,7 +197,13 @@ async function performPromotion(
     .select('id, promoted_at')
     .single();
   if (auditErr || !audit) {
-    return { error: { code: 'INTERNAL_ERROR', status: 500, message: auditErr?.message ?? 'audit insert failed' } };
+    return {
+      error: {
+        code: 'INTERNAL_ERROR',
+        status: 500,
+        message: auditErr?.message ?? 'audit insert failed',
+      },
+    };
   }
 
   return {
@@ -227,8 +241,7 @@ async function handleAdminJwtCall(req: Request, token: string): Promise<Response
   );
 
   const { data: userResp, error: userErr } = await supabase.auth.getUser(token);
-  if (userErr || !userResp.user)
-    return errorResponse('UNAUTHORIZED', 'Invalid JWT', 401);
+  if (userErr || !userResp.user) return errorResponse('UNAUTHORIZED', 'Invalid JWT', 401);
   const userId = userResp.user.id;
 
   const { data: admin } = await supabase
